@@ -159,3 +159,4 @@ if( is_singular() || ( function_exists( 'is_woocommerce' ) && is_woocommerce() )
 if(  function_exists('is_bbpress') && is_bbpress() && tie_get_option( 'bbpress_full' )) $sidebar = ' full-width';
 ?>
 	<div id="main-content" class="container<?php echo $sidebar ; ?>">
+
