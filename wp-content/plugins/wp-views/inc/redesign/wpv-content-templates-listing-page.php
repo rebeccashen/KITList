@@ -32,24 +32,66 @@ function wpv_admin_menu_content_templates_listing_page() {
 				?>
 			</h2>
 
-			<?php // Messages: trashed, untrashed, deleted
+			<?php
+
+				// Messages: trashed, untrashed, deleted
 				add_filter( 'wpv_maybe_show_listing_message_undo', 'wpv_admin_ct_listing_message_undo', 10, 3 );
 
-				wpv_maybe_show_listing_message( 'trashed', __( 'Content Template moved to the Trash.', 'wpv-views' ), __( '%d Content Templates moved to the Trash.', 'wpv-views' ), true );
-				wpv_maybe_show_listing_message( 'untrashed', __( 'Content Template restored from the Trash.', 'wpv-views' ), __( '%d Content Templates restored from the Trash.', 'wpv-views' ) );
-				wpv_maybe_show_listing_message( 'deleted', __( 'Content Template permanently deleted.', 'wpv-views' ), __( '%d Content Templates permanently deleted.', 'wpv-views' ) );
+				wpv_maybe_show_listing_message(
+						'trashed', __( 'Content Template moved to the Trash.', 'wpv-views' ),
+						__( '%d Content Templates moved to the Trash.', 'wpv-views' ), true );
+				wpv_maybe_show_listing_message(
+						'untrashed', __( 'Content Template restored from the Trash.', 'wpv-views' ),
+						__( '%d Content Templates restored from the Trash.', 'wpv-views' ) );
+				wpv_maybe_show_listing_message(
+						'deleted', __( 'Content Template permanently deleted.', 'wpv-views' ),
+						__( '%d Content Templates permanently deleted.', 'wpv-views' ) );
 
-
-			if ( isset( $_GET["arrangeby"] ) && sanitize_text_field( $_GET["arrangeby"] ) == 'usage' ) {
-				$usage = 'single';
-				if ( isset( $_GET["usage"] ) ) {
-					$usage = sanitize_text_field($_GET["usage"]);
+				// Determine how should we arrange the items (what should be displayed)
+				if ( isset( $_GET["arrangeby"] ) && sanitize_text_field( $_GET["arrangeby"] ) == 'usage' ) {
+					$arrange_by = 'single';
+					if ( isset( $_GET["usage"] ) ) {
+						$arrange_by = sanitize_text_field($_GET["usage"]);
+					}
+				} else {
+					$arrange_by = 'name';
 				}
-				wpv_admin_content_template_listing_usage($usage);
-			} else {
-				wpv_admin_content_template_listing_name();
-			}
+					
+				// "Arrange by" tabs
+				?>
+					<div class="wpv-admin-tabs">
+						<ul class="wpv-admin-tabs-links">
+							<?php
+								$tabs = array(
+										'name' => __( 'Name','wpv-views' ),
+										'single' => __( 'Usage for single page', 'wpv-views' ),
+										'post-archives' => __( 'Usage for custom post archives', 'wpv-views' ),
+										'taxonomy-archives' => __( 'Usage for taxonomy archives', 'wpv-views' ) );
+										
+								foreach( $tabs as $tab_slug => $tab_label ) {
+									printf(
+										'<li><a href="%s" %s>%s</a></li>',
+										add_query_arg(
+											array(
+													'page' => 'view-templates',
+													'arrangeby' => ( 'name' == $tab_slug ) ? 'name' : 'usage',
+													'usage' => $tab_slug ),
+											admin_url( 'admin.php' ) ),
+										wpv_current_class( $arrange_by, $tab_slug, false ),
+										$tab_label );
+								}
+							?> 
+						</ul>
+					</div>				
+				<?php
 
+				// Render the actual listing
+				if ( 'name' == $arrange_by ) {
+					wpv_admin_content_template_listing_name();
+				} else {
+					wpv_admin_content_template_listing_usage( $arrange_by );
+				}
+				
 			?>
 		</div> <!-- .wpv-views-listing-page -->
 	</div> <!-- .toolset-views -->
@@ -146,53 +188,7 @@ function wpv_admin_content_template_listing_name() {
 	<?php
 		if ( $some_posts_exist ) {
 			?>
-			<div class="wpv-views-listing-arrange" style="clear:none;float:left">
-				<p style="margin-bottom:0"><?php _e('Arrange by','wpv-views'); ?>: </p>
-				<ul>
-					<li data-sortby="name" class="active"><?php _e('Name','wpv-views') ?></li>
-					<li data-sortby="usage-single">
-						<?php
-							printf(
-								'<a href="%s">%s</a>',
-								add_query_arg(
-									array(
-											'page' => 'view-templates',
-											'arrangeby' => 'usage',
-											'usage' => 'single' ),
-									admin_url( 'admin.php' ) ),
-								__( 'Usage for single page', 'wpv-views' ) );
-						?>
-					</li>
-					<li data-sortby="usage-post-archives">
-						<?php
-							printf(
-								'<a href="%s">%s</a>',
-								add_query_arg(
-									array(
-											'page' => 'view-templates',
-											'arrangeby' => 'usage',
-											'usage' => 'post-archives' ),
-									admin_url( 'admin.php' ) ),
-								__( 'Usage for custom post archives', 'wpv-views' ) );
-						?>
-					</li>
-					<li data-sortby="usage-taxonomy-archives">
-						<?php
-							printf(
-								'<a href="%s">%s</a>',
-								add_query_arg(
-									array(
-											'page' => 'view-templates',
-											'arrangeby' => 'usage',
-											'usage' => 'taxonomy-archives' ),
-									admin_url( 'admin.php' ) ),
-								__( 'Usage for taxonomy archives', 'wpv-views' ) );
-						?>
-					</li>
-				</ul>
-			</div>
-
-			<ul class="subsubsub" style="clear:left"><!-- links to lists WPA in different statuses -->
+			<ul class="subsubsub" style="clear:both"><!-- links to lists WPA in different statuses -->
 				<li>
 					<?php
 						$is_plain_publish_current_status = ( $wpv_args['post_status'] == 'publish' && !isset( $_GET["s"] ) );
@@ -515,13 +511,16 @@ function wpv_admin_content_template_listing_name() {
 									 * they get echoed as a class of the span tag and get styled from WordPress core css
 									 * accordingly (e.g. trash in different colour than the rest) */
 									$row_actions = array();
-									$asigned_count = $wpdb->get_var( 
-										"SELECT COUNT(post_id) FROM {$wpdb->postmeta} JOIN {$wpdb->posts} p 
-										WHERE meta_key = '_views_template' 
-										AND meta_value = '{$template_id}' 
-										AND post_id = p.ID 
-										AND p.post_status NOT IN  ('auto-draft') 
-										AND p.post_type != 'revision'"
+									$asigned_count = $wpdb->get_var(
+										$wpdb->prepare(
+											"SELECT COUNT(post_id) FROM {$wpdb->postmeta} JOIN {$wpdb->posts} p 
+											WHERE meta_key = '_views_template' 
+											AND meta_value = %s
+											AND post_id = p.ID 
+											AND p.post_status NOT IN ('auto-draft') 
+											AND p.post_type != 'revision'",
+											$template_id
+										)
 									);
 									if ( 'publish' == $wpv_args['post_status'] ) {
 										$row_actions['edit'] = sprintf(
@@ -548,7 +547,7 @@ function wpv_admin_content_template_listing_name() {
 									echo wpv_admin_table_row_actions( $row_actions,	array(
 												"data-ct-id" => $template_id,
 												"data-postcount" => $asigned_count,
-												"data-ct-name" => htmlentities( $post->title, ENT_QUOTES ),
+												"data-ct-name" => htmlentities( $post->post_title, ENT_QUOTES ),
 												"data-viewactionnonce" => $ct_action_nonce,
 												// Used by the "duplicate" action
 												"data-msg" => htmlentities( __( 'Enter new title','wpv-views'), ENT_QUOTES ) 
@@ -588,133 +587,12 @@ function wpv_admin_content_template_listing_name() {
 
 		wpv_admin_listing_pagination( 'view-templates', $wpv_found_posts, $wpv_args["posts_per_page"], $mod_url );
 
-		?>
-		<div class="popup-window-container">
-
-			<div class="wpv-dialog js-remove-content-template-dialog">
-				<div class="wpv-dialog-header">
-					<h2><?php _e('Delete Content Template','wpv-views'); ?></h2>
-				</div>
-				<div class="wpv-dialog-content">
-					<p><?php echo sprintf( __('There are %s single posts that are currently using this template.','wpv-views'), '<span class="js-ct-single-postcount"></span>'); ?></p>
-					<p><?php _e('Are you sure you want to delete it?', 'wpv-views');?>
-				</div>
-				<div class="wpv-dialog-footer">
-					<button class="button js-dialog-close"><?php _e('Cancel','wpv-views'); ?></button>
-					<button class="button button-primary js-remove-template-permanent"><?php _e('Delete','wpv-views'); ?></button>
-				</div>
-			</div>
-
-			<div class="wpv-dialog js-bulk-remove-content-templates-dialog">
-				<div class="wpv-dialog-header">
-					<h2><?php _e('Delete Content Templates','wpv-views'); ?></h2>
-				</div>
-				<div class="wpv-dialog-content">
-					<p class="js-ct-single-postcount-message-usage">
-						<?php
-							printf(
-									__( 'There are %s single posts that are currently using some of these templates.','wpv-views'),
-									'<span class="js-ct-single-postcount"></span>' );
-						?>
-					</p>
-					<p class="js-ct-single-postcount-message-ays-nonzero"><?php _e( 'Are you sure you want to permanently delete them?', 'wpv-views' ); ?></p>
-					<p class="js-ct-single-postcount-message-ays-zero" style="display: none;">
-						<?php _e( 'Are you sure you want to permanently delete selected content templates?', 'wpv-views' ); ?>
-					</p>
-				</div>
-				<div class="wpv-dialog-footer">
-					<button class="button js-dialog-close"><?php _e( 'Cancel','wpv-views' ); ?></button>
-					<button class="button button-primary js-bulk-remove-templates-permanent"><?php _e( 'Delete all', 'wpv-views' ); ?></button>
-				</div>
-			</div>
-
-
-			<div class="wpv-dialog js-wpv-duplicate-ct-dialog">
-				<div class="wpv-dialog-header">
-					<h2><?php _e('Duplicate Content Template','wpv-views') ?></h2>
-				</div>
-				<div class="wpv-dialog-content">
-			<p>
-				<label for="duplicated_ct_name"><?php _e('Name for the new Content Template','wpv-views'); ?></label>
-				<input type="text" value="" class="widefat js-wpv-duplicated-ct-title" placeholder="<?php _e('Enter name here','wpv-views') ?>" name="duplicated_ct_name">
-			</p>
-			<div class="js-wpv-ct-duplicate-error-container"></div>
-				</div>
-				<div class="wpv-dialog-footer">
-					<button class="button js-dialog-close"><?php _e('Cancel','wpv-views') ?></button>
-					<button class="button button-secondary js-wpv-duplicate-ct" disabled><?php _e('Duplicate','wpv-views') ?></button>
-				</div>
-			</div> <!-- .js-duplicate-view-dialog -->
-
-		</div>
-	<?php
+		// Render dialog templates.
+		wpv_render_ct_listing_dialog_templates_arrangeby_name();
 }
 
 function wpv_admin_content_template_listing_usage( $usage = 'single' ) {
 	?>
-	<div class="wpv-views-listing-arrange">
-		<p><?php _e('Arrange by','wpv-views'); ?>: </p>
-		<ul>
-			<li data-sortby="name">
-				<a href="<?php echo add_query_arg( array( 'page' => 'view-templates' ), admin_url( 'admin.php' ) ); ?>"><?php _e('Name','wpv-views'); ?></a>
-			</li>
-
-			<?php $is_single_usage = ( $usage == 'single' ); ?>
-			<li data-sortby="usage-single" <?php if( $is_single_usage ) { echo 'class="active"'; } ?> >
-				<?php
-					if( $is_single_usage ) {
-						_e( 'Usage for single page', 'wpv-views' );
-					} else {
-						printf( '<a href="%s">%s</a>',
-								add_query_arg(
-										array(
-												'page' => 'view-templates',
-												'arrangeby' => 'usage',
-												'usage' => 'single' ),
-										admin_url( 'admin.php' ) ),
-								__( 'Usage for single page', 'wpv-views' ) );
-					}
-				?>
-			</li>
-
-			<?php $is_post_archives_usage = ( $usage == 'post-archives' ); ?>
-			<li data-sortby="usage-post-archives" <?php if ( $is_post_archives_usage ) { echo 'class="active"'; } ?> >
-				<?php
-					if( $is_post_archives_usage ) {
-						_e( 'Usage for custom post archives', 'wpv-views' );
-					} else {
-						printf( '<a href="%s">%s</a>',
-								add_query_arg(
-										array(
-												'page' => 'view-templates',
-												'arrangeby' => 'usage',
-												'usage' => 'post-archives' ),
-										admin_url( 'admin.php' ) ),
-								__( 'Usage for custom post archives', 'wpv-views' ) );
-					}
-				?>
-			</li>
-
-			<?php $is_taxonomy_archive_usage = ( $usage == 'taxonomy-archives' ); ?>
-			<li data-sortby="usage-taxonomy-archives" <?php if ( $is_taxonomy_archive_usage ) { echo 'class="active"'; } ?> >
-				<?php
-					if( $is_taxonomy_archive_usage ) {
-						_e( 'Usage for taxonomy archives', 'wpv-views' );
-					} else {
-						printf( '<a href="%s">%s</a>',
-								add_query_arg(
-										array(
-												'page' => 'view-templates',
-												'arrangeby' => 'usage',
-												'usage' => 'taxonomy-archives' ),
-										admin_url( 'admin.php' ) ),
-								__( 'Usage for taxonomy archives', 'wpv-views' ) );
-					}
-				?>
-			</li>
-		</ul>
-	</div>
-
 	<table class="wpv-views-listing widefat">
 
 		<thead>
@@ -733,42 +611,25 @@ function wpv_admin_content_template_listing_usage( $usage = 'single' ) {
 
 		<tbody class="js-wpv-views-listing-body">
 			<?php
-			echo wpv_admin_menu_content_template_listing_by_type_row('usage-' . $usage);
+				echo wpv_admin_menu_content_template_listing_by_type_row( 'usage-' . $usage );
 			?>
 		</tbody>
 	</table>
 
-	<div class="popup-window-container"> <!-- placeholder for static colorbox popups -->
-
-		<!-- popup: unlink Template -->
-
-		<div class="wpv-dialog js-single-unlink-template-dialog">
-			<div class="wpv-dialog-header">
-				<h2><?php echo sprintf( __('Clear single %s','wpv-views'), '<strong class="js-single-unlink-label"></strong>'); ?></h2>
-			</div>
-			<div class="wpv-dialog-content">
-				<p><?php echo sprintf( __('There is no general Content Template asigned to single %s, but %s individual %s have a Content Template asigned to them.','wpv-views'), '<strong class="js-single-unlink-label"></strong>', '<strong class="js-single-unlink-number"></strong>', '<strong class="js-single-unlink-label"></strong>'); ?></p>
-				<p><?php echo __('Would you like to clear them?','wpv-views'); ?></p>
-			</div>
-			<div class="wpv-dialog-footer">
-				<button class="button js-dialog-close"><?php _e('Cancel','wpv-views') ?></button>
-				<button class="button button-primary js-single-unlink-template-ok" data-slug="" data-nonce="<?php echo wp_create_nonce( 'wpv_single_unlink_template_nonce' ); ?>"><?php _e('Clear','wpv-views') ?></button>
-			</div>
-		</div>
-
-	</div>
 	<?php
+	
+	// Render dialog templates
+	wpv_render_ct_listing_dialog_templates_arrangeby_usage();
 }
 
 // @todo this use of IN in the query can lead to long queries - problems
 
 function wpv_content_template_used_for_list( $ct_id ) {
-	global $WP_Views;
+	global $WP_Views, $WPV_settings;
 	$list = '';
 	$layout_loop_template_for_view_id = get_post_meta( $ct_id, '_view_loop_id', true );
 	if ( empty( $layout_loop_template_for_view_id ) ) {
 		global $wpdb;
-		$options = $WP_Views->get_options();
 		$post_types_array = wpv_get_pt_tax_array();
 		$count_single_post = count( $post_types_array['single_post'] );
 		$count_archive_post = count( $post_types_array['archive_post'] );
@@ -777,15 +638,30 @@ function wpv_content_template_used_for_list( $ct_id ) {
 		for ( $i=0; $i<$count_single_post; $i++ ) {
 			$type = $post_types_array['single_post'][$i][0];
 			$label = $post_types_array['single_post'][$i][1];
-			if ( isset($options['views_template_for_' . $type]) && $options['views_template_for_' . $type] == $ct_id)   {
-				$list .= '<li>' . $label . __(' (single)', 'wpv-views');
-					$posts = $wpdb->get_col( "SELECT {$wpdb->posts}.ID FROM {$wpdb->posts} WHERE post_type='{$type}' AND post_status!='auto-draft'" );
+			if ( isset( $WPV_settings['views_template_for_' . $type] ) && $WPV_settings['views_template_for_' . $type] == $ct_id ) {
+                $list .= '<li>' . $label . __(' (single)', 'wpv-views');
+					$posts = $wpdb->get_col( 
+						$wpdb->prepare(
+							"SELECT {$wpdb->posts}.ID FROM {$wpdb->posts} 
+							WHERE post_type = %s 
+							AND post_status != 'auto-draft'",
+							$type
+						)
+					);
 					$count = sizeof( $posts );
 					if ( $count > 0 ) {
 						$posts = "'" . implode( "','", $posts ) . "'";
-						$set_count = $wpdb->get_var( "SELECT COUNT(post_id) FROM {$wpdb->postmeta} WHERE
-						meta_key='_views_template' AND meta_value='{$options['views_template_for_' . $type]}'
-						AND post_id IN ({$posts})" );
+						$set_count = $wpdb->get_var( 
+							$wpdb->prepare(
+								"SELECT COUNT(post_id) FROM {$wpdb->postmeta} 
+								WHERE meta_key = '_views_template' 
+								AND meta_value = %s
+								AND post_id IN ({$posts}) 
+								LIMIT %d",
+								$WPV_settings['views_template_for_' . $type],
+								$count
+							)
+						);
 						if ( ( $count - $set_count ) > 0 ) {
 							$list .= sprintf(
 									'<span class="%s"><a class="%s" data-target="%s"> %s</a></span>',
@@ -808,16 +684,16 @@ function wpv_content_template_used_for_list( $ct_id ) {
 		for ( $i=0; $i < $count_archive_post; $i++ ) {
 			$type = $post_types_array['archive_post'][$i][0];
 			$label = $post_types_array['archive_post'][$i][1];
-			if ( isset($options['views_template_archive_for_' . $type]) && $options['views_template_archive_for_' . $type] == $ct_id)   {
-				$list .= '<li>' . $label . __(' (post type archive)','wpv-views') . '</li>';
+			if ( isset( $WPV_settings['views_template_archive_for_' . $type] ) && $WPV_settings['views_template_archive_for_' . $type] == $ct_id ) {
+                $list .= '<li>' . $label . __(' (post type archive)','wpv-views') . '</li>';
 			 }
 		}
 
 		for ( $i=0; $i < $count_taxonomy_post; $i++ ) {
 			$type = $post_types_array['taxonomy_post'][$i][0];
 			$label = $post_types_array['taxonomy_post'][$i][1];
-			if ( isset($options['views_template_loop_' . $type]) && $options['views_template_loop_' . $type] == $ct_id)   {
-				$list .= '<li>' . $label . __(' (taxonomy archive)','wpv-views') . '</li>';
+			if ( isset( $WPV_settings['views_template_loop_' . $type] ) && $WPV_settings['views_template_loop_' . $type] == $ct_id ) {
+                $list .= '<li>' . $label . __(' (taxonomy archive)','wpv-views') . '</li>';
 			 }
 		}
 		
@@ -843,6 +719,7 @@ function wpv_content_template_used_for_list( $ct_id ) {
 	return $list;
 }
 
+// TODO consider using WP_Views_archive_loops::get_archive_loops instead
 function wpv_get_pt_tax_array(){
    static $post_types_array;
    static $taxonomies_array;
@@ -882,10 +759,12 @@ function wpv_get_pt_tax_array(){
    return $wpv_posts_array;
 }
 
+/**
+ * @todo comment
+ */ 
 // TODO check if the action URL parameter is needed when creating a CT
 function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 ) {
-	global $WP_Views, $post, $wpdb;
-	$options = $WP_Views->get_options();
+	global $WPV_settings, $post, $wpdb;
 	// $post_types = get_post_types( array('public' => true), 'objects' );
 	$post_types_array = wpv_get_pt_tax_array();
 
@@ -937,13 +816,20 @@ function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 )
 									sprintf( __( 'Create a Content Template for single %s', 'wpv-views' ), $label ) );
 
 							// TODO get_posts or explanation why is it done this way (optimalization?)
-							$posts = $wpdb->get_col( "SELECT {$wpdb->posts}.ID FROM {$wpdb->posts} WHERE post_type='{$type}' AND post_status!='auto-draft'" );
+							$posts = $wpdb->get_col( 
+								$wpdb->prepare(
+									"SELECT {$wpdb->posts}.ID FROM {$wpdb->posts} 
+									WHERE post_type = %s 
+									AND post_status != 'auto-draft'",
+									$type
+								)
+							);
 							$count = sizeof( $posts );
 							$posts_ids = "'" . implode( "','", $posts ) . "'";
 
-							if ( isset( $options[ 'views_template_for_' . $type ] ) ) {
-								if ( $options[ 'views_template_for_' . $type ] != 0 ) {
-									$template = get_post( $options[ 'views_template_for_' . $type ] );
+							if ( isset( $WPV_settings[ 'views_template_for_' . $type ] ) ) {
+								if ( $WPV_settings[ 'views_template_for_' . $type ] != 0 ) {
+									$template = get_post( $WPV_settings[ 'views_template_for_' . $type ] );
 									if ( is_object( $template ) ) {
 										printf(
 												'<a href="%s">%s</a>',
@@ -951,10 +837,16 @@ function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 )
 												$template->post_title );
 										if ( $count > 0 ) {
 											$set_count = $wpdb->get_var(
+												$wpdb->prepare(
 													"SELECT COUNT(post_id) FROM {$wpdb->postmeta}
-													WHERE meta_key='_views_template'
-														AND meta_value='{$options['views_template_for_' . $type]}'
-														AND post_id IN ({$posts_ids})" );
+													WHERE meta_key = '_views_template'
+													AND meta_value = %s
+													AND post_id IN ({$posts_ids}) 
+													LIMIT %d",
+													$WPV_settings['views_template_for_' . $type],
+													$count
+												)
+											);
 											if ( ( $count - $set_count ) > 0 ) {
 												?>
 												<span class="js-alret-icon-hide-<?php echo $type; ?>">
@@ -981,12 +873,46 @@ function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 )
 								} else {
 									echo $add_button;
 
+									if ( $count > 0 ) {
+										$set_count = $wpdb->get_var(
+											$wpdb->prepare(
+												"SELECT COUNT(post_id) FROM {$wpdb->postmeta}
+												WHERE meta_key = '_views_template'
+												AND meta_value != %s
+												AND post_id IN ({$posts_ids}) 
+												LIMIT %d",
+												'0',
+												$count
+											)
+										);
+										if ( $set_count > 0) {
+											?>
+											<a class="button button-small js-single-unlink-template-open-dialog" href="#"
+													data-unclear="<?php echo $set_count; ?>"
+													data-slug="<?php echo $type; ?>"
+													data-label="<?php echo htmlentities( $label, ENT_QUOTES ); ?>">
+												<i class="icon-unlink"></i>
+												<?php echo sprintf( __('Clear %d %s', 'wpv-views'), $set_count, $label ); ?>
+											</a>
+											<?php
+										}
+									}
+								}
+							} else {
+								echo $add_button;
+								if ( $count > 0 ) {
 									$set_count = $wpdb->get_var(
+										$wpdb->prepare(
 											"SELECT COUNT(post_id) FROM {$wpdb->postmeta}
-											WHERE meta_key='_views_template'
-												AND meta_value!='0'
-												AND post_id IN ({$posts_ids})" );
-									if ( $set_count > 0) {
+											WHERE meta_key = '_views_template'
+											AND meta_value != %s
+											AND post_id IN ({$posts_ids}) 
+											LIMIT %d",
+											'0',
+											$count
+										)
+									);
+									if ( $set_count > 0 ) {
 										?>
 										<a class="button button-small js-single-unlink-template-open-dialog" href="#"
 												data-unclear="<?php echo $set_count; ?>"
@@ -997,25 +923,6 @@ function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 )
 										</a>
 										<?php
 									}
-								}
-							} else {
-								echo $add_button;
-
-								$set_count = $wpdb->get_var(
-										"SELECT COUNT(post_id) FROM {$wpdb->postmeta}
-										WHERE meta_key='_views_template'
-											AND meta_value!='0'
-											AND post_id IN ({$posts_ids})" );
-								if ( $set_count > 0 ) {
-									?>
-									<a class="button button-small js-single-unlink-template-open-dialog" href="#"
-											data-unclear="<?php echo $set_count; ?>"
-											data-slug="<?php echo $type; ?>"
-											data-label="<?php echo htmlentities( $label, ENT_QUOTES ); ?>">
-										<i class="icon-unlink"></i>
-										<?php echo sprintf( __('Clear %d %s', 'wpv-views'), $set_count, $label ); ?>
-									</a>
-									<?php
 								}
 							}
 						?>
@@ -1065,9 +972,9 @@ function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 )
 				<td>
 					<ul>
 						<?php
-							if ( isset( $options[ 'views_template_archive_for_' . $type ] )
-									&& $options[ 'views_template_archive_for_' . $type ] != 0) {
-								$post = get_post( $options[ 'views_template_archive_for_' . $type ] );
+							if ( isset( $WPV_settings[ 'views_template_archive_for_' . $type ] )
+									&& $WPV_settings[ 'views_template_archive_for_' . $type ] != 0) {
+								$post = get_post( $WPV_settings[ 'views_template_archive_for_' . $type ] );
 								if ( is_object( $post ) ) {
 									printf(
 											'<a href="%s">%s</a>',
@@ -1136,9 +1043,9 @@ function wpv_admin_menu_content_template_listing_by_type_row( $sort, $page = 0 )
 				<td>
 					<ul>
 						<?php
-							if ( isset( $options[ 'views_template_loop_' . $type ] )
-									&& $options[ 'views_template_loop_' . $type ] != 0 ) {
-								$post = get_post( $options['views_template_loop_' . $type] );
+							if ( isset( $WPV_settings[ 'views_template_loop_' . $type ] )
+									&& $WPV_settings[ 'views_template_loop_' . $type ] != 0 ) {
+								$post = get_post( $WPV_settings['views_template_loop_' . $type] );
 								if ( is_object( $post ) ) {
 									printf(
 											'<a href="%s">%s</a>',

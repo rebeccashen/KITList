@@ -249,7 +249,7 @@
 
 		</form>
 
-		<div class="js-errors js-wpv-parametric-dialog-tolset-messages errors-in-parametric-box"></div>
+		<div class="js-errors js-wpv-parametric-dialog-toolset-messages errors-in-parametric-box"></div>
 
 	</div> <!-- .wpv-dialog-content -->
 

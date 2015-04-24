@@ -140,21 +140,25 @@ WPViews.ParentFilterGUI = function( $ ) {
 			WPViews.query_filters.close_filter_row( self.post_row );
 			thiz.hide();
 		} else {
-			var update_message = thiz.data('success'),
-			unsaved_message = thiz.data('unsaved'),
-			action = thiz.data( 'saveaction' ),
-			nonce = thiz.data('nonce'),
-			spinnerContainer = $( self.spinner ).insertBefore( thiz ).show();
-			self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
-			var data = {
-				action: action,
-				id: self.view_id,
-				filter_options: self.post_current_options,
-				wpnonce: nonce
-			};
-			$.post( ajaxurl, data, function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) ) {
-					if ( response != 0 ) {
+			var valid = WPViews.query_filters.validate_filter_options( '.js-filter-post-parent' );
+			if ( valid ) {
+				// update_message = thiz.data('success');
+				// unsaved_message = thiz.data('unsaved');
+				var action = thiz.data( 'saveaction' ),
+				nonce = thiz.data('nonce'),
+				spinnerContainer = $( self.spinner ).insertBefore( thiz ).show(),
+				error_container = thiz
+					.closest( '.js-filter-row' )
+						.find( '.js-wpv-filter-toolset-messages' );
+				self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
+				var data = {
+					action: action,
+					id: self.view_id,
+					filter_options: self.post_current_options,
+					wpnonce: nonce
+				};
+				$.post( ajaxurl, data, function( response ) {
+					if ( response.success ) {
 						$( self.post_close_save_selector )
 							.addClass('button-secondary')
 							.removeClass('button-primary js-wpv-section-unsaved')
@@ -164,22 +168,20 @@ WPViews.ParentFilterGUI = function( $ ) {
 						if ( $( '.js-wpv-section-unsaved' ).length < 1 ) {
 							setConfirmUnload( false );
 						}
-						$( self.post_summary_container_selector ).html( response );
+						$( self.post_summary_container_selector ).html( response.data.summary );
 						WPViews.query_filters.close_and_glow_filter_row( self.post_row, 'wpv-filter-saved' );
 					} else {
-						console.log( "Error: WordPress AJAX returned " + response );
+						WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 					}
-				} else {
-					console.log( "Error: AJAX returned ", response );
-				}
-			})
-			.fail( function( jqXHR, textStatus, errorThrown ) {
-				console.log( "Error: ", textStatus, errorThrown );
-			})
-			.always( function() {
-				spinnerContainer.remove();
-				thiz.hide();
-			});
+				}, 'json' )
+				.fail( function( jqXHR, textStatus, errorThrown ) {
+					console.log( "Error: ", textStatus, errorThrown );
+				})
+				.always( function() {
+					spinnerContainer.remove();
+					thiz.hide();
+				});
+			}
 		}
 	});
 	
@@ -372,11 +374,14 @@ WPViews.ParentFilterGUI = function( $ ) {
 			WPViews.query_filters.close_filter_row( self.tax_row );
 			thiz.hide();
 		} else {
-			var update_message = thiz.data('success'),
-			unsaved_message = thiz.data('unsaved'),
-			action = thiz.data( 'saveaction' ),
+			// update_message = thiz.data('success');
+			// unsaved_message = thiz.data('unsaved');
+			var action = thiz.data( 'saveaction' ),
 			nonce = thiz.data('nonce'),
-			spinnerContainer = $( self.spinner ).insertBefore( thiz ).show();
+			spinnerContainer = $( self.spinner ).insertBefore( thiz ).show(),
+			error_container = thiz
+				.closest( '.js-filter-row' )
+					.find( '.js-wpv-filter-toolset-messages' );
 			self.tax_current_options = $( self.tax_options_container_selector + ' input, ' + self.tax_options_container_selector + ' select' ).serialize();
 			var data = {
 				action: action,
@@ -385,26 +390,22 @@ WPViews.ParentFilterGUI = function( $ ) {
 				wpnonce: nonce
 			};
 			$.post( ajaxurl, data, function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) ) {
-					if ( response != 0 ) {
-						$( self.tax_close_save_selector )
-							.addClass( 'button-secondary' )
-							.removeClass( 'button-primary js-wpv-section-unsaved' )
-							.html(
-								self.icon_edit + $( self.tax_close_save_selector ).data( 'close' )
-							);
-						if ( $( '.js-wpv-section-unsaved' ).length < 1 ) {
-							setConfirmUnload( false );
-						}
-						$( self.tax_summary_container_selector ).html( response );
-						WPViews.query_filters.close_and_glow_filter_row( self.tax_row, 'wpv-filter-saved' );
-					} else {
-						console.log( "Error: WordPress AJAX returned " + response );
+				if ( response.success ) {
+					$( self.tax_close_save_selector )
+						.addClass( 'button-secondary' )
+						.removeClass( 'button-primary js-wpv-section-unsaved' )
+						.html(
+							self.icon_edit + $( self.tax_close_save_selector ).data( 'close' )
+						);
+					if ( $( '.js-wpv-section-unsaved' ).length < 1 ) {
+						setConfirmUnload( false );
 					}
+					$( self.tax_summary_container_selector ).html( response.data.summary );
+					WPViews.query_filters.close_and_glow_filter_row( self.tax_row, 'wpv-filter-saved' );
 				} else {
-					console.log( "Error: AJAX returned ", response );
+					WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 				}
-			})
+			}, 'json' )
 			.fail( function( jqXHR, textStatus, errorThrown ) {
 				console.log( "Error: ", textStatus, errorThrown );
 			})

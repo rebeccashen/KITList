@@ -11,6 +11,8 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 	};
 	self.spinner = '<span class="spinner ajax-loader"></span>&nbsp;&nbsp;';
 	
+	self.edit_screen = ( typeof WPViews.view_edit_screen != 'undefined' ) ? WPViews.view_edit_screen : WPViews.wpa_edit_screen;
+	
 	// ---------------------------------
 	// Inline Content Template add dialog management
 	// ---------------------------------
@@ -363,7 +365,10 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 
 	$( document ).on( 'click', '.js-wpv-ct-update-inline', function() {
 		var thiz = $( this ),
-		thiz_container = thiz.parents('.js-wpv-ct-listing' ),
+		thiz_container = thiz.closest('.js-wpv-ct-listing' ),
+		messages_container = thiz_container
+			.closest( '.js-wpv-content-template-view-list' )
+				.find( '.js-wpv-message-container' ),
 		ct_id = thiz.data( 'id' ),
 		ct_value = window["wpv_ct_inline_editor_" + ct_id].getValue(),
 		spinnerContainer = $( self.spinner ).insertBefore( thiz ).show(),
@@ -374,10 +379,7 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 			wpnonce : $( '#wpv_inline_content_template' ).attr( 'value' )
 		};
 		$.post( ajaxurl, data, function( response ) {
-			 if ( response == 0 ) {
-				// TODO manage this error!
-			 	console.log('Content Template not found');
-			 } else {
+			if ( response.success ) {
 				$( '.js-wpv-ct-update-inline-'+ ct_id )
 					.parent()
 						.find('.toolset-alert-error')
@@ -394,8 +396,10 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 				if ( $( '.js-wpv-section-unsaved' ).length < 1 ) {
 					setConfirmUnload( false );
 				}
-			 }
-		})
+			} else {
+				self.edit_screen.manage_ajax_fail( response.data, messages_container );
+			}
+		}, 'json' )
 		.fail( function( jqXHR, textStatus, errorThrown ) {
 			//console.log( "Error: ", textStatus, errorThrown );
 		})
@@ -410,17 +414,22 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 		e.preventDefault();
 		var thiz = $( this ),
 		thiz_container = thiz.parents('.js-wpv-ct-listing' ),
-		ct_id = thiz_container.data( 'id' );
+		ct_id = thiz_container.data( 'id' ),
+		messages_container = thiz.closest( '.js-wpv-content-template-view-list' ).find( '.js-wpv-message-container' );
 		if ( $( '.js-wpv-dialog-remove-content-template-from-view' ).hasClass( 'js-wpv-dialog-dismissed' ) ) {
 			data = {
 				action : 'wpv_remove_content_template_from_view',
 				view_id : self.view_id,
 				template_id : ct_id,
 				dismiss : 'true',
-				wpnonce : $('#wpv-ct-inline-edit').attr( 'value' )
+				wpnonce : $('#wpv_inline_content_template').attr( 'value' )
 			};
 			$.post( ajaxurl, data, function( response ) {
-				self.remove_inline_content_template( ct_id, thiz_container );
+				if ( response.success ) {
+					self.remove_inline_content_template( ct_id, thiz_container );
+				} else {
+					self.edit_screen.manage_ajax_fail( response.data, messages_container );
+				}
 			});
 		} else {
 			$.colorbox({
@@ -450,12 +459,16 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 							view_id : self.view_id,
 							template_id : ct_id,
 							dismiss : dismiss,
-							wpnonce : $('#wpv-ct-inline-edit').attr( 'value' )
+							wpnonce : $('#wpv_inline_content_template').attr( 'value' )
 						};
 						$.post( ajaxurl, data, function( response ) {
-							self.remove_inline_content_template( ct_id, thiz_container );
-							if ( dismiss == 'true' ) {
-								$( '.js-wpv-dialog-remove-content-template-from-view' ).addClass( 'js-wpv-dialog-dismissed' );
+							if ( response.success ) {
+								self.remove_inline_content_template( ct_id, thiz_container );
+								if ( dismiss == 'true' ) {
+									$( '.js-wpv-dialog-remove-content-template-from-view' ).addClass( 'js-wpv-dialog-dismissed' );
+								}
+							} else {
+								self.edit_screen.manage_ajax_fail( response.data, messages_container );
 							}
 						})
 						.fail( function( jqXHR, textStatus, errorThrown ) {
@@ -475,7 +488,10 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 	self.remove_inline_content_template = function( template_id, template_container ) {
 		template_container
 			.addClass( 'wpv-inline-content-template-deleted' )
-			.fadeOut( 500, function() {
+			.animate({
+			  height: "toggle",
+			  opacity: "toggle"
+			}, 400, function() {
 				if ( typeof window["wpv_ct_inline_editor_" + template_id] !== 'undefined' ) {
 					window["wpv_ct_inline_editor_" + template_id].focus();
 					delete window["wpv_ct_inline_editor_" + template_id];
@@ -489,50 +505,6 @@ WPViews.ViewEditScreenInlineCT = function( $ ) {
 				}
 			});
 	};
-	
-	// Remove
-	/*
-	$( document ).on( 'click', '.js-remove-template-from-view', function( e ) {
-		e.preventDefault();
-		var data = {
-			action : 'wpv_remove_content_template_from_view_process',
-			view_id : $(this).data('viewid'),
-			id : $(this).data('id'),
-			wpnonce : $('#wpv-ct-inline-edit').attr( 'value' )
-		};
-		$.post( ajaxurl, data, function( response ) {
-			$.colorbox.close();
-			//console.log( response );
-			// @todo enought of this nonsense of listing-show and listing-delete
-			// shown are there, delete are deleted, FGS
-			$('#wpv-ct-listing-'+id).removeClass('js-wpv-ct-listing-show').addClass('js-wpv-ct-listing-delete').addClass('hidden');
-			if ( $(".js-wpv-content-template-view-list ul li.js-wpv-ct-listing-show").size() < 1 ){
-				$('.js-wpv-content-template-section-errors').wpvToolsetMessage({
-					type: 'info',
-					stay: true,
-					classname: 'wpv_ct_inline_message',
-					text : wpv_inline_templates_strings.no_inline_templates,
-					close: true,
-					onClose: function() {
-						$('.wpv-settings-templates').hide();
-					}
-				});
-			}
-			$('.js-wpv-content-template-section-errors').wpvToolsetMessage({
-				text:wpv_inline_templates_strings.unassign_success,
-				stay:false,
-				close:true,
-				fadeOut:2000,
-				fadeIn: 1000,
-				type: 'success'
-			});
-		});
-		return false;
-	});
-	*/
-	// ---------------------------------
-	// Inline Content Template add dialog management
-	// ---------------------------------
 	
 	self.init = function() {
 	

@@ -86,7 +86,8 @@ class WPV_Taxonomy_Filter {
 				'name' => $category->label,
 				'present' => 'tax_' . $taxonomy . '_relationship',
 				'callback' => array( 'WPV_Taxonomy_Filter', 'wpv_add_new_filter_taxonomy_list_item' ),
-				'args' => $category
+				'args' => $category,
+				'group' => __( 'Taxonomies', 'wpv-views' )
 			);
 		}
 		return $filters;
@@ -121,7 +122,6 @@ class WPV_Taxonomy_Filter {
 	*/
 
 	static function wpv_add_filter_taxonomy_list_item( $view_settings ) {
-		global $sitepress;
 		if ( ! isset( $view_settings['taxonomy_relationship'] ) ) {
 			$view_settings['taxonomy_relationship'] = 'AND';
 		}
@@ -135,16 +135,22 @@ class WPV_Taxonomy_Filter {
 				if ( ! isset( $view_settings[$save_name] ) ) {
 					$view_settings[$save_name] = array();
 				}
-				if ( isset( $sitepress ) && function_exists( 'icl_object_id' ) ) {
-					// Adjust for WPML support
-					$trans_term_ids = array();
-					foreach ( $view_settings[$save_name] as $untrans_term_id ) {
-						$trans_term_ids[] = icl_object_id( $untrans_term_id, $category->name, true );
+				if ( ! empty( $view_settings[$save_name] ) ) {
+					$adjusted_term_ids = array();
+					foreach ( $view_settings[$save_name] as $candidate_term_id ) {
+						// WordPress 4.2 compatibility - split terms
+						$candidate_term_id_splitted = wpv_compat_get_split_term( $candidate_term_id, $category->name );
+						if ( $candidate_term_id_splitted ) {
+							$candidate_term_id = $candidate_term_id_splitted;
+						}
+						// WPML support
+						$candidate_term_id = apply_filters( 'translate_object_id', $candidate_term_id, $category->name, true, null );
+						$adjusted_term_ids[] = $candidate_term_id;
 					}
-					$view_settings[$save_name] = $trans_term_ids;
+					$view_settings[$save_name] = $adjusted_term_ids;
 				}
 				$name = ( $category->name == 'category' ) ? 'post_category' : 'tax_input[' . $category->name . ']';
-				$td .= WPV_Taxonomy_Filter::wpv_get_list_item_ui_post_taxonomy($category, $view_settings[$save_name], $view_settings);
+				$td .= WPV_Taxonomy_Filter::wpv_get_list_item_ui_post_taxonomy( $category, $view_settings[$save_name], $view_settings );
 				if ( $summary != '' ) {
 					if ( $view_settings['taxonomy_relationship'] == 'OR') {
 						$summary .= __( ' OR ', 'wpv-views' );
@@ -169,7 +175,7 @@ class WPV_Taxonomy_Filter {
 			}
 			?>
 			<div id="wpv-filter-taxonomy-edit" class="wpv-filter-edit js-wpv-filter-edit js-wpv-filter-taxonomy-edit js-wpv-filter-options" style="padding-bottom:28px;">
-			<?php echo $td;?>
+				<?php echo $td;?>
 				<div class="wpv-filter-taxonomy-relationship wpv-filter-multiple-element js-wpv-filter-taxonomy-relationship">
 					<h4><?php _e('Taxonomy relationship:', 'wpv-views') ?></h4>
 					<div class="wpv-filter-multiple-element-options">
@@ -180,7 +186,7 @@ class WPV_Taxonomy_Filter {
 						</select>
 					</div>
 				</div>
-				<div class="js-wpv-filter-toolset-messages"></div>
+				<div class="js-wpv-filter-multiple-toolset-messages"></div>
 				<span class="filter-doc-help">
 				<?php echo sprintf(
 					__( '%sLearn about filtering by taxonomy%s', 'wpv-views' ),
@@ -208,40 +214,67 @@ class WPV_Taxonomy_Filter {
 	*/
 
 	static function wpv_get_list_item_ui_post_taxonomy( $category, $cats_selected, $view_settings = array() ) {
+		global $WP_Views_fapi;
 		$type = ( $category->name == 'category' ) ? 'post_category' : 'tax_input[' . $category->name . ']';
 		$taxonomy = $category->name;
 		$taxonomy_name = $category->label;
 		if ( ! isset($view_settings['tax_' . $taxonomy . '_relationship'] ) ) {
 			$view_settings['tax_' . $taxonomy . '_relationship'] = 'IN';
 		}
-		if ( ! isset( $view_settings['taxonomy-' . $taxonomy . '-attribute-url'] ) || empty( $view_settings['taxonomy-' . $taxonomy . '-attribute-url'] ) ) {
+		if ( 
+			! isset( $view_settings['taxonomy-' . $taxonomy . '-attribute-url'] ) 
+			|| empty( $view_settings['taxonomy-' . $taxonomy . '-attribute-url'] ) 
+		) {
 			$view_settings['taxonomy-' . $taxonomy . '-attribute-url'] = 'wpv' . $taxonomy;
 		}
-		if ( isset( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] ) && is_array( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] ) ) {
+		if ( 
+			isset( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] ) 
+			&& is_array( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] ) 
+		) {
 			$view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] = $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'][0];
 		}
 		if ( ! isset( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] ) ) {
 			$view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] = 'slug';
 		}
+		if ( ! isset( $view_settings['taxonomy-' . $taxonomy . '-framework'] ) ) {
+			$view_settings['taxonomy-' . $taxonomy . '-framework'] = '';
+		}
 		ob_start();
 		?>
-			<div class="wpv-filter-multiple-element js-wpv-filter-multiple-element js-wpv-filter-taxonomy-multiple-element js-wpv-filter-row-taxonomy-<?php echo $taxonomy; ?> js-wpv-filter-row-tax-<?php echo $type; ?>" data-taxonomy="<?php echo $taxonomy; ?>">
+			<div class="wpv-filter-multiple-element js-wpv-filter-multiple-element js-wpv-filter-taxonomy-multiple-element js-wpv-filter-row-taxonomy-<?php echo esc_attr( $taxonomy ); ?> js-wpv-filter-row-tax-<?php echo esc_attr( $type ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>">
 				<h4><?php echo $taxonomy_name; ?></h4>
 				<span class="wpv-filter-multiple-element-delete">
-					<button class="button button-secondary button-small js-filter-remove" data-taxonomy="<?php echo $taxonomy; ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_taxonomy_delete_nonce' );?>">
+					<button class="button button-secondary button-small js-filter-remove" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_taxonomy_delete_nonce' );?>">
 						<i class="icon-trash"></i>&nbsp;<?php _e( 'Delete', 'wpv-views' ); ?>
 					</button>
 				</span>
 				<div class="wpv-filter-multiple-element-options">
-				<?php _e('Taxonomy is:', 'wpv-views'); ?>
-					<select class="wpv_taxonomy_relationship js-wpv-taxonomy-relationship" name="tax_<?php echo $taxonomy; ?>_relationship">
+				<?php echo sprintf( __( '%s are:', 'wpv-views' ), $taxonomy_name ); ?>
+					<select class="wpv_taxonomy_relationship js-wpv-taxonomy-relationship js-wpv-filter-validate" name="tax_<?php echo esc_attr( $taxonomy ); ?>_relationship" data-type="select" autocomplete="off">
+						<?php 
+						if (
+							! $WP_Views_fapi->framework_valid
+							&& $view_settings['tax_' . $taxonomy . '_relationship'] == 'framework'
+						) {
+						?>
+						<option value=""><?php _e( 'Select one option...', 'wpv-views' ); ?></option>
+						<?php
+						} ?>
 						<option value="IN" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'IN' ); ?>><?php _e('Any of the following', 'wpv-views'); ?></option>
-						<option value="NOT IN" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'NOT IN' ); ?>><?php _e('NOT one of the following', 'wpv-views'); ?></option>
+						<option value="NOT IN" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'NOT IN' ); ?>><?php _e('No one of the following', 'wpv-views'); ?></option>
 						<option value="AND" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'AND' ); ?>><?php _e('All of the following', 'wpv-views'); ?></option>
-						<option value="FROM PAGE" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM PAGE' ); ?>><?php _e('Value set by the current page', 'wpv-views'); ?></option>
-						<option value="FROM ATTRIBUTE" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM ATTRIBUTE' ); ?>><?php _e('Value set by View shortcode attribute', 'wpv-views'); ?></option>
-						<option value="FROM URL" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM URL' ); ?>><?php _e('Value set by URL parameter', 'wpv-views'); ?></option>
-						<option value="FROM PARENT VIEW" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM PARENT VIEW' ); ?>><?php _e('Value set by parent view', 'wpv-views'); ?></option>
+						<option value="FROM PAGE" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM PAGE' ); ?>><?php _e('Set by the current page', 'wpv-views'); ?></option>
+						<option value="FROM PARENT VIEW" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM PARENT VIEW' ); ?>><?php _e('Set by the parent View', 'wpv-views'); ?></option>
+						<option value="FROM ATTRIBUTE" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM ATTRIBUTE' ); ?>><?php _e('Set by one View shortcode attribute', 'wpv-views'); ?></option>
+						<option value="FROM URL" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'FROM URL' ); ?>><?php _e('Set by one URL parameter', 'wpv-views'); ?></option>
+						<?php
+						if ( $WP_Views_fapi->framework_valid ) {
+							$framework_data = $WP_Views_fapi->framework_data
+						?>
+						<option value="framework" <?php selected( $view_settings['tax_' . $taxonomy . '_relationship'], 'framework' ); ?>><?php echo sprintf( __('Set by one %s key', 'wpv-views'), sanitize_text_field( $framework_data['name'] ) ); ?></option>
+						<?php
+						}
+						?>
 					</select>
 					<?php
 					$hidden = '';
@@ -249,7 +282,7 @@ class WPV_Taxonomy_Filter {
 						$hidden = ' hidden';
 					}
 					?>
-					<ul id="taxonomy-<?php echo $taxonomy; ?>" class="wpv-mightlong-list wpv-filter-multiple-element-options-mode js-taxonomy-checklist<?php echo $hidden; ?>">
+					<ul id="taxonomy-<?php echo esc_attr( $taxonomy ); ?>" class="wpv-mightlong-list wpv-filter-multiple-element-options-mode js-taxonomy-checklist<?php echo $hidden; ?>">
 						<?php 
 						$my_walker = new WPV_Walker_Taxonomy_Checkboxes_Flat();
 						wp_terms_checklist( 0, array( 'taxonomy' => $taxonomy, 'selected_cats' => $cats_selected, 'walker' => $my_walker ) ) ?>
@@ -260,33 +293,60 @@ class WPV_Taxonomy_Filter {
 						$hidden = ' hidden';
 					}
 					?>
-					<ul id="taxonomy-<?php echo $taxonomy; ?>-attribute-url" class="wpv-filter-multiple-element-options-mode js-taxonomy-parameter<?php echo $hidden; ?>">
-						<li>
-							<label><?php echo __('Value: ');?></label>
-							<?php $checked = $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] == 'name' ? 'checked="checked"' : ''; ?>
-							<label><input type="radio" name="taxonomy-<?php echo $taxonomy; ?>-attribute-url-format[]" value="name" <?php echo $checked;?> /><?php echo __('Taxonomy name', 'wpv-views');?></label>
-							<?php $checked = $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'] == 'slug' ? 'checked="checked"' : ''; ?>
-							<label><input type="radio" name="taxonomy-<?php echo $taxonomy; ?>-attribute-url-format[]" value="slug" <?php echo $checked;?> /><?php echo __('Taxonomy slug', 'wpv-views');?></label>
-						</li>
-						<li>
-							<label class="js-taxonomy-param-label" data-attribute="<?php echo __('Shortcode attribute', 'wpv-views');?>" data-parameter="<?php echo __('URL parameter', 'wpv-views');?>"><?php echo __('Shortcode attribute', 'wpv-views');?></label>:
-							<input type="text" data-class="js-taxonomy-<?php echo $taxonomy; ?>-param" data-type="url" class="wpv_taxonomy_param js-taxonomy-param js-taxonomy-<?php echo $taxonomy; ?>-param js-wpv-filter-validate" name="taxonomy-<?php echo $taxonomy; ?>-attribute-url" value="<?php echo esc_attr($view_settings['taxonomy-' . $taxonomy . '-attribute-url']); ?>" />
-						</li>
-						<li>
+					<div id="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-attribute-url" class="wpv-filter-multiple-element-options-mode js-taxonomy-parameter<?php echo $hidden; ?>">
+						<span class="wpv-combo">
+						<?php echo __( 'The', 'wpv-views' ); ?>
+						<select name="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-attribute-url-format[]">
+							<option value="slug" <?php selected( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'], 'slug' ); ?>><?php echo sprintf( __( '%s slug', 'wpv-views' ), $taxonomy );?></option>
+							<option value="name" <?php selected( $view_settings['taxonomy-' . $taxonomy . '-attribute-url-format'], 'name' ); ?>><?php echo sprintf( __( '%s name', 'wpv-views' ), $taxonomy );?></option>
+						</select>
+						</span>
+						<span class="wpv-combo">
+						<?php echo __( 'is', 'wpv-views' ); ?>
+						<?php
+							if ( ! isset( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'] ) ) {
+								$view_settings['taxonomy-' . $taxonomy . '-attribute-operator'] = 'IN';
+							}
+						?>
+						<select name="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-attribute-operator" id="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-attribute-operator" class="js-taxonomy-<?php echo esc_attr( $taxonomy ); ?>-attribute-operator">
+							<option value="IN" <?php echo selected( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'], 'IN' ); ?>><?php echo __('any of the values', 'wpv-views'); ?></option>
+							<option value="NOT IN" <?php echo selected( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'], 'NOT IN' ); ?>><?php echo __('not one of the values', 'wpv-views'); ?></option>
+							<option value="AND" <?php echo selected( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'], 'AND' ); ?>><?php echo __('all of the values', 'wpv-views'); ?></option>
+						</select>
+						</span>
+						<?php echo __( ' coming from the ', 'wpv-views' ); ?>
+						<span class="wpv-combo">
+						<span class="js-taxonomy-param-label" data-attribute="<?php echo esc_attr( __( 'Shortcode attribute', 'wpv-views' ) );?>" data-parameter="<?php echo esc_attr( __( 'URL parameter', 'wpv-views' ) );?>"><?php echo ( $view_settings['tax_' . $taxonomy . '_relationship'] == 'FROM URL' ) ? __( 'URL parameter', 'wpv-views' ) : __( 'Shortcode attribute', 'wpv-views' );?></span>
+						<input type="text" data-class="js-taxonomy-<?php echo esc_attr( $taxonomy ); ?>-param" data-type="url" class="wpv_taxonomy_param js-taxonomy-param js-taxonomy-<?php echo esc_attr( $taxonomy ); ?>-param js-wpv-filter-validate" name="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-attribute-url" value="<?php echo esc_attr($view_settings['taxonomy-' . $taxonomy . '-attribute-url']); ?>" />
+						</span>
+					</div>
+					<?php
+					$hidden = '';
+					if ( ! in_array( $view_settings['tax_' . $taxonomy . '_relationship'], array( 'framework' ) ) ) {
+						$hidden = ' hidden';
+					}
+					?>
+					<div id="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-framework" class="wpv-filter-multiple-element-options-mode js-taxonomy-framework<?php echo $hidden; ?>">
+					<?php if ( $WP_Views_fapi->framework_valid ) { ?>
+						<label for="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-framework-select"><?php _e( 'Use the Framework value for', 'wpv-views' ); ?></label>
+						<select id="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-framework-select" name="taxonomy-<?php echo esc_attr( $taxonomy ); ?>-framework" autocomplete="off">
+							<option value=""><?php _e( 'Select a key', 'wpv-views' ); ?></option>
 							<?php
-								if (!isset($view_settings['taxonomy-' . $taxonomy . '-attribute-operator'])) {
-									$view_settings['taxonomy-' . $taxonomy . '-attribute-operator'] = 'IN';
-								}
+							$fw_key_options = array();
+							$fw_key_options = apply_filters( 'wpv_filter_extend_framework_options_for_category', $fw_key_options );
+							foreach ( $fw_key_options as $index => $value ) {
+								?>
+								<option value="<?php echo esc_attr( $index ); ?>" <?php selected( $view_settings['taxonomy-' . $taxonomy . '-framework'], $index ); ?>><?php echo $value; ?></option>
+								<?php
+							}
 							?>
-							<label for="taxonomy-<?php echo $taxonomy; ?>-attribute-operator"><?php echo __('Operator', 'wpv-views'); ?></label>
-							<select name="taxonomy-<?php echo $taxonomy; ?>-attribute-operator" id="taxonomy-<?php echo $taxonomy; ?>-attribute-operator" class="js-taxonomy-<?php echo $taxonomy; ?>-attribute-operator">
-								<option value="IN"<?php if ( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'] == 'IN' ) echo ' selected="selected"'; ?>><?php echo __('IN', 'wpv-views'); ?></option>
-								<option value="NOT IN"<?php if ( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'] == 'NOT IN' ) echo ' selected="selected"'; ?>><?php echo __('NOT IN', 'wpv-views'); ?></option>
-								<option value="AND"<?php if ( $view_settings['taxonomy-' . $taxonomy . '-attribute-operator'] == 'AND' ) echo ' selected="selected"'; ?>><?php echo __('AND', 'wpv-views'); ?></option>
-							</select>
-						</li>
-					</ul>
+						</select>
+					<?php } else {
+						$WP_Views_fapi->framework_missing_message_for_filters( false, false );
+					} ?>
+					</div>
 				</div>
+				<div class="js-wpv-filter-toolset-messages"></div>
 			</div>
 		<?php
 		$buffer = ob_get_clean();
@@ -303,21 +363,62 @@ class WPV_Taxonomy_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( empty( $_POST['filter_taxonomy'] ) ) {
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
 		$change = false;
+		$view_id = $_POST['id'];
 		parse_str( $_POST['filter_taxonomy'], $filter_taxonomy );
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
 		foreach ( $filter_taxonomy as $filter_key => $filter_data ) {
-			if ( ! isset( $view_array[$filter_key] ) || $filter_data != $view_array[$filter_key] ) {
+			if ( 
+				! isset( $view_array[$filter_key] ) 
+				|| $filter_data != $view_array[$filter_key] 
+			) {
+				if ( is_array( $filter_data ) ) {
+					$filter_data = array_map( 'sanitize_text_field', $filter_data );
+				} else {
+					$filter_data = sanitize_text_field( $filter_data );
+				}
 				$change = true;
 				$view_array[$filter_key] = $filter_data;
 			}
 		}
 		if ( $change ) {
-			$success = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
 		$summary = __( 'Select posts with taxonomy: ', 'wpv-views' );
 		$result = '';
@@ -341,8 +442,12 @@ class WPV_Taxonomy_Filter {
 			}
 		}
 		$summary .= $result;
-		echo $summary;
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Taxonomy filter saved', 'wpv-views' ),
+			'summary' => $summary
+		);
+		wp_send_json_success( $data );
 	}
 
 	
@@ -356,7 +461,7 @@ class WPV_Taxonomy_Filter {
 			$save_name = ( $category->name == 'category' ) ? 'post_category' : 'tax_input_' . $category->name;
 			$relationship_name = ( $category->name == 'category' ) ? 'tax_category_relationship' : 'tax_' . $category->name . '_relationship';
 
-			if (isset($view_settings[$relationship_name])) {
+			if ( isset( $view_settings[$relationship_name] )) {
 
 				if (!isset($view_settings[$save_name])) {
 					$view_settings[$save_name] = array();
@@ -391,9 +496,33 @@ class WPV_Taxonomy_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 		$len = isset( $view_array['filter_controls_field_name'] ) ? count( $view_array['filter_controls_field_name'] ) : 0;
@@ -404,6 +533,7 @@ class WPV_Taxonomy_Filter {
 				'taxonomy-' . $taxonomy . '-attribute-url',
 				'taxonomy-' . $taxonomy . '-attribute-url-format',
 				'taxonomy-' . $taxonomy . '-attribute-operator',
+				'taxonomy-' . $taxonomy . '-framework'
 			);
 			if ( 'category' == $taxonomy ) {
 				$to_delete[] = 'post_category';
@@ -428,8 +558,12 @@ class WPV_Taxonomy_Filter {
 			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Taxonomy filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 
 

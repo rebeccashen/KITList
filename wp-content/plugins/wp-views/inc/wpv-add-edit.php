@@ -6,7 +6,6 @@
 
 /** General TODOs
 * TODO Create extra files to make this screen modular. STATUS: 90%
-* TODO Require files only when needed
 */
 
 // Filter section files
@@ -31,20 +30,26 @@ require_once WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon.class.php';
  * View edit screen
  */
 function views_redesign_html() {
-	global $WP_Views, $post, $views_edit_help;
+	global $WP_Views, $post;
 	
-	if ( isset( $_GET['view_id'] ) && is_numeric( $_GET['view_id'] ) ) {
+	if ( 
+		isset( $_GET['view_id'] ) 
+		&& is_numeric( $_GET['view_id'] ) 
+	) {
 		do_action('views_edit_screen');
-		$view_id = (int)$_GET['view_id'];
+		$view_id = (int) $_GET['view_id'];
 		$view = get_post( $view_id );
 		if ( null == $view ) {
 			wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views' ) );
 		} elseif ( 'view'!= $view->post_type ) {
 			wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views' ) );
 		} else {
-			$view_settings = $WP_Views->get_view_settings($_GET['view_id']);
-			$view_layout_settings = get_post_meta($_GET['view_id'], '_wpv_layout_settings', true);
-			if (isset($view_settings['view-query-mode']) && ('normal' ==  $view_settings['view-query-mode'])) {
+			$view_settings = get_post_meta( $_GET['view_id'], '_wpv_settings', true );
+			$view_layout_settings = get_post_meta( $_GET['view_id'], '_wpv_layout_settings', true );
+			if (
+				isset( $view_settings['view-query-mode'] ) 
+				&& ( 'normal' ==  $view_settings['view-query-mode'] )
+			) {
 				$post = $view;
 				if ( get_post_status( $view_id ) == 'trash' ) {
 					wpv_die_toolset_alert_error( __( 'You can’t edit this View because it is in the Trash. Please restore it and try again.', 'wpv-views' ) );
@@ -63,7 +68,10 @@ function views_redesign_html() {
 	*/
 	?>
 	<div id="screen-meta-dup" class="metabox-prefs js-screen-meta-dup hidden">
-		<div id="screen-options-wrap" aria-label="<?php echo htmlentities( __('Screen Options Tab'), ENT_QUOTES ); ?>" class="wpv-screen-options js-wpv-show-hide-container" data-dpsneedsfilter="<?php echo htmlentities( __('The parametric search settings section has unsaved changes, so you can not hide it', 'wpv-views'), ENT_QUOTES ); ?>" data-pagneedsfilter="<?php echo htmlentities( __('Pagination requires the Filter HTML section to be visible.', 'wpv-views'), ENT_QUOTES ); ?>" data-unclickable="<?php echo htmlentities( __('This section has unsaved changes, so you can not hide it', 'wpv-views'), ENT_QUOTES ); ?>">
+		<div id="screen-options-wrap" aria-label="<?php echo esc_attr( __('Screen Options Tab') ); ?>" class="wpv-screen-options js-wpv-show-hide-container" 
+			data-dpsneedsfilter="<?php echo esc_attr( __('The parametric search settings section has unsaved changes, so you can not hide it', 'wpv-views') ); ?>" 
+			data-pagneedsfilter="<?php echo esc_attr( __('Pagination requires the Filter HTML section to be visible.', 'wpv-views') ); ?>" 
+			data-unclickable="<?php echo esc_attr( __('This section has unsaved changes, so you can not hide it', 'wpv-views') ); ?>">
 			<h5><?php _e('Show on screen', 'wpv-views');?></h5>
 			<p>
 				<small><?php echo __('Note that those Screen Options are set per View.', 'wpv-views');?></small>
@@ -71,18 +79,25 @@ function views_redesign_html() {
 			<?php
 				$sections = array();
 				$sections = apply_filters( 'wpv_sections_query_show_hide', $sections );
-				if ( !empty( $sections ) ) {
+				if ( ! empty( $sections ) ) {
 			?>
 			<div class="wpv-show-hide-section wpv-show-hide-section-query js-wpv-show-hide-section" data-metasection="wpv-query-section">
 				<h6><?php _e('Query section', 'wpv-views'); ?></h6>
 				<span class="js-wpv-screen-pref">
-				<?php if ( isset( $view_settings['metasections-hep-show-hide'] ) && isset( $view_settings['metasections-hep-show-hide']['wpv-query-help'] ) ) {
+				<?php 
+				if ( 
+					isset( $view_settings['metasections-hep-show-hide'] ) 
+					&& isset( $view_settings['metasections-hep-show-hide']['wpv-query-help'] ) 
+				) {
 					$state = $view_settings['metasections-hep-show-hide']['wpv-query-help'];
 				} else {
 					$state = 'on';
 				} ?>
-				<label for="wpv-show-hide-query-help"><input type="checkbox" id="wpv-show-hide-query-help" data-metasection="query" class="js-wpv-show-hide-help js-wpv-show-hide-query-help"<?php if ('on' == $state) echo ' checked="checked"'; ?> /><?php echo __('Display Query section help', 'wpv-views'); ?></label>
-				<input name="wpv-query-help" type="hidden" class="js-wpv-show-hide-help-value js-wpv-show-hide-query-help-value" value="<?php echo $state; ?>" />
+				<label for="wpv-show-hide-query-help">
+					<input type="checkbox" id="wpv-show-hide-query-help" data-metasection="query" class="js-wpv-show-hide-help js-wpv-show-hide-query-help" <?php checked( 'on', $state ); ?> autocomplete="off" />
+					<?php echo __('Display Query section help', 'wpv-views'); ?>
+				</label>
+				<input name="wpv-query-help" type="hidden" class="js-wpv-show-hide-help-value js-wpv-show-hide-query-help-value" value="<?php echo esc_attr( $state ); ?>" autocomplete="off" />
 				</span>
 				<?php
 					foreach ( $sections as $key => $values ) {
@@ -92,8 +107,11 @@ function views_redesign_html() {
 							$values['state'] = 'on';
 						} ?>
 						<span class="js-wpv-screen-pref">
-						<label for="wpv-show-hide-<?php echo $key; ?>"><input data-section="<?php echo $key; ?>" type="checkbox" id="wpv-show-hide-<?php echo $key; ?>" class="js-wpv-show-hide js-wpv-show-hide-<?php echo $key; ?>"<?php if ('on' == $values['state']) echo ' checked="checked"'; ?> /><?php echo $values['name']; ?></label>
-						<input data-section="<?php echo $key; ?>" name="<?php echo $key; ?>" class="js-wpv-show-hide-value" type="hidden" value="<?php echo $values['state']; ?>" />
+						<label for="wpv-show-hide-<?php echo esc_attr( $key ); ?>">
+							<input data-section="<?php echo esc_attr( $key ); ?>" type="checkbox" id="wpv-show-hide-<?php echo esc_attr( $key ); ?>" class="js-wpv-show-hide js-wpv-show-hide-<?php echo esc_attr( $key ); ?>" <?php checked( 'on', $values['state'] ); ?> autocomplete="off" />
+							<?php echo $values['name']; ?>
+						</label>
+						<input data-section="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>" class="js-wpv-show-hide-value" type="hidden" value="<?php echo esc_attr( $values['state'] ); ?>" autocomplete="off" />
 						</span>
 					<?php }
 				?>
@@ -107,24 +125,37 @@ function views_redesign_html() {
 			<div class="wpv-show-hide-section wpv-show-hide-section-filter js-wpv-show-hide-section" data-metasection="wpv-filter-section">
 				<h6><?php _e('Filter section', 'wpv-views'); ?></h6>
 				<span class="js-wpv-screen-pref">
-				<?php if ( isset( $view_settings['metasections-hep-show-hide'] ) && isset( $view_settings['metasections-hep-show-hide']['wpv-filter-help'] ) ) {
+				<?php 
+				if ( 
+					isset( $view_settings['metasections-hep-show-hide'] ) 
+					&& isset( $view_settings['metasections-hep-show-hide']['wpv-filter-help'] ) 
+				) {
 					$state = $view_settings['metasections-hep-show-hide']['wpv-filter-help'];
 				} else {
 					$state = 'on';
 				} ?>
-				<label for="wpv-show-hide-filter-help"><input type="checkbox" id="wpv-show-hide-filter-help" data-metasection="filter" class="js-wpv-show-hide-help js-wpv-show-hide-filter-help"<?php if ('on' == $state) echo ' checked="checked"'; ?> /><?php echo __('Display Filter section help', 'wpv-views'); ?></label>
-				<input name="wpv-filter-help" type="hidden" class="js-wpv-show-hide-help-value js-wpv-show-hide-filter-help-value" value="<?php echo $state; ?>" />
+				<label for="wpv-show-hide-filter-help">
+					<input type="checkbox" id="wpv-show-hide-filter-help" data-metasection="filter" class="js-wpv-show-hide-help js-wpv-show-hide-filter-help" <?php checked( 'on', $state ); ?> autocomplete="off" />
+					<?php echo __('Display Filter section help', 'wpv-views'); ?>
+				</label>
+				<input name="wpv-filter-help" type="hidden" class="js-wpv-show-hide-help-value js-wpv-show-hide-filter-help-value" value="<?php echo esc_attr( $state ); ?>" autocomplete="off" />
 				</span>
 				<?php
 					foreach ( $sections as $key => $values ) {
-						if ( isset( $view_settings['sections-show-hide'] ) && isset( $view_settings['sections-show-hide'][$key] ) ) {
+						if ( 
+							isset( $view_settings['sections-show-hide'] ) 
+							&& isset( $view_settings['sections-show-hide'][$key] ) 
+						) {
 							$values['state'] = $view_settings['sections-show-hide'][$key];
 						} else {
 							$values['state'] = 'on';
 						} ?>
 						<span class="js-wpv-screen-pref">
-						<label for="wpv-show-hide-<?php echo $key; ?>"><input data-section="<?php echo $key; ?>" type="checkbox" id="wpv-show-hide-<?php echo $key; ?>" class="js-wpv-show-hide js-wpv-show-hide-<?php echo $key; ?>"<?php if ('on' == $values['state']) echo ' checked="checked"'; ?> /><?php echo $values['name']; ?></label>
-						<input data-section="<?php echo $key; ?>" name="<?php echo $key; ?>" class="js-wpv-show-hide-value" type="hidden" value="<?php echo $values['state']; ?>" />
+						<label for="wpv-show-hide-<?php echo esc_attr( $key ); ?>">
+							<input data-section="<?php echo esc_attr( $key ); ?>" type="checkbox" id="wpv-show-hide-<?php echo esc_attr( $key ); ?>" class="js-wpv-show-hide js-wpv-show-hide-<?php echo esc_attr( $key ); ?>" <?php checked( 'on', $values['state'] ); ?> autocomplete="off" />
+							<?php echo $values['name']; ?>
+						</label>
+						<input data-section="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>" class="js-wpv-show-hide-value" type="hidden" value="<?php echo esc_attr( $values['state'] ); ?>" autocomplete="off" />
 						</span>
 					<?php }
 				?>
@@ -137,44 +168,59 @@ function views_redesign_html() {
 				if ( '' == $js && isset( $sections['layout-settings-extra-js'] ) ) {
 					unset( $sections['layout-settings-extra-js'] );
 				}
-				if ( !empty( $sections ) ) {
+				if ( ! empty( $sections ) ) {
 			?>
 			<div class="wpv-show-hide-section wpv-show-hide-section-layout js-wpv-show-hide-section" data-metasection="wpv-layout-section">
 				<h6><?php _e( 'Loop Output section', 'wpv-views' ); ?></h6>
 				<span class="js-wpv-screen-pref">
-				<?php if ( isset( $view_settings['metasections-hep-show-hide'] ) && isset( $view_settings['metasections-hep-show-hide']['wpv-layout-help'] ) ) {
+				<?php
+				if ( 
+					isset( $view_settings['metasections-hep-show-hide'] ) 
+					&& isset( $view_settings['metasections-hep-show-hide']['wpv-layout-help'] ) 
+				) {
 					$state = $view_settings['metasections-hep-show-hide']['wpv-layout-help'];
 				} else {
 					$state = 'on';
 				} ?>
-				<label for="wpv-show-hide-layout-help"><input type="checkbox" id="wpv-show-hide-layout-help" data-metasection="layout" class="js-wpv-show-hide-help js-wpv-show-hide-layout-help"<?php if ('on' == $state) echo ' checked="checked"'; ?> /><?php echo __( 'Display help for the Loop Output section', 'wpv-views'); ?></label>
-				<input name="wpv-layout-help" type="hidden" class="js-wpv-show-hide-help-value js-wpv-show-hide-layout-help-value" value="<?php echo $state; ?>" />
+				<label for="wpv-show-hide-layout-help">
+					<input type="checkbox" id="wpv-show-hide-layout-help" data-metasection="layout" class="js-wpv-show-hide-help js-wpv-show-hide-layout-help" <?php checked( 'on', $state ); ?> autocomplete="off" />
+					<?php echo __( 'Display help for the Loop Output section', 'wpv-views'); ?>
+				</label>
+				<input name="wpv-layout-help" type="hidden" class="js-wpv-show-hide-help-value js-wpv-show-hide-layout-help-value" value="<?php echo esc_attr( $state ); ?>" autocomplete="off" />
 				</span>
 				<?php
 					foreach ( $sections as $key => $values ) {
-						if ( isset( $view_settings['sections-show-hide'] ) && isset( $view_settings['sections-show-hide'][$key] ) ) {
+						if ( 
+							isset( $view_settings['sections-show-hide'] ) 
+							&& isset( $view_settings['sections-show-hide'][$key] ) 
+						) {
 							$values['state'] = $view_settings['sections-show-hide'][$key];
 						} else {
 							$values['state'] = 'on';
 						}
 						?>
 						<span class="js-wpv-screen-pref">
-						<label for="wpv-show-hide-<?php echo $key; ?>"><input data-section="<?php echo $key; ?>" type="checkbox" id="wpv-show-hide-<?php echo $key; ?>" class="js-wpv-show-hide js-wpv-show-hide-<?php echo $key; ?>"<?php if ('on' == $values['state']) echo ' checked="checked"'; ?> /><?php echo $values['name']; ?></label>
-						<input data-section="<?php echo $key; ?>" name="<?php echo $key; ?>" class="js-wpv-show-hide-value" type="hidden" value="<?php echo $values['state']; ?>" />
+						<label for="wpv-show-hide-<?php echo esc_attr( $key ); ?>">
+							<input data-section="<?php echo esc_attr( $key ); ?>" type="checkbox" id="wpv-show-hide-<?php echo esc_attr( $key ); ?>" class="js-wpv-show-hide js-wpv-show-hide-<?php echo esc_attr( $key ); ?>" <?php checked( 'on', $values['state'] ); ?> autocomplete="off" />
+							<?php echo $values['name']; ?>
+						</label>
+						<input data-section="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>" class="js-wpv-show-hide-value" type="hidden" value="<?php echo esc_attr( $values['state'] ); ?>" autocomplete="off" />
 						</span>
 					<?php }
 				?>
 			</div>
 			<?php } ?>
 			<?php
-			// @note From 1.7, bootstrap-grid purpose is deprecated and hopefully removed, defaults to full
-			if ( ! isset( $view_settings['view_purpose'] ) || $view_settings['view_purpose'] == 'bootstrap-grid' ) {
+			if ( 
+				! isset( $view_settings['view_purpose'] ) 
+				|| $view_settings['view_purpose'] == 'bootstrap-grid' // @note From 1.7, bootstrap-grid purpose is deprecated and hopefully removed, defaults to full
+			) {
 				$view_settings['view_purpose'] = 'full';
 			}
 			?>
 			<p>
 				<label for="wpv-view-purpose"><?php echo __('View purpose', 'wpv-views'); ?></label>
-				<select id="wpv-view-purpose" class="js-view-purpose">
+				<select id="wpv-view-purpose" class="js-view-purpose" autocomplete="off">
 					<?php $purpose_options = array(
 						'all' => __('Display all results', 'wpv-views'),
 						'pagination' => __('Display the results with pagination', 'wpv-views'),
@@ -182,11 +228,11 @@ function views_redesign_html() {
 						'parametric' => __('Display the results as a parametric search', 'wpv-views'),
 						'full' => __('Full custom display mode', 'wwpv-views')
 					);
-					foreach ($purpose_options as $opt => $opt_name) { ?>
-						<option id="wpv-settings-query-type-posts"<?php if ($view_settings['view_purpose'] == $opt) echo ' selected="selected"'; ?> value="<?php echo $opt; ?>"><?php echo $opt_name; ?></option>
+					foreach ( $purpose_options as $opt => $opt_name ) { ?>
+						<option id="wpv-settings-query-type-posts" <?php selected( $view_settings['view_purpose'], $opt ); ?> value="<?php echo esc_attr( $opt ); ?>"><?php echo $opt_name; ?></option>
 					<?php } ?>
 				</select>
-				<input type="hidden" data-nonce="<?php echo wp_create_nonce( 'wpv_view_show_hide_nonce' ); ?>" class="js-wpv-show-hide-update" />
+				<input type="hidden" data-nonce="<?php echo wp_create_nonce( 'wpv_view_show_hide_nonce' ); ?>" class="js-wpv-show-hide-update" autocomplete="off" />
 			</p>
 			<div class="js-wpv-toolset-messages"></div>
 		</div>
@@ -199,14 +245,11 @@ function views_redesign_html() {
 	<?php
 	/**
 	* Actual View edit page
-	*
-	* NOTE
-	* $views_edit_help is localized and escaped in wpv-section-descriptions.php
 	*/
 	?>
 	<div class="wrap toolset-views">
-	<input id="post_ID" class="js-post_ID" type="hidden" value="<?php echo $view_id; ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_edit_general_nonce' ); ?>" />
-    <input id="toolset-edit-data" type="hidden" value="<?php echo $view_id; ?>" data-plugin="views" />
+	<input id="post_ID" class="js-post_ID" type="hidden" value="<?php echo esc_attr( $view_id ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_edit_general_nonce' ); ?>" />
+    <input id="toolset-edit-data" type="hidden" value="<?php echo esc_attr( $view_id ); ?>" data-plugin="views" />
 	<div id="icon-edit" class="icon32 icon32-posts-post"><br></div>
 	<h2><?php echo __('Edit View','wpv-views'); ?></h2>
 	<?php
@@ -217,29 +260,30 @@ function views_redesign_html() {
 	}
 	$user_id = get_current_user_id();
 	?>
-	<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo $in_iframe; ?>" />
-		<div class="wpv-settings-save-all wpv-general-actions-bar wpv-setting-container js-wpv-no-lock js-wpv-general-actions-bar">
-			<div class="wpv-setting">
-				<p class="update-button-wrap js-wpv-update-button-wrap">
-					<span class="js-wpv-message-container"></span>
-					<button class="button-secondary button button-large js-wpv-view-save-all"
-							disabled="disabled"
-							data-success="<?php echo htmlentities( __('View saved', 'wpv-views'), ENT_QUOTES ); ?>"
-							data-unsaved="<?php echo htmlentities( __('View not saved', 'wpv-views'), ENT_QUOTES ); ?>">
-						<?php _e( 'Save all sections at once', 'wpv-views' ); ?>
-					</button>
-				</p>
-			</div>
+	<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo esc_attr( $in_iframe ); ?>" />
+		<div id="js-wpv-general-actions-bar" class="wpv-settings-save-all wpv-general-actions-bar wpv-setting-container js-wpv-no-lock js-wpv-general-actions-bar">
+			<p class="update-button-wrap js-wpv-update-button-wrap">
+				<button class="button-secondary button button-large js-wpv-view-save-all"
+						disabled="disabled"
+						data-success="<?php echo esc_attr( __('View saved', 'wpv-views') ); ?>"
+						data-unsaved="<?php echo esc_attr( __('View not saved', 'wpv-views') ); ?>">
+					<?php _e( 'Save all sections at once', 'wpv-views' ); ?>
+				</button>
+			</p>
+			<span class="wpv-message-container js-wpv-message-container"></span>
 		</div>
 		<input type="hidden" name="_wpv_settings[view-query-mode]" value="normal" />
 		<div class="wpv-title-section">
 			<div class="wpv-setting-container wpv-settings-title-and-desc js-wpv-settings-title-and-desc js-wpv-no-lock">
 				<div class="wpv-settings-header">
 					<h3>
-						<?php _e( 'Title and Description', 'wpv-views' ); ?>
+						<?php 
+						_e( 'Title and Description', 'wpv-views' ); 
+						$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'title_and_description' );
+						?>
 						<i class="icon-question-sign js-display-tooltip"
-								data-header="<?php echo $views_edit_help['title_and_description']['title'] ?>"
-								data-content="<?php echo $views_edit_help['title_and_description']['content'] ?>">
+								data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+								data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
 						</i>
 					</h3>
 				</div>
@@ -248,7 +292,7 @@ function views_redesign_html() {
 					<div id="titlediv">
 						<div id="titlewrap" class="js-wpv-titlewrap">
 							<label class="screen-reader-text js-title-reader" id="title-prompt-text" for="title"><?php _e('Enter title here','wp-views'); ?></label>
-							<input id="title" class="js-title" type="text" name="post_title" size="30" value="<?php echo get_the_title( $view_id ); ?>" id="title" autocomplete="off">
+							<input id="title" class="js-title" type="text" name="post_title" size="30" value="<?php echo esc_attr( get_the_title( $view_id ) ); ?>" id="title" autocomplete="off">
 						</div>
 					</div>
 
@@ -259,8 +303,8 @@ function views_redesign_html() {
 							&bull;
 							<button class="button-secondary js-wpv-change-view-status"
 									data-statusto="trash"
-									data-success="<?php echo htmlentities( __('View moved to trash', 'wpv-views'), ENT_QUOTES ); ?>"
-									data-unsaved="<?php echo htmlentities( __('View not moved to trash', 'wpv-views'), ENT_QUOTES ); ?>"
+									data-success="<?php echo esc_attr( __('View moved to trash', 'wpv-views') ); ?>"
+									data-unsaved="<?php echo esc_attr( __('View not moved to trash', 'wpv-views') ); ?>"
 									data-redirect="<?php echo admin_url( 'admin.php?page=views'); ?>"
 									data-nonce="<?php echo wp_create_nonce( 'wpv_view_change_status' ); ?>">
 								<i class="icon-trash"></i> <?php _e('Move to trash', 'wpv-views'); ?>
@@ -269,7 +313,7 @@ function views_redesign_html() {
 					</div>
 
 					<?php
-						$view_description = get_post_meta($_GET['view_id'], '_wpv_description', true);
+						$view_description = get_post_meta( $_GET['view_id'], '_wpv_description', true );
 					?>
 
 					<p<?php echo ( isset( $view_description ) && !empty( $view_description ) ) ? ' class="hidden"' : ''; ?>>
@@ -281,13 +325,13 @@ function views_redesign_html() {
 							<label for="wpv-description"><?php _e('Describe this View', 'wpv-views' ) ?></label>
 						</p>
 						<p>
-							<textarea id="wpv-description" class="js-wpv-description" name="_wpv_settings[view_description]" cols="72" rows="4"><?php echo ( isset( $view_description ) ) ? esc_html($view_description) : ''; ?></textarea>
+							<textarea id="wpv-description" class="js-wpv-description" name="_wpv_settings[view_description]" cols="72" rows="4"><?php echo ( isset( $view_description ) ) ? esc_html( $view_description ) : ''; ?></textarea>
 						</p>
 					</div>
 
 					<p class="update-button-wrap js-wpv-update-button-wrap">
 						<span class="js-wpv-message-container"></span>
-						<button data-success="<?php echo htmlentities( __('Title and description updated', 'wpv-views'), ENT_QUOTES ); ?>" data-unsaved="<?php echo htmlentities( __('Title and description not saved', 'wpv-views'), ENT_QUOTES ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_title_description_nonce' ); ?>" class="js-wpv-title-description-update button-secondary" disabled="disabled"><?php _e('Update', 'wpv-views'); ?></button>
+						<button data-success="<?php echo esc_attr( __('Title and description updated', 'wpv-views') ); ?>" data-unsaved="<?php echo esc_attr( __('Title and description not saved', 'wpv-views') ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_title_description_nonce' ); ?>" class="js-wpv-title-description-update button-secondary" disabled="disabled"><?php _e('Update', 'wpv-views'); ?></button>
 					</p>
 
 				</div>
@@ -338,19 +382,19 @@ function views_redesign_html() {
 		</div>
 		
         <?php
-        $display_help = isset( $_GET['in-iframe-for-layout'] ) && $_GET['in-iframe-for-layout'] == 1 ? false : true;
+        $display_help = ( isset( $_GET['in-iframe-for-layout'] ) && $_GET['in-iframe-for-layout'] == 1 ) ? false : true;
         
-        if( $display_help === true ): ?>
+        if ( $display_help === true ) { ?>
 		<div class="wpv-help-section">
 		<?php
 			wpv_display_view_howto_help_box();
 		?>
 		</div>
-        <?php endif; ?>
+        <?php } ?>
 
 		<script type="text/javascript">
-			jQuery(function($){
-				jQuery('li.current a').attr('href',jQuery('li.current a').attr('href')+'&view_id=<?php echo $view_id?>');
+			jQuery( function( $ ) {
+				jQuery('li.current a').attr('href',jQuery('li.current a').attr('href')+'&view_id=<?php echo esc_attr( $view_id ); ?>');
 			});
 		</script>
 		<?php

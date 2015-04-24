@@ -73,7 +73,8 @@ class WPV_Taxonomy_Term_Filter {
 			'name' => __( 'Taxonomy term', 'wpv-views' ),
 			'present' => 'taxonomy_terms_mode',
 			'callback' => array( 'WPV_Taxonomy_Term_Filter', 'wpv_add_new_filter_taxonomy_term_list_item' ),
-			'args' => $taxonomy_type
+			'args' => $taxonomy_type,
+			'group' => __( 'Taxonomy filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -124,7 +125,6 @@ class WPV_Taxonomy_Term_Filter {
 	*/
 
 	static function wpv_get_list_item_ui_taxonomy_term( $view_settings = array() ) {
-		global $sitepress;
 		if ( isset( $view_settings['taxonomy_type'] ) && is_array( $view_settings['taxonomy_type'] ) ) {
             $view_settings['taxonomy_type'] = $view_settings['taxonomy_type'][0];
         }
@@ -134,13 +134,19 @@ class WPV_Taxonomy_Term_Filter {
         if ( ! isset( $view_settings['taxonomy_terms'] ) ) {
 			$view_settings['taxonomy_terms'] = array();
         }
-        if ( isset($sitepress) && function_exists('icl_object_id') && !empty( $view_settings['taxonomy_terms'] ) ) {
-		// Adjust for WPML support
-			$trans_term_ids = array();
-			foreach ( $view_settings['taxonomy_terms'] as $untrans_term_id ) {
-				$trans_term_ids[] = icl_object_id( $untrans_term_id, $view_settings['taxonomy_type'], true );
+		if ( ! empty( $view_settings['taxonomy_terms'] ) ) {
+			$adjusted_term_ids = array();
+			foreach ( $view_settings['taxonomy_terms'] as $candidate_term_id ) {
+				// WordPress 4.2 compatibility - split terms
+				$candidate_term_id_splitted = wpv_compat_get_split_term( $candidate_term_id, $view_settings['taxonomy_type'] );
+				if ( $candidate_term_id_splitted ) {
+					$candidate_term_id = $candidate_term_id_splitted;
+				}
+				// WPML support
+				$candidate_term_id = apply_filters( 'translate_object_id', $candidate_term_id, $view_settings['taxonomy_type'], true, null );
+				$adjusted_term_ids[] = $candidate_term_id;
 			}
-			$view_settings['taxonomy_terms'] = $trans_term_ids;
+			$view_settings['taxonomy_terms'] = $adjusted_term_ids;
 		}
 		ob_start()
 		?>
@@ -154,6 +160,7 @@ class WPV_Taxonomy_Term_Filter {
 			<div id="wpv-filter-taxonomy-term" class="js-wpv-filter-options js-wpv-filter-taxonomy-term-options">
 				<?php WPV_Taxonomy_Term_Filter::wpv_render_taxonomy_term_options( $view_settings ); ?>
 			</div>
+			<div class="js-wpv-filter-toolset-messages"></div>
 		</div>
 		<?php
 		$res = ob_get_clean();
@@ -169,33 +176,80 @@ class WPV_Taxonomy_Term_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_term_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_term_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_term_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$change = false;
+		$view_id = intval( $_POST['id'] );
 		parse_str( $_POST['filter_options'], $filter_taxonomy_term );
 		if ( ! isset( $filter_taxonomy_term['taxonomy_terms'] ) ) {
 			$filter_taxonomy_term['taxonomy_terms'] = array();
 		}
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		if ( ! isset( $view_array['taxonomy_terms_mode'] ) || $filter_taxonomy_term['taxonomy_terms_mode'] != $view_array['taxonomy_terms_mode'] ) {
-			$change = true;
-			$view_array['taxonomy_terms_mode'] = $filter_taxonomy_term['taxonomy_terms_mode'];
-		}
-		if ( ! isset( $view_array['taxonomy_terms'] ) || $filter_taxonomy_term['taxonomy_terms'] != $view_array['taxonomy_terms'] ) {
-			$change = true;
-			$view_array['taxonomy_terms'] = $filter_taxonomy_term['taxonomy_terms'];
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
+		$settings_to_check = array(
+			'taxonomy_terms_mode',
+			'taxonomy_terms',
+			'taxonomy_terms_framework'
+		);
+		foreach ( $settings_to_check as $set ) {
+			if ( 
+				isset( $filter_taxonomy_term[$set] ) 
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_taxonomy_term[$set] != $view_array[$set] 
+				)
+			) {
+				if ( is_array( $filter_taxonomy_term[$set] ) ) {
+					$filter_taxonomy_term[$set] = array_map( 'sanitize_text_field', $filter_taxonomy_term[$set] );
+				} else {
+					$filter_taxonomy_term[$set] = sanitize_text_field( $filter_taxonomy_term[$set] );
+				}
+				$change = true;
+				$view_array[$set] = $filter_taxonomy_term[$set];
+			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			$result = update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
-		echo wpv_get_filter_taxonomy_term_summary_txt( $view_array );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Taxonomy term filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_taxonomy_term_summary_txt( $view_array )
+		);
+		wp_send_json_success( $data );
 	}
 
 	static function wpv_filter_taxonomy_term_sumary_update_callback() {
@@ -223,20 +277,52 @@ class WPV_Taxonomy_Term_Filter {
 	*/
 	
 	static function wpv_filter_taxonomy_term_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_term_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_term_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		if ( isset( $view_array['taxonomy_terms_mode'] ) ) {
-			unset( $view_array['taxonomy_terms_mode'] );
-		}
-		if ( isset( $view_array['taxonomy_terms'] ) ) {
-			unset( $view_array['taxonomy_terms'] );
+		$to_delete = array(
+			'taxonomy_terms_mode',
+			'taxonomy_terms',
+			'taxonomy_terms_framework'
+		);
+		foreach ( $to_delete as $index ) {
+			if ( isset( $view_array[$index] ) ) {
+				unset( $view_array[$index] );
+			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Taxonomy term filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -267,7 +353,8 @@ class WPV_Taxonomy_Term_Filter {
 	static function wpv_render_taxonomy_term_options( $view_settings = array() ) {
 		$defaults = array(
 			'taxonomy_terms' => array(),
-			'taxonomy_terms_mode' => 'THESE'
+			'taxonomy_terms_mode' => 'THESE',
+			'taxonomy_terms_framework' => ''
 		);
 		$view_settings = wp_parse_args( $view_settings, $defaults );
 		if ( isset( $view_settings['taxonomy_type'] ) && $view_settings['taxonomy_type'] != '' ) {
@@ -279,11 +366,11 @@ class WPV_Taxonomy_Term_Filter {
 		<h4><?php  _e( 'List the following terms', 'wpv-views' ); ?></h4>
 		<ul class="wpv-filter-options-set">
 			<li>
-				<input type="radio" id="taxonomy-terms-mode-current" name="taxonomy_terms_mode" <?php checked( $view_settings['taxonomy_terms_mode'], 'CURRENT_PAGE' ); ?> class="taxonomy-terms-mode js-wpv-taxonomy-term-mode" value="CURRENT_PAGE" />
+				<input type="radio" id="taxonomy-terms-mode-current" name="taxonomy_terms_mode" <?php checked( $view_settings['taxonomy_terms_mode'], 'CURRENT_PAGE' ); ?> class="taxonomy-terms-mode js-wpv-taxonomy-term-mode" value="CURRENT_PAGE" autocomplete="off" />
 				<label for="taxonomy-terms-mode-current"><?php _e('Set by the current post', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" id="taxonomy-terms-mode-these" name="taxonomy_terms_mode" <?php checked( $view_settings['taxonomy_terms_mode'], 'THESE' ); ?> class="taxonomy-terms-mode js-wpv-taxonomy-term-mode" value="THESE" />
+				<input type="radio" id="taxonomy-terms-mode-these" name="taxonomy_terms_mode" <?php checked( $view_settings['taxonomy_terms_mode'], 'THESE' ); ?> class="taxonomy-terms-mode js-wpv-taxonomy-term-mode" value="THESE" autocomplete="off" />
 				<label for="taxonomy-terms-mode-these"><?php echo __('One of these', 'wpv-views'); ?></label>
 			<?php 
 			if ( taxonomy_exists( $taxonomy ) ) {
@@ -299,7 +386,7 @@ class WPV_Taxonomy_Term_Filter {
 							if ($taxonomy == 'category') {
 							$checklist = str_replace('post_category[]', 'taxonomy_terms[]', $checklist);
 							} else {
-							$checklist = str_replace('tax_input[' . $taxonomy . '][]', 'taxonomy_terms[]', $checklist);
+							$checklist = str_replace( 'tax_input[' . $taxonomy . '][]', 'taxonomy_terms[]', $checklist );
 							}
 						
 						echo $checklist;
@@ -309,6 +396,30 @@ class WPV_Taxonomy_Term_Filter {
 			}
 			?>
 			</li>
+			<?php
+			global $WP_Views_fapi;
+			if ( $WP_Views_fapi->framework_valid ) {
+				$framework_data = $WP_Views_fapi->framework_data
+			?>
+			<li>
+				<input type="radio" id="taxonomy-terms-mode-framework" name="taxonomy_terms_mode"  class="taxonomy-terms-mode js-wpv-taxonomy-term-mode" value="framework" <?php checked( $view_settings['taxonomy_terms_mode'], 'framework' ); ?> autocomplete="off" />
+				<label for="taxonomy-terms-mode-framework"><?php echo sprintf( __( 'Set by the %s key: ', 'wpv-views'), sanitize_text_field( $framework_data['name'] ) ); ?></label>
+				<select name="taxonomy_terms_framework" autocomplete="off">
+					<option value=""><?php _e( 'Select a key', 'wpv-views' ); ?></option>
+					<?php
+					$fw_key_options = array();
+					$fw_key_options = apply_filters( 'wpv_filter_extend_framework_options_for_taxonomy_term', $fw_key_options );
+					foreach ( $fw_key_options as $index => $value ) {
+						?>
+						<option value="<?php echo esc_attr( $index ); ?>" <?php selected( $view_settings['taxonomy_terms_framework'], $index ); ?>><?php echo $value; ?></option>
+						<?php
+					}
+					?>
+				</select>
+			</li>
+			<?php
+			}
+			?>
 		</ul>
 		<?php
 	}
@@ -388,9 +499,9 @@ class WPV_Walker_Taxonomy_Checkboxes_Flat extends Walker {
 		$args['selected_cats'] = empty( $args['selected_cats'] ) ? array() : $args['selected_cats'];
 
 		/** This filter is documented in wp-includes/category-template.php */
-		$output .= "\n<li id='{$taxonomy}-{$category->term_id}'$class>" .
-			'<label class="selectit"><input value="' . $category->term_id . '" type="checkbox" name="'.$name.'[]" id="in-'.$taxonomy.'-' . $category->term_id . '"' .
-			checked( in_array( $category->term_id, $args['selected_cats'] ), true, false ) .
+		$output .= "\n<li id='" . esc_attr( $taxonomy ) . "-" . esc_attr( $category->term_id ) . esc_attr( $class ) . "'>" .
+			'<label class="selectit"><input value="' . esc_attr( $category->term_id ) . '" type="checkbox" name="' . esc_attr( $name ) . '[]" id="in-' . esc_attr( $taxonomy ) . '-' . esc_attr( $category->term_id ) . '" ' .
+			checked( in_array( $category->term_id, $args['selected_cats'] ), true, false ) . " " .
 			disabled( empty( $args['disabled'] ), false, false ) . ' /> ' .
 			esc_html( apply_filters( 'the_category', $category->name ) ) . '</label>';
 	}

@@ -19,6 +19,40 @@ WPV_Toolset.CodeMirror_instance['wpv_layout_meta_html_css'] =  codemirror_views_
 WPV_Toolset.CodeMirror_instance['wpv_layout_meta_html_js'] =  codemirror_views_layout_js;
 WPV_Toolset.CodeMirror_instance['wpv_content'] =  codemirror_views_content;
 
+// Define 'save' command in CodeMirror object
+// This automatically adds Ctrl+S (Cmd+S in Mac) keyboard shortcut for saving
+// in every CodeMirror instance.
+// This code is duplicated in views_editor.js
+jQuery(document).ready(function ($) {
+    CodeMirror.commands.save = function (cm) {
+        // Prevent Firefox trigger Save Dialog
+        var keypress_handler = function (cm, event) {
+            if (event.which == 115 && (event.ctrlKey || event.metaKey) || (event.which == 19)) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        };
+        CodeMirror.off(cm.getWrapperElement(), 'keypress', keypress_handler);
+        cm.on('keypress', keypress_handler);
+        
+        var textarea_id = cm.getTextArea().id;
+        if (
+                textarea_id === 'wpv_layout_meta_html_content' ||
+                textarea_id === 'wpv_layout_meta_html_css' ||
+                textarea_id === 'wpv_layout_meta_html_js'
+                ) {
+            /* Loop Output */
+            jQuery('.js-wpv-layout-extra-update').click();
+        } else if (
+                textarea_id === 'wpv_content'
+                ) {
+            /* Filter and Loop Output Integration */
+            jQuery('.js-wpv-content-update').click();
+        }
+    };
+});
+
 var WPViews = WPViews || {};
 
 WPViews.WPAEditScreen = function( $ ) {
@@ -28,14 +62,19 @@ WPViews.WPAEditScreen = function( $ ) {
 	self.show_hide_sections =  $( '.js-wpv-show-hide-container' ).find('.js-wpv-show-hide-value').serialize();
 	self.show_hide_metasections_help =  $( '.js-wpv-show-hide-container' ).find('.js-wpv-show-hide-help-value').serialize();
 	
-	self.action_bar = $( '.js-wpv-general-actions-bar' );
+	self.action_bar = $( '#js-wpv-general-actions-bar' );
+	self.action_bar_message_container = $( '#js-wpv-general-actions-bar .js-wpv-message-container' );
 	self.html = $( 'html' );
+	
+	self.overlay_container = $("<div class='wpv-setting-overlay js-wpv-setting-overlay'><div class='wpv-transparency'></div><i class='icon-lock'></i></div>");
 	
 	if ( self.action_bar && self.action_bar.offset() ) {
 		var toolbarPos = self.action_bar.offset().top,
-		adminBarHeight = 0;
+		adminBarHeight = 0,
+		adminBarWidth = $( '.wpv-title-section .wpv-setting-container' ).width();
 		if ( $('#wpadminbar').length !== 0 ) {
 			adminBarHeight = $('#wpadminbar').height();
+			self.action_bar.width( adminBarWidth );
 		}
 		self.set_toolbar_pos = function() {
 			if ( toolbarPos <= $(window).scrollTop() + adminBarHeight + 5) {
@@ -46,12 +85,81 @@ WPViews.WPAEditScreen = function( $ ) {
 			}
 		};
 
-		$(window).on('scroll', function() {
+		$( window ).on( 'scroll', function() {
 			self.set_toolbar_pos();
 		});
+		
+		$( window ).on( 'resize', function() {
+			var adminBarWidth = $( '.wpv-title-section .wpv-setting-container' ).width();
+			self.action_bar.width( adminBarWidth );
+		});
 
-		self.set_toolbar_pos(); // Initialize on DOM ready
+		self.set_toolbar_pos();
 	}
+	
+	// ---------------------------------
+	// Save actions: errors and successes
+	// ---------------------------------
+	
+	self.manage_ajax_fail = function( data, message_container ) {
+		if ( data.type ) {
+			switch ( data.type ) {
+				case 'nonce':
+				case 'id':
+				case 'capability':
+					self.manage_action_bar_error( data );
+					setConfirmUnload( false );
+					$( '.wpv-setting-container:not(.js-wpv-general-actions-bar)' ).prepend( self.overlay_container );
+					break;
+				default:
+					if ( data.message ) {
+						message_container
+							.wpvToolsetMessage({
+								text: data.message,
+								type: 'error',
+								inline: true,
+								stay: true
+							});
+					}
+					break;
+			}
+		} else {
+			if ( data.message ) {
+				message_container
+					.wpvToolsetMessage({
+						text: data.message,
+						type: 'error',
+						inline: true,
+						stay: true
+					});
+			}
+		}
+	};
+	
+	self.manage_ajax_success = function( data, message_container ) {
+		if ( data.message ) {
+			message_container
+				.wpvToolsetMessage({
+					text: data.message,
+					type: 'success',
+					inline: true,
+					stay: false
+				});
+		}
+	};
+	
+	self.manage_action_bar_error = function( data ) {
+		if ( data.message ) {
+			$.colorbox.close();
+			self.action_bar_message_container
+				.wpvToolsetMessage({
+					text: data.message,
+					type: 'error',
+					inline: false,
+					stay: true
+				});
+		}
+	};
 	
 	// ---------------------------------
 	// Screen options
@@ -118,16 +226,12 @@ WPViews.WPAEditScreen = function( $ ) {
 				wpnonce: nonce
 			};
 			$.post( ajaxurl, data, function( response ) {
-				if ( ( typeof( response ) !== 'undefined') ) {
-					if ( 0 != response ) {
-						$( document ).trigger( 'js_event_wpv_screen_options_saved' );
-					} else {
-						console.log( "Error: WordPress AJAX returned ", response );
-					}
+				if ( response.success ) {
+					$( document ).trigger( 'js_event_wpv_screen_options_saved' );
 				} else {
-					console.log( "Error: AJAX returned ", response );
+					self.manage_action_bar_error( response.data );
 				}
-			})
+			}, 'json' )
 			.fail( function( jqXHR, textStatus, errorThrown ) {
 				console.log( "Error: ", textStatus, errorThrown );
 			})
@@ -265,7 +369,6 @@ WPViews.WPAEditScreen = function( $ ) {
 		var dataholder = $( '.js-wpv-loop-selection-update' ),
 		messages_container = dataholder.parents( '.js-wpv-update-action-wrap' ).find( '.js-wpv-message-container' ),
 		section_container = $( '.js-wpv-settings-archive-loop' ),
-		update_message = dataholder.data('success'),
 		unsaved_message = dataholder.data('unsaved'),
 		nonce = dataholder.data('nonce'),
 		spinnerContainer,
@@ -284,22 +387,15 @@ WPViews.WPAEditScreen = function( $ ) {
 		};
 		$('.js-loop-selection-form input').prop( 'disabled', true );
 		$.ajax({
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function(response){
-				decoded_response = $.parseJSON(response);
-				if ( decoded_response.success == data.id ) {
-					$('.js-loop-selection-form').html( decoded_response.wpv_settings_archive_loops );
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: data,
+			success: function( response ) {
+				if ( response.success ) {
+					$('.js-loop-selection-form').html( response.data.updated_archive_loops );
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error: function (ajaxContext) {

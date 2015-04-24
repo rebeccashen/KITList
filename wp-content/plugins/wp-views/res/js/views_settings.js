@@ -301,7 +301,11 @@ jQuery(function($){
 			success:function(response){
 				if ( (typeof(response) !== 'undefined') ) {
 					if (response == 'ok') {
-						$('li.js-' + thiz + '-item', parent_container).fadeOut( 'fast', function() { $(this).remove(); });
+						$( 'li.js-' + thiz + '-item', parent_container )
+							.addClass( 'remove' )
+							.fadeOut( 'fast', function() { 
+								$( this ).remove(); 
+							});
 					}
 					else {
 						$('.js-wpv-cs-ajaxfail', parent_container).show();
@@ -405,7 +409,11 @@ jQuery(function($){
 			success:function(response){
 				if ( (typeof(response) !== 'undefined') ) {
 					if (response == 'ok') {
-						$('li.js-' + thiz + '-item', parent_container).fadeOut( 'fast', function() { $(this).remove(); });
+						$( 'li.js-' + thiz + '-item', parent_container )
+							.addClass( 'remove' )
+							.fadeOut( 'fast', function() { 
+								$( this ).remove(); 
+							});
 					}
 					else {
 						$('.js-wpv-cs-ajaxfail', parent_container).show();
@@ -685,7 +693,7 @@ jQuery(function($){
 			var data = {
 				action: 'wpv_update_debug_mode_status',
 				debug_status: debug_status,
-				wpv_dembug_mode_type: $('input[name=wpv-debug-mode-type]:radio:checked').val(),
+				wpv_debug_mode_type: $('input[name=wpv_debug_mode_type]:radio:checked').val(),
 				wpv_debug_mode_option: $('#wpv_debug_mode_option').val()
 				
 			};

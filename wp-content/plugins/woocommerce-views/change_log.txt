@@ -1,4 +1,20 @@
 -------------------------------------------------------------------------------------------------------------------
+Version 2.5.1
+	- Fixed: Fatal error on is_shop when WooCommerce is not activated.
+	- Fixed: Updated nonce checks on some AJAX requests.	
+	- Fixed: Custom single product templates inside the theme woocommerce directory is not detected when not using Layouts.
+	- Fixed: WooCommerce placeholder image height and width are not enforced.
+	- Fixed: WooCommerce onsale badge is not working properly in AJAX pagination for Views.
+	- Fixed: Woocommerce shop pages breaks when loading default WooCommerce templates.
+	- Fixed: Custom single product templates inside the theme WooCommerce directory is not detected when using Layouts.
+	- Fixed: Custom archive product templates inside the theme WooCommerce directory is not detected when using Layouts.
+	- Fixed: Genesis customized single product templates does not appear on WooCommerce Views template selection.
+	- New: WooCommerce cart count shortcode. 
+	- New: Added new parameter to wpv-woo-buy-or-select shortcode to display product variation options in listing pages.
+	- New: Compatibility to WordPress 4.2
+	- Deprecated: Very old shortcodes as a security measure: wpv-wooaddcart, wpv-wooaddcartbox, wpv-wooremovecart, wpv-woo-carturl
+
+-------------------------------------------------------------------------------------------------------------------
 Version 2.5
 	- New: Added support for any WooCommerce product taxonomies when its assigned with Layouts.
     - New: Added support for any non-default WooCommerce product types like composite products.

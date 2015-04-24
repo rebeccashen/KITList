@@ -59,7 +59,6 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 	self.usermeta_field_initialize_compare = function() {
 		var wpv_allowed_values = 0;
 		WPViews.query_filters.clear_validate_messages( self.post_row );
-		$( self.post_row ).find('.filter-input-error').removeClass('filter-input-error');
 		$( '.js-wpv-usermeta-field-compare-select' ).each( function() {
 			var wpv_single_row = $( this ).parents( '.js-wpv-filter-multiple-element' ),
 			thiz_inner = $( this ),
@@ -116,17 +115,21 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 	
 	self.usermeta_field_initialize_compare_mode = function() {
 		$( '.js-wpv-usermeta-field-compare-mode' ).each( function() {
-			self.usermeta_field_show_hide_text_date_controls( this );
+			self.usermeta_field_adjust_value_controls( this );
 		});
 	};
 	
-	self.usermeta_field_show_hide_text_date_controls = function( item ) {
+	self.usermeta_field_adjust_value_controls = function( item ) {
 		// Show the text control depending on the compare function.
 		var mode = $( item ).val(),
-		value_div = $( item ).parents( '.js-wpv-usermeta-field-value-div' );
-		value_div.find('.js-wpv-usermeta-field-value-text')
+		value_div = $( item ).parents( '.js-wpv-usermeta-field-value-div' ),
+		value_input = value_div.find('.js-wpv-usermeta-field-value-text');
+		value_input
 			.removeClass( 'js-wpv-filter-validate' )
 			.data('type', 'none');
+		value_div
+			.find( '.js-wpv-usermeta-field-value-combo-input, .js-wpv-usermeta-field-value-combo-date, .js-wpv-usermeta-field-value-combo-framework' )
+				.hide();
 		switch( mode ) {
 			case 'constant':
 			case 'future_day':
@@ -139,44 +142,37 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 			case 'months_from_now':
 			case 'years_from_now':
 				value_div
-					.find( '.js-wpv-usermeta-field-value-text' )
+					.find( '.js-wpv-usermeta-field-value-combo-input' )
 						.show();
-				value_div
-					.find( '.js-wpv-usermeta-field-date' )
-						.hide();
 				break;
 			case 'url':
 				value_div
-					.find( '.js-wpv-usermeta-field-value-text' )
-						.addClass( 'js-wpv-filter-validate' )
-						.data('type', 'url')
+					.find( '.js-wpv-usermeta-field-value-combo-input' )
 						.show();
-				value_div
-					.find( '.js-wpv-usermeta-field-date' )
-						.hide();
+				value_input
+					.addClass( 'js-wpv-filter-validate' )
+					.data('type', 'url');
 				break;
 			case 'attribute':
 				value_div
-					.find( '.js-wpv-usermeta-field-value-text' )
-						.addClass( 'js-wpv-filter-validate' )
-						.data('type', 'shortcode')
+					.find( '.js-wpv-usermeta-field-value-combo-input' )
 						.show();
-				value_div
-					.find( '.js-wpv-usermeta-field-date' )
-						.hide();
+				value_input
+					.addClass( 'js-wpv-filter-validate' )
+					.data('type', 'shortcode');
 				break;
 			case 'date':
 				value_div
-					.find( '.js-wpv-usermeta-field-value-text' )
-						.hide();
+					.find( '.js-wpv-usermeta-field-value-combo-date' )
+						.show();
+				break;
+			case 'framework':
 				value_div
-					.find( '.js-wpv-usermeta-field-date' )
+					.find( '.js-wpv-usermeta-field-value-combo-framework' )
 						.show();
 				break;
 			default:
-				value_div
-					.find( '.js-wpv-usermeta-field-value-text, .js-wpv-usermeta-field-date' )
-						.hide();
+				
 				break;
 		}
 	};
@@ -203,6 +199,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 					resolved_value += ',';
 				}
 				var value = $( this ).find( '.js-wpv-usermeta-field-value-text' ).val(),
+				framework_value = $( this ).find( '.js-wpv-usermeta-field-framework-value' ).val(),
 				mode = $( this ).find( '.js-wpv-usermeta-field-compare-mode' ).val();
 				switch ( mode ) {
 					case 'url':
@@ -210,6 +207,9 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 						break;
 					case 'attribute':
 						value = 'VIEW_PARAM(' + value + ')';
+						break;
+					case 'framework':
+						value = 'FRAME_KEY(' + framework_value + ')';
 						break;
 					case 'now':
 						value = 'NOW()';
@@ -251,8 +251,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 						value = 'YEARS_FROM_NOW(' + value + ')';
 						break;
 					case 'date':
-						var date_div = 
-						month = $( this ).find( '.js-wpv-usermeta-field-date select' ),
+						var month = $( this ).find( '.js-wpv-usermeta-field-date select' ),
 						mm = month.val(),
 						jj = month.next().val(),
 						aa = month.next().next().val();
@@ -269,7 +268,8 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 		$( self.post_close_save_selector ).removeClass( 'js-wpv-section-unsaved' );
 		var nonce = $( '.js-wpv-filter-remove-usermeta-field' ).data( 'nonce' ),
 		usermeta_field = [],
-		spinnerContainer = $( self.spinner ).insertBefore( $( '.js-wpv-filter-remove-usermeta-field' ) ).show();
+		spinnerContainer = $( self.spinner ).insertBefore( $( '.js-wpv-filter-remove-usermeta-field' ) ).show(),
+		error_container = $( self.post_row ).find( '.js-wpv-filter-multiple-toolset-messages' );
 		$('.js-wpv-filter-usermeta-field-multiple-element .js-filter-remove').each( function() {
 			usermeta_field.push( $( this ).data( 'field' ) );
 		});
@@ -281,20 +281,24 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 		};
 		$.ajax({
 			type: "POST",
+			dataType: "json",
 			url: ajaxurl,
 			data: data,
 			success: function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) && ( response === data.id ) ) {
+				if ( response.success ) {
 					$( self.post_row )
 						.addClass( 'wpv-filter-deleted' )
-						.fadeOut( 500, function() {
+						.animate({
+						  height: "toggle",
+						  opacity: "toggle"
+						}, 400, function() {
 							$( this ).remove();
 							self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
 							$( document ).trigger( 'js_event_wpv_query_filter_deleted', [ 'usermeta-field' ] );
 							self.usermeta_field_initialize_relationship();
 						});
 				} else {
-					 console.log( "Error: AJAX returned ", response );
+					WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 				}
 			 },
 			 error: function ( ajaxContext ) {
@@ -316,7 +320,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 	});
 	
 	$( document ).on( 'change', '.js-wpv-usermeta-field-compare-mode', function() {
-		self.usermeta_field_show_hide_text_date_controls( this )
+		self.usermeta_field_adjust_value_controls( this )
 	});
 	
 	// Add another value
@@ -357,10 +361,6 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 	// Watch changes
 	
 	$( document ).on( 'change keyup input cut paste', self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select', function() {
-		$( this )
-			.parents( '.js-filter-usermeta-field' )
-				.find( '.filter-input-error' )
-					.removeClass( 'filter-input-error' );
 		self.manage_filter_changes();
 	});
 	
@@ -370,12 +370,12 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 			WPViews.query_filters.close_filter_row('.js-filter-usermeta-field');
 		} else {
 			var valid = true;
-			var field_row = $( '.js-wpv-usermeta-field-compare-mode' ).parents( '.js-wpv-filter-multiple-element' ).data( 'field' );
-			valid = WPViews.query_filters.validate_filter_options( '.js-filter-row-usermeta-field-' + field_row );
+			valid = WPViews.query_filters.validate_filter_options( self.post_row );
 			if ( valid ) {
 				self.resolve_usermeta_field_value();
 				var nonce = $( this ).data('nonce'),				
 				spinnerContainer = $( self.spinner ).insertBefore( $( this ) ).show(),
+				error_container = $( self.post_row ).find( '.js-wpv-filter-multiple-toolset-messages' ),
 				data = {
 					action: 'wpv_filter_usermeta_field_update',
 					id: self.view_id,
@@ -383,21 +383,16 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 					wpnonce: nonce
 				};
 				self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
-				$.post(ajaxurl, data, function(response) {
-					if ( (typeof(response) !== 'undefined')) {
-						if (response != 0) {
-							$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
-							$( document ).trigger( 'js_event_wpv_query_filter_saved', [ 'usermeta-field' ] );
-							$('.js-wpv-filter-usermeta-field-summary').html(response);
-							WPViews.query_filters.close_and_glow_filter_row('.js-filter-usermeta-field', 'wpv-filter-saved' );
-						} else {
-							console.log( "Error: WordPress AJAX returned " + response );
-						}
+				$.post( ajaxurl, data, function( response ) {
+					if ( response.success ) {
+						$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
+						$( document ).trigger( 'js_event_wpv_query_filter_saved', [ 'usermeta-field' ] );
+						$( '.js-wpv-filter-usermeta-field-summary' ).html( response.data.summary );
+						WPViews.query_filters.close_and_glow_filter_row( self.post_row, 'wpv-filter-saved' );
 					} else {
-						console.log( "Error: AJAX returned " + response );
+						WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 					}
-
-				})
+				}, 'json' )
 				.fail(function(jqXHR, textStatus, errorThrown) {
 					console.log( "Error: %s %s", textStatus, errorThrown );
 				})
@@ -415,6 +410,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 		field = thiz.data('field'),
 		nonce = thiz.data('nonce'),
 		spinnerContainer = $('<div class="spinner ajax-loader">').insertBefore( thiz ).hide(),
+		error_container = row.find( '.js-wpv-filter-toolset-messages' ),
 		data = {
 			action: 'wpv_filter_usermeta_field_delete',
 			id: self.view_id,
@@ -426,7 +422,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 		} else {
 			spinnerContainer.show();
 			$.post( ajaxurl, data, function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) && ( response === data.id ) ) {
+				if ( response.success ) {
 					row
 						.addClass( 'wpv-filter-multiple-element-removed' )
 						.fadeOut( 500, function() {
@@ -436,10 +432,9 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 						});
 					$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
 				} else {
-					console.log( "Error: AJAX returned ", response );
+					WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 				}
-
-			})
+			}, 'json' )
 			.fail( function( jqXHR, textStatus, errorThrown ) {
 				console.log( "Error: ", textStatus, errorThrown );
 			})
@@ -479,7 +474,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 		if ( filter_type == 'usermeta-field' || filter_type.substr( 0, 14 ) == 'usermeta-field' || filter_type == 'all' ) {
 			self.manage_filter_changes();
 			self.usermeta_field_initialize_compare();
-			self.usermeta_field_initialize_compare_mode();
+			self.usermeta_field_initialize_compare_mode();// Might not be needed here
 			self.usermeta_field_initialize_relationship();
 		}
 		WPViews.query_filters.filters_exist();
@@ -490,7 +485,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 			self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
 			self.manage_filter_changes();
 			self.usermeta_field_initialize_compare();
-			self.usermeta_field_initialize_compare_mode();
+			self.usermeta_field_initialize_compare_mode();// Might not be needed here
 			self.usermeta_field_initialize_relationship();
 		}
 		WPViews.query_filters.filters_exist();
@@ -500,7 +495,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 		if ( filter_type == 'usermeta-field' || filter_type.substr( 0, 14 ) == 'usermeta-field' || filter_type == 'all' ) {
 			self.manage_filter_changes();
 			self.usermeta_field_initialize_compare();
-			self.usermeta_field_initialize_compare_mode();
+			self.usermeta_field_initialize_compare_mode();// Might not be needed here
 			self.usermeta_field_initialize_relationship();
 		}
 		WPViews.query_filters.filters_exist();
@@ -508,7 +503,7 @@ WPViews.UsermetaFieldFilterGUI = function( $ ) {
 	
 	self.init = function() {
 		self.usermeta_field_initialize_compare();
-		self.usermeta_field_initialize_compare_mode();
+		//self.usermeta_field_initialize_compare_mode();
 		self.usermeta_field_initialize_relationship();
 	};
 	

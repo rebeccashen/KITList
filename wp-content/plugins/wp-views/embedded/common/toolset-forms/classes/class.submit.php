@@ -1,10 +1,10 @@
 <?php
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/toolset-forms/classes/class.submit.php $
- * $LastChangedDate: 2014-10-29 11:24:27 +0000 (Wed, 29 Oct 2014) $
- * $LastChangedRevision: 28329 $
- * $LastChangedBy: marcin $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.submit.php $
+ * $LastChangedDate: 2015-03-20 10:02:23 +0000 (Fri, 20 Mar 2015) $
+ * $LastChangedRevision: 32518 $
+ * $LastChangedBy: francesco $
  *
  */
 require_once 'class.textfield.php';
@@ -22,7 +22,7 @@ class WPToolset_Field_Submit extends WPToolset_Field_Textfield
             '#title' => $this->getTitle(),
             '#description' => $this->getDescription(),
             '#name' => $this->getName(),
-            '#value' => $this->getValue(),
+            '#value' => esc_attr(__($this->getValue(), 'wpv-views')),
             '#validate' => $this->getValidationData(),
             '#attributes' => array(
                 'class' => '',

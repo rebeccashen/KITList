@@ -28,6 +28,18 @@ jQuery( document ).ready( function( $ ) {
 	        };
 	  });
 	
+	/** AJAX response wrapping */
+	jQuery(document).ajaxSuccess(function(event,xhr,options){	
+		
+        var responseText_string= xhr.responseText;        
+        if (responseText_string.indexOf("js-wpv-view-layout") > -1) {        	
+        	//Let's check if its wrapped already
+        	if (!($('span.wcviews_onsale_wrap').length)) {        		
+        		$('.woocommerce span.onsale').wrap('<span class="wcviews_onsale_wrap" />');
+        	}       	
+		}         
+	});
+	
 	//Restore add to cart quantity when queried with AJAX	
 	$.each(['html'], function (i, ev) {
         var el = $.fn[ev];
@@ -51,3 +63,12 @@ jQuery( document ).ready( function( $ ) {
 	$('.woocommerce .star-rating').addClass('wc_views_star_rating');
 
 });
+
+function wcviews_onsale_pagination_callback() {
+	    
+    	//Let's check if its wrapped already
+    	if (!(jQuery('span.wcviews_onsale_wrap').length)) {    		
+    		jQuery('.woocommerce span.onsale').wrap('<span class="wcviews_onsale_wrap" />');
+    	}        	
+	 
+}

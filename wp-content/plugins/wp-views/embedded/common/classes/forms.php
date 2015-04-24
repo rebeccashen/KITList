@@ -2,15 +2,15 @@
 /**
  * Returns HTML formatted output for elements and handles form submission.
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/classes/forms.php $
- * $LastChangedDate: 2014-11-05 14:33:34 +0000 (Wed, 05 Nov 2014) $
- * $LastChangedRevision: 28576 $
- * $LastChangedBy: jans $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/classes/forms.php $
+ * $LastChangedDate: 2015-03-12 13:46:29 +0000 (Thu, 12 Mar 2015) $
+ * $LastChangedRevision: 32265 $
+ * $LastChangedBy: marcin $
  *
  * @version 1.0
  */
-if (!class_exists('Enlimbo_Forms_Wpcf')) {
-
+if (!class_exists('Enlimbo_Forms_Wpcf')) {   
+    
     class Enlimbo_Forms_Wpcf
     {
 
@@ -932,8 +932,10 @@ if (!class_exists('Enlimbo_Forms_Wpcf')) {
             }
 
             $parts = explode('[', $name);
-            $parts = array_map(create_function('&$a', 'return trim($a, \']\');'),
-                    $parts);
+            //https://icanlocalize.basecamphq.com/projects/7393061-toolset/todo_items/196173458/comments
+            //Security Fixing
+            //$parts = array_map(create function('&$a', 'return trim($a, \']\');'), $parts);
+            $parts = array_map("cred_mytrimfunction", $parts);
             if (!isset($_REQUEST[$parts[0]])) {
                 return in_array($element['#type'],
                                 array('textfield', 'textarea')) ? '' : 0;

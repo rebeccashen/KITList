@@ -1,5 +1,7 @@
 <?php
 
+// @todo this needs a complete $_POST data sanitization on several methods
+
 // class
 if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generic.class.php')
 	&& ! class_exists( 'Editor_addon_parametric' )  ) {
@@ -119,8 +121,15 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 					}
 
 					global $wpdb;
-					$sql = "SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = '%s' ORDER BY meta_value LIMIT 0, 20";
-					$results = $wpdb->get_results( $wpdb->prepare( $sql, $field ) );
+					$results = $wpdb->get_results( 
+						$wpdb->prepare( 
+							"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} 
+							WHERE meta_key = %s 
+							ORDER BY meta_value 
+							LIMIT 0, 20",
+							$field 
+						) 
+					);
 					foreach ( $results as $row ) {
 						echo $row->meta_value . "\n";
 					}
@@ -131,6 +140,10 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 
 
 		public function validate_post_relationship_tree() {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				echo __( 'You do not have permissions for that.', 'wpv-views' );
+				die();
+			}
 			if ( !wp_verify_nonce( $_POST['wpnonce'], 'wpv_parametric_validate_post_relationship_tree' ) ) {
 				die( "Security check" );
 			}
@@ -172,11 +185,18 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 
 
 		public function create_parametric_dialog() {
-			if( $_POST && wp_verify_nonce( $_POST['wpv_parametric_create_dialog_nonce'], 'wpv_parametric_create_dialog_nonce' ) ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				echo __( sprintf( 'There are security problems. You do not have permissions for that %s', __METHOD__), 'wpv-views' );
+				die();
+			} else if ( 
+				$_POST 
+				&& wp_verify_nonce( $_POST['wpv_parametric_create_dialog_nonce'], 'wpv_parametric_create_dialog_nonce' ) 
+			) {
 				include WPV_PATH . '/inc/redesign/templates/wpv-parametric-form.tpl.php';
 				die();
 			} else {
 				echo __( sprintf( 'There are nonce problems. Template could not be loaded %s', __METHOD__), 'wpv-views' );
+				die();
 			}
 		}
 
@@ -282,53 +302,52 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 
 
 		/**
-		 * get_postmetakeys_by_post_type function.
-		 *
-		 * @access private
-		 * @param mixed $type
-		 * @return array
-		 */
-		private function get_postmetakeys_by_post_type( $type )	{
-			// TODO maybe we need to set a limit here, carefull!!
-			if( !$type ) {
-				return array( 'error' => __( sprintf( 'No types to query... make sure you made a selection %s',  __METHOD__), 'wpv-views' ) );
-			}
-
-			global $wpdb;
-			$arr = array();
-
-			//You loop through wp_postmeta by post_id of a given post type, so give keys only once
-			$results = $wpdb->get_results( $wpdb->prepare(
-					"SELECT DISTINCT meta_key
-					FROM {$wpdb->postmeta}
-					WHERE post_id IN (SELECT ID FROM {$wpdb->posts} WHERE post_type = %s)",
-					$type ) );
-
-			foreach( $results as $res ) {
-				// push only if it is not there, we want to be safe
-				if( !in_array( $res->meta_key, $arr ) ) {
-					array_push( $arr, $res->meta_key );
-				}
-			}
-
-			return $arr;
-		}
-
-
-		/**
 		 * get_meta_keys_by_post_types function.
 		 *
 		 * @access public
 		 * @param array $types
 		 * @return array
+		 * @todo manage hidden _whatever meta_keys
 		 */
 		public function get_meta_keys_by_post_types( $types ) {
 			$metas = array();
 
-			if( is_array( $types ) ) {
-				foreach( $types as $type ) {
-					array_push( $metas, $this->get_postmetakeys_by_post_type( $type ) );
+			if ( is_array( $types ) ) {
+				global $wpdb;
+				$values_to_prepare = array();
+				$wpdb_join = "";
+				$wpdb_where = "";
+				if (
+					! empty( $types )
+					&& ! in_array( 'any', $types )
+				) {
+					$types_count = count( $types );
+					$types_placeholders = array_fill( 0, $types_count, '%s' );
+					$types_flat = implode( ",", $types_placeholders );
+					foreach ( $types as $types_item ) {
+						$values_to_prepare[] = $types_item;
+					}
+					$wpdb_join = " LEFT JOIN {$wpdb->posts} p ON p.ID = pm.post_id ";
+					$wpdb_where = " WHERE p.post_type IN ({$types_flat}) ";
 				}
+
+				$values_to_prepare[] = 150;
+				$results = $wpdb->get_results( 
+					$wpdb->prepare(
+						"SELECT DISTINCT pm.meta_key FROM {$wpdb->postmeta} pm 
+						{$wpdb_join}
+						{$wpdb_where}
+						LIMIT %d",
+						$values_to_prepare 
+					)				
+				);
+
+				foreach ( $results as $res ) {
+					// push only if it is not there, we want to be safe
+					if( !in_array( $res->meta_key, $metas ) ) {
+						array_push( $metas, $res->meta_key );
+					}
+				}				
 
 				$ret = $this->flattenArray($metas);
 			} else {
@@ -370,7 +389,7 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 		 * @return array
 		 */
 		public function getPostTypesMetas( $object_types, $include_hidden = false ) {
-			global $WP_Views;
+			global $WPV_settings;
 
 			if( !is_array( $object_types ) ||  empty( $object_types ) ) {
 				return array( 'error' => __( sprintf( 'Parameter should be a not empty array %s', __METHOD__ ), 'wpv-views' ) );
@@ -386,9 +405,8 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 			//	$ret = array_diff( $ret, self::wpv_filter_excludes( $this->view_id, $ret, $type = 'custom-field' ) );
 
 			if ( !$include_hidden ) {
-				$options = $WP_Views->get_options();
-				if ( isset( $options['wpv_show_hidden_fields'] ) ) {
-					$include_these_hidden = explode( ',', $options['wpv_show_hidden_fields'] );
+				if ( isset( $WPV_settings->wpv_show_hidden_fields ) && $this->wpv_show_hidden_fields != '' ) {
+					$include_these_hidden = explode( ',', $WPV_settings->wpv_show_hidden_fields );
 				} else {
 					$include_these_hidden = array();
 				}
@@ -627,12 +645,12 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 
 			$index = self::get_param_index( $settings, $field );
 
-			if( $index > -1 ) {
+			if ( $index > -1 ) {
 				$field['url_param'] = self::$tmp_settings['filter_controls_param'][ $index ];
 				$field['can_force_zero'] = false;
 				self::$tmp_settings = null;
 
-				if( isset( $field['taxonomy'] ) ) {
+				if ( isset( $field['taxonomy'] ) ) {
 
 					$name = $settings['filter_controls_field_name'][ $index ];
 					$id = $name;
@@ -646,9 +664,10 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 					$name = $field['field'];
 					$nice_name = explode( 'wpcf-', $name );
 					$id = ( isset( $nice_name[1] ) ) ? $nice_name[1] : $name;
-					$field_options = wpcf_admin_fields_get_field( $id );
+					$field_options = array();
 
 					if( function_exists( 'wpcf_admin_fields_get_groups_by_field' ) ) {
+						$field_options = wpcf_admin_fields_get_field( $id );
 						foreach( wpcf_admin_fields_get_groups_by_field( $id ) as $gs ) {
 							$g = $gs['name'];
 						}
@@ -657,10 +676,17 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 					$ret['group'] = $g ? $g : "Custom fields";
 					$name = $g ? $name : $field['field'];
 					$ret['is_types'] = $g ? true : false;
-					if ( !empty( $field_options ) && isset( $field_options['meta_key'] ) ) {
+					if ( 
+						! empty( $field_options ) 
+						&& isset( $field_options['meta_key'] ) 
+					) {
 						$name = $field_options['meta_key'];
 					}
-					if ( !empty( $field_options ) && ( $field_options['type'] == 'checkbox' ) && $field_options['data']['save_empty'] == 'yes' ) {
+					if ( 
+						! empty( $field_options ) 
+						&& $field_options['type'] == 'checkbox' 
+						&& $field_options['data']['save_empty'] == 'yes' 
+					) {
 						$ret['can_force_zero'] = true;
 					}
 					$id = $g ? $id : $field['field'];
@@ -738,9 +764,14 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 		 */
 		public function send_data_to_parametric_form()
 		{
-			if( $_POST && wp_verify_nonce( $_POST['wpv_parametric_create_nonce'], 'wpv_parametric_create_nonce' ) ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				$send = array( 'error' =>  __( sprintf( 'Permission problem: you do not have permissions for that. %s', __METHOD__ ), 'wpv-views') );
+			} else if( 
+				$_POST 
+				&& wp_verify_nonce( $_POST['wpv_parametric_create_nonce'], 'wpv_parametric_create_nonce' ) 
+			) {
 				global $WP_Views;
-				$this->view_id = $_POST['view_id'];
+				$this->view_id = intval( $_POST['view_id'] );
 				$send = array();
 				$edit = false;
 
@@ -764,7 +795,8 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 				} else {
 
 					$post_types = $_POST['post_types'] ? explode(',', $_POST['post_types'] ) : array();
-					$metas = $WP_Views->get_meta_keys();
+					$post_types = array_map( 'sanitize_text_field', $post_types );
+					$metas = $WP_Views->get_meta_keys();// @todo switch to use the getPostTypesMetas() method at some point
 					$taxes = $this->getPostTypesTaxonomies( $post_types );
 					$types = $this->getCustomFieldsPropertiesArray( $metas );
 					$other_filters = $this->wpv_get_other_parametric_filters( $settings );
@@ -976,8 +1008,13 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 		 */
 		public function get_data_from_parametric_form()
 		{
-			if( $_POST && wp_verify_nonce( $_POST['wpv_parametric_submit_create_nonce'], 'wpv_parametric_submit_create_nonce' ) ) {
-				$this->view_id = $_POST['view_id'];
+			if ( ! current_user_can( 'manage_options' ) ) {
+				$send = array( 'error' =>  __( sprintf( 'Permission problem: you do not have permissions for that. %s', __METHOD__ ), 'wpv-views') );
+			} else if ( 
+				$_POST 
+				&& wp_verify_nonce( $_POST['wpv_parametric_submit_create_nonce'], 'wpv_parametric_submit_create_nonce' ) 
+			) {
+				$this->view_id = intval( $_POST['view_id'] );
 
 				if( !$this->view_id ) {
 					die( array( 'error' =>  __( sprintf( 'The view_id variable is missing we do not know what to associate the data with. %s', __METHOD__ ), 'wpv-views') ) );
@@ -1120,13 +1157,14 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 							= $param;
 
 					$check = update_post_meta( $this->view_id, '_wpv_settings', $settings );
+					do_action( 'wpv_action_wpv_save_item', $this->view_id );
 					//	print "\n\n" .$check . "\n\n";
 					//	print_r( array_diff( $control, $settings ) );
 
 					if( $check || sizeof( @array_diff( $control, $settings ) ) == 0 ) {
-						$send = array( 'insert' => __( 'The view has been succesfully updated', 'wpv-views') );
+						$send = array( 'insert' => __( 'The filter has been succesfully updated', 'wpv-views') );
 					} else {
-						$send = array( 'error' => __( sprintf( 'There are problems updating the view. %s', __METHOD__ ), 'wpv-views') );
+						$send = array( 'error' => __( sprintf( 'There are problems updating the filter. %s', __METHOD__ ), 'wpv-views') );
 					}
 
 				} else	{
@@ -1134,7 +1172,7 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 				}
 
 			} else {
-				$send = array( 'error' =>  __( sprintf( 'Nonce problem: apparently we do not know from where the request comes from. %s', __METHOD__ ), 'wpv-views') );
+				$send = array( 'error' =>  __( sprintf( 'Nonce problem: apparently we do not know where the request comes from. %s', __METHOD__ ), 'wpv-views') );
 			}
 
 			echo $this->formGenericDataStore( $send );
@@ -1217,7 +1255,7 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 								'debug' => true,
 								// General strings
 								'make_valid_selection' => __('Please make a valid selection.', 'wpv-views'),
-								'something_bad' => __("Something bad happend with shortcode building, check the console", 'wpv-views'),
+								'something_bad' => __("Something bad happened with shortcode building, check the console", 'wpv-views'),
 								'field_mandatory' => __('The value for "Refer to this field as" is mandatory, please provide one.', 'wpv-views'),
 								'relationship_tree_mandatory' => __('Please make a valid tree selection.'),
 
@@ -1232,17 +1270,18 @@ if ( file_exists( WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon-generi
 								'db_insert_problem' => __("There are problems inserting your data. Check the console. ", 'wpv-views'),
 								'select_post_types' => __('Please select at least one post type to fiter by.', 'wpv-views'),
 								'data_loading_problem' => __('Something went wrong loading data ', 'wpv-views'),
-								'model_build_problem' => __('Something went wrong while bulding model.', 'wpv-views'),
+								'model_build_problem' => __('Something went wrong while building model.', 'wpv-views'),
 								'select_taxonomy_alert' => __('Select posts with taxonomy:', 'wpv-views'),
 								'select_taxonomy_alert_2' => __('the same as set by the URL parameter', 'wpv-views'),
 								'error_building_filter' => __("Something went wrong in building the filter ", 'wpv-views'),
+								'editing_manual_filter' => __( 'This filter appears to have been entered manually, so you cannot modify it with this editor. You can continue editing the shortcode manually or re-insert it using the Filters button.', 'wpv-views' ),
 								'taxonomy' => __('Taxonomy', 'wpv-views'),
 								'basic_filters' => __('Basic filters', 'wpv-views'),
 								'relationship_select_tree' => __('Select one tree', 'wpv-views'),
 								'add_submit_shortcode_button' => __('Submit button', 'wpv-views'),
 								'add_submit_shortcode_button_label' => __('Submit', 'wpv-views'),
 								'add_toolbar_submit_button_title' => __( 'Use the submit button to get results based on the form values', 'wpv-views' ),
-								'add_toolbar_submit_button_title_complete' => __( 'This form has a sumbit button already', 'wpv-views' ),
+								'add_toolbar_submit_button_title_complete' => __( 'This form has a submit button already', 'wpv-views' ),
 								'add_toolbar_submit_button_title_incomplete' => __( 'You need to add a submit button', 'wpv-views' ),
 								'add_toolbar_submit_button_title_irrelevant' => __( 'You do not need a submit button in this form', 'wpv-views' ),
 								'add_toolbar_submit_button_title_irrelevant_added' => __( 'You do not need a submit button in this form, although you already have one', 'wpv-views' ),

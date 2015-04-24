@@ -6,6 +6,8 @@
 * @since 1.2.0
 *
 * @moved 1.5.0 to its own file
+*
+* @todo transform this into a proper class
 */
 
 // Add Module Manager constants
@@ -65,13 +67,12 @@ function wpv_module_manager_init() {
 */
 
 function wpv_modules_library_link_components( $current_module = array(), $modman_modules = array() ) {
-	$this_module_data = array();//echo '<pre>';print_r($installed_modules_data);echo '</pre>';echo '<pre>';print_r($modules_rendered);echo '</pre>';
+	$this_module_data = array();
 	foreach ( $modman_modules as $hackey => $hackhack ) {
 		if ( strtolower( $hackey ) == strtolower( $current_module['name'] ) ) {
 			$this_module_data = $hackhack;
 		}
 	}
-	//echo '<pre>';print_r( $this_module_data );echo '</pre>';
 	if ( 
 		( isset( $this_module_data[_VIEWS_MODULE_MANAGER_KEY_] ) && is_array( $this_module_data[_VIEWS_MODULE_MANAGER_KEY_] ) ) 
 		||
@@ -86,11 +87,30 @@ function wpv_modules_library_link_components( $current_module = array(), $modman
 		<?php
 		if ( isset( $this_module_data[_VIEWS_MODULE_MANAGER_KEY_] ) && is_array( $this_module_data[_VIEWS_MODULE_MANAGER_KEY_] ) ) {
 			$view_titles = array();
+			$view_pairs = false;
 			foreach ( $this_module_data[_VIEWS_MODULE_MANAGER_KEY_] as $this_view ) {
 				$view_titles[] = $this_view['title'];
 			}
-			$view_titles_flat = implode( "','", $view_titles );
-			$view_pairs = $wpdb->get_results( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_title IN ('{$view_titles_flat}') AND post_type = 'view'" );
+			if ( count( $view_titles ) > 0 ) {
+				$values_to_prepare = array();
+				$view_titles_count = count( $view_titles );
+				$view_titles_placeholders = array_fill( 0, $view_titles_count, '%s' );
+				$view_titles_flat = implode( ",", $view_titles_placeholders );
+				foreach ( $view_titles as $view_titles_item ) {
+					$values_to_prepare[] = $view_titles_item;
+				}
+				$values_to_prepare[] = 'view';
+				$values_to_prepare[] = $view_titles_count;
+				$view_pairs = $wpdb->get_results( 
+					$wpdb->prepare( 
+						"SELECT ID, post_title FROM {$wpdb->posts} 
+						WHERE post_title IN ({$view_titles_flat}) 
+						AND post_type = %s
+						LIMIT %d",
+						$values_to_prepare
+					)
+				);
+			}
 			if ( $view_pairs ) {
 				$suffix = 'editor';
 				if ( $embedded ) {
@@ -107,11 +127,30 @@ function wpv_modules_library_link_components( $current_module = array(), $modman
 		}
 		if ( isset( $this_module_data[_VIEW_TEMPLATES_MODULE_MANAGER_KEY_] ) && is_array( $this_module_data[_VIEW_TEMPLATES_MODULE_MANAGER_KEY_] ) ) {
 			$template_titles = array();
+			$template_pairs = false;
 			foreach ( $this_module_data[_VIEW_TEMPLATES_MODULE_MANAGER_KEY_] as $this_template ) {
 				$template_titles[] = $this_template['title'];
 			}
-			$template_titles_flat = implode( "','", $template_titles );
-			$template_pairs = $wpdb->get_results( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_title IN ('{$template_titles_flat}') AND post_type = 'view-template'" );
+			if ( count( $template_titles ) > 0 ) {
+				$values_to_prepare = array();
+				$template_titles_count = count( $template_titles );
+				$template_titles_placeholders = array_fill( 0, $template_titles_count, '%s' );
+				$template_titles_flat = implode( ",", $template_titles_placeholders );
+				foreach ( $template_titles as $template_titles_item ) {
+					$values_to_prepare[] = $template_titles_item;
+				}
+				$values_to_prepare[] = 'view-template';
+				$values_to_prepare[] = $template_titles_count;
+				$template_pairs = $wpdb->get_results( 
+					$wpdb->prepare( 
+						"SELECT ID, post_title FROM {$wpdb->posts} 
+						WHERE post_title IN ({$template_titles_flat}) 
+						AND post_type = %s
+						LIMIT %d",
+						$values_to_prepare
+					)
+				);
+			}
 			if ( $template_pairs ) {
 				foreach ( $template_pairs as $template_data ) {
 					if ( $embedded ) {
@@ -129,9 +168,16 @@ function wpv_modules_library_link_components( $current_module = array(), $modman
 	}
 }
 
-// Register sections in Module Manager
+/**
+* wpv_register_modules_sections
+*
+* Register sections in Module Manager
+*
+* @since unknown
+*
+* @todo change to new icons
+*/
 
-//TODO: change with new icons
 function wpv_register_modules_sections( $sections ) {
 	$sections[_VIEW_TEMPLATES_MODULE_MANAGER_KEY_] = array(
 		'title' => __( 'Content Templates','wpv-views' ),
@@ -147,7 +193,13 @@ function wpv_register_modules_sections( $sections ) {
 	return $sections;
 }
 
-// Views register, export, import and check
+/**
+* export_modules_views_items
+*
+* Export selected items - post_type=view
+*
+* @since unknown
+*/
 
 function export_modules_views_items( $res, $items ) {
 	$newitems = array();
@@ -167,13 +219,29 @@ function export_modules_views_items( $res, $items ) {
 	);
 }
 
+/**
+* import_modules_views_items
+*
+* Import selected items - post_type=view
+*
+* @since unknown
+*/
+
 function import_modules_views_items( $result, $xmlstring, $items ) {
 	$result = wpv_admin_import_data_from_xmlstring( $xmlstring, $items, 'views' );
-	if ( false === $result || is_wp_error( $result ) ) {
-		return ( false === $result ) ? __( 'Error during View import','wpv-views' ) : $result->get_error_message( $result->get_error_code() );
+	if ( is_wp_error( $result ) ) {
+		return $result->get_error_message( $result->get_error_code() );
 	}
 	return $result;
 }
+
+/**
+* check_modules_views_items
+*
+* Check selected items for changes - post_type=view
+*
+* @since unknown
+*/
 
 function check_modules_views_items( $items ) {
 	foreach ( $items as $key=>$item ) {
@@ -198,7 +266,13 @@ function check_modules_views_items( $items ) {
 	return $items;
 }
 
-// Content Templates register, export, import and check
+/**
+* export_modules_view_templates_items
+*
+* Export selected items - post_type=view-template
+*
+* @since unknown
+*/
 
 function export_modules_view_templates_items( $res, $items ) {
 	$newitems = array();
@@ -218,13 +292,29 @@ function export_modules_view_templates_items( $res, $items ) {
 	);
 }
 
+/**
+* import_modules_view_templates_items
+*
+* Import selected items - post_type=view-template
+*
+* @since unknown
+*/
+
 function import_modules_view_templates_items( $result, $xmlstring, $items ) {
 	$result = wpv_admin_import_data_from_xmlstring( $xmlstring, $items, 'view-templates' );
-	if ( false === $result || is_wp_error( $result ) ) {
-		return ( false === $result ) ? __( 'Error during Content Template import', 'wpv-views' ) : $result->get_error_message( $result->get_error_code() );
+	if ( is_wp_error( $result ) ) {
+		return $result->get_error_message( $result->get_error_code() );
 	}
 	return $result;
 }
+
+/**
+* check_modules_view_templates_items
+*
+* Check selected items for changes - post_type=view-template
+*
+* @since unknown
+*/
 
 function check_modules_view_templates_items( $items ) {
 	foreach ( $items as $key => $item ) {
@@ -271,7 +361,7 @@ function wpv_modules_views_pluginversion_used() {
 * @since 1.2.0
 */
 function wpv_admin_export_selected_data( $items, $type = 'view', $mode = 'xml' ) {
-    global $WP_Views, $_wp_additional_image_sizes;
+    global $wpdb, $WPV_settings, $_wp_additional_image_sizes;
 
     require_once WPV_PATH_EMBEDDED . '/common/array2xml.php';
     $xml = new ICL_Array2XML();
@@ -925,38 +1015,48 @@ function wpv_admin_export_selected_data( $items, $type = 'view', $mode = 'xml' )
 		&& ( 'view-template' == $type )
 	) {
         //This is a module manager export request for Content Template
-		$options = get_option( 'wpv_options' );
-		if ( ! empty( $options ) ) {
-			foreach ( $options as $option_name => $option_value ) {
+		if ( ! $WPV_settings->is_empty() ) {
+			$wpv_settings_to_export = array();
+			foreach ( $WPV_settings as $option_name => $option_value ) {
 				if ( strpos( $option_name, 'views_template_for_' ) === 0 ) {
-					$post = get_post( $option_value );
-					if ( ! empty( $post ) ) {
-						$options[$option_name] = $post->post_name;
+					$item_name = $wpdb->get_var( 
+						$wpdb->prepare( 
+							"SELECT post_name FROM {$wpdb->posts} 
+							WHERE ID = %s 
+							LIMIT 1", 
+							$option_value 
+						) 
+					);
+					if ( $item_name ) {
+						$wpv_settings_to_export[$option_name] = $item_name;
 					}
-				} else {
-                    unset( $options[$option_name] );
-                }
+				}
 			}
-			$data['settings'] = $options;
+			$data['settings'] = $wpv_settings_to_export;
 		}
 	} elseif (
 		( 'module_manager' == $mode ) 
 		&& ( 'view' == $type )
 	) {
 		//This is a module manager export request for WordPress archives
-		$options = get_option( 'wpv_options' );
-		if ( ! empty( $options ) ) {
-			foreach ( $options as $option_name => $option_value ) {
+		if ( ! $WPV_settings->is_empty() ) {
+			$wpv_settings_to_export = array();
+			foreach ( $WPV_settings as $option_name => $option_value ) {
 				if ( strpos( $option_name, 'view_' ) === 0 ) {
-					$post = get_post( $option_value );
-					if ( ! empty( $post ) ) {
-						$options[$option_name] = $post->post_name;
+					$item_name = $wpdb->get_var( 
+						$wpdb->prepare( 
+							"SELECT post_name FROM {$wpdb->posts} 
+							WHERE ID = %s 
+							LIMIT 1", 
+							$option_value 
+						) 
+					);
+					if ( $item_name ) {
+						$wpv_settings_to_export[$option_name] = $item_name;
 					}
-				} else {
-					unset( $options[$option_name] );
 				}
 			}
-			$data['settings'] = $options;
+			$data['settings'] = $wpv_settings_to_export;
     	}
     }
     /** END */
@@ -981,4 +1081,107 @@ function wpv_ksort_by_string_views( $data ) {
 		}
 	}
 	return $data;
+}
+
+/*
+* wpv_admin_import_data_from_xmlstring
+*
+* Custom Import function for Module Manager
+*
+* Imports given xml string, an array of items to import and the type of data to import
+*
+* @param $xmlstring (string) String-ized version of an import XML file
+* @param $items (array) Array of items to import - note that the values are arrays prefixed with the Module Manager register key for the component
+* @param $import_type (string) <views|view-templates> Type of element to import
+*
+* @since unknown
+*/
+function wpv_admin_import_data_from_xmlstring( $xmlstring, $items = array(), $import_type = null ) {
+    global $WPV_Export_Import;
+    if ( ! empty( $xmlstring ) ) {
+        if ( ! function_exists( 'simplexml_load_string' ) ) {
+            return new WP_Error( 'xml_missing', __( 'The Simple XML library is missing.', 'wpv-views' ) );
+        }
+        $xml = simplexml_load_string( $xmlstring );
+        if ( ! $xml ) {
+            return new WP_Error( 'not_xml_file', sprintf( __( 'The XML could not be read.', 'wpv-views' ) ) );
+        }
+        $import_data = wpv_admin_import_export_simplexml2array( $xml );
+        if ( isset( $import_type ) ) {
+			if ( 'view-templates' == $import_type ) { // Import Content Templates
+				$import_items = array();
+				foreach ( $items as $item ) {
+					$import_items[] = str_replace( _VIEW_TEMPLATES_MODULE_MANAGER_KEY_ , '', $item );
+				}
+				$args = array(
+					'force_import_id' => $import_items,
+					'return_to' => 'module_manager'
+				);
+				$result = $WPV_Export_Import->import_content_templates( $import_data, $args );
+				
+				/** EMERSON: Import Content Template assignments to post types */
+				//Proceed only if settings are set and not empty
+				if ( 
+					isset( $import_data['settings'] ) 
+					&& ! empty( $import_data['settings'] )
+				) {
+					$error = $WPV_Export_Import->import_settings( $import_data );						
+				}				
+				
+				return $result;
+				
+			} elseif ( 'views' == $import_type ) { // Import Views
+				$import_items = array();
+				foreach ( $items as $item ) {
+					$import_items[] = str_replace( _VIEWS_MODULE_MANAGER_KEY_, '', $item );
+				}
+				$args = array(
+					'force_import_id' => $import_items,
+					'return_to' => 'module_manager'
+				);
+				$result = $WPV_Export_Import->import_views( $import_data, $args );
+				
+				/** EMERSON: Import WordPress archive assignments */
+				//Proceed only if settings are set and not empty
+				if ( 
+					isset( $import_data['settings'] ) 
+					&& ! empty( $import_data['settings'] )
+				) {
+					foreach ( $import_data['settings'] as $k => $v ) {
+						if ( ! ( strpos( $k, 'view_' ) === 0 ) ) {							
+							unset( $import_data['settings'][$k] );
+						} 
+					}
+					$error = $WPV_Export_Import->import_settings( $import_data );
+				}
+
+				return $result;
+				
+			} else { // Defined but not known $import_type
+				$results = array(
+					'updated' => 0,
+					'new' => 0,
+					'failed' => 0,
+					'errors' => array()
+				);
+				return $results;
+			}
+        } else { // Not set $import_type
+			$results = array(
+				'updated' => 0,
+				'new' => 0,
+				'failed' => 0,
+				'errors' => array()
+			);
+			return $results;
+        }
+    } else { // empty xml string
+		$results = array(
+			'updated' => 0,
+			'new' => 0,
+			'failed' => 0,
+			'errors' => array()
+		);
+		return $results;
+    }
 }

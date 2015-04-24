@@ -5,7 +5,7 @@
  * The WooCommerce Views Class aims PHP code-free implementation of WooCommerce Plugin with Toolset.
  *
  * @class 		Class_WooCommerce_Views
- * @version		2.5
+ * @version		2.5.1
  * @package		WooCommerce-Views/Classes
  * @category	Class
  * @author 		OnTheGoSystems
@@ -44,7 +44,7 @@ class Class_WooCommerce_Views {
 		add_action('init',array(&$this,'prefix_setup_schedule'));			
 		add_action('admin_init',array(&$this,'reset_all_wc_admin_screen'));
 		
-		//Old shortcodes		
+		//Old shortcodes-all deprecated still added for outputting deprecation notices		
 		add_shortcode('wpv-wooaddcart', array(&$this,'wpv_woo_add_to_cart'));
 		add_shortcode('wpv-wooaddcartbox', array(&$this,'wpv_woo_add_to_cart_box'));
 		add_shortcode('wpv-wooremovecart', array(&$this,'wpv_woo_remove_from_cart'));
@@ -66,6 +66,7 @@ class Class_WooCommerce_Views {
 		add_shortcode('wpv-woo-display-tabs',array(&$this,'wpv_woo_display_tabs_func'));
 		add_shortcode('wpv-woo-onsale',array(&$this,'wpv_woo_onsale_func'));	
 		add_shortcode('wpv-woo-product-meta', array(&$this,'wpv_woo_product_meta_func'));
+		add_shortcode('wpv-woo-cart-count', array(&$this,'wpv_woo_cart_count_func'));
 		
 		//By default, don't include gallery images in image shortcode at listings
 		add_filter('woocommerce_product_gallery_attachment_ids',array(&$this,'remove_gallery_on_main_image_at_listings'),20,2);
@@ -144,7 +145,14 @@ class Class_WooCommerce_Views {
 				'dd_layouts',
 				'view',
 				'view-template'
-		);		
+		);	
+
+		// Ensure cart contents are updated when products are added to the cart via AJAX (place the following in functions.php)
+		// This hooked is used by WooCommerce Views cart count shortcode.
+		add_filter( 'woocommerce_add_to_cart_fragments', array(&$this,'woocommerce_views_add_to_cart_fragment' ),10,1);
+		
+		//Auto-JS handler for WooCommerce Views onsale shortcode in Views AJAX pagination
+		add_filter( 'wpv_view_settings', array($this,'wcviews_onsale_pagination_callback_func'), 99, 2 );
 	}
 
 	/**
@@ -1132,8 +1140,8 @@ class Class_WooCommerce_Views {
 	 */	
 	
 	public function check_if_types_group_exist( $title ) {
-		global $wpdb;
-		$return = $wpdb->get_row( "SELECT ID FROM $wpdb->posts WHERE post_title = '" . $title . "' && post_status = 'publish' && post_type = 'wp-types-group' ", 'ARRAY_N' );
+		global $wpdb;		
+		$return= $wpdb->get_row($wpdb->prepare("SELECT ID FROM $wpdb->posts WHERE post_title=%s && post_status = 'publish' && post_type = 'wp-types-group' ", $title),'ARRAY_N');
 		if( empty( $return ) ) {
 			return false;
 		} else {
@@ -2261,7 +2269,30 @@ class Class_WooCommerce_Views {
 	public function ajax_process_wc_views_batchprocessing($wc_view_woocommerce_orderobject='') {
 	
 		global $wpdb,$woocommerce;
-	 
+	    $doing_ajax_batch_processing=false;
+	    
+		if (defined('DOING_AJAX') && DOING_AJAX ) {			
+			//Doing AJAX          
+			//Let's catch those sent for AJAX batch processing
+			if (isset($_POST['action'])) {
+				//action set
+				$the_action=$_POST['action'];
+				if ('wc_views_ajax_response_admin' == $the_action) {
+					$doing_ajax_batch_processing= true;					
+				}				
+			}
+			
+			//Catch wrong nonce
+           if ((isset($_POST['wpv_wc_views_ajax_response_admin_nonce'])) && ($doing_ajax_batch_processing)) {
+           	if (!( wp_verify_nonce( $_POST['wpv_wc_views_ajax_response_admin_nonce'], 'wc_views_ajax_response_admin' )))  {
+           			$response['status']='error';
+					$response['batch_processing_output'] = __('Batch processing output is not successful because nonce is invalid.','woocommerce_views');
+					echo json_encode($response);
+					die();
+           	}
+           }
+		}
+		
 		//Define custom field names
 		$views_woo_price = 'views_woo_price';
 		$views_woo_on_sale = 'views_woo_on_sale';
@@ -2335,7 +2366,7 @@ class Class_WooCommerce_Views {
 	             //Status NOT set, this is not "checking out". Output this AJAX response.
 				if (defined('DOING_AJAX') && DOING_AJAX ) {
 					echo json_encode($response);
-						die();
+					die();
 				}
 			}
 	       
@@ -2394,9 +2425,13 @@ class Class_WooCommerce_Views {
 	
 	             //File belongs one directory deeper
 	             //Check if its a WooCommerce single-products.php template
+	             //Two possibilities- single-product.php and archive-product.
+	             //This is all we need for now with WooCommerce Views.
 	             $unclean_template_name=strtolower($unclean_template_name);
 	             if ($unclean_template_name =='woocommerce/archive-product.php') {
 	                 $sanitized_complete_template_files_list[$template_name]=$template_path;
+	             } elseif ($unclean_template_name =='woocommerce/single-product.php') {
+	             	$sanitized_complete_template_files_list[$template_name]=$template_path;
 	             }
 
 	         } else {
@@ -2452,6 +2487,40 @@ class Class_WooCommerce_Views {
 	}
 	
 	/**
+	 * Method to check for the existence and use of Genesis Frameworks
+	 * @access public
+	 * @return boolean
+	 */
+	public function wc_views_is_using_genesis_framework($theme) {
+
+		$using_genesis_framework=false;		
+		
+		if (is_object($theme)) {
+			
+			$current_theme_name ='';
+			$parent_headers_name ='';
+			
+			if (isset($theme->name)) {				
+				$current_theme_name=$theme->name;				
+			}			
+			if (isset($theme->parent_theme)) {				
+				$parent_headers_name =$theme->parent_theme;
+			}
+
+			$genesis_func_exist= false;
+			if (function_exists('genesis')) {				
+				$genesis_func_exist=true;
+			}
+			
+			if ((('Genesis' == $current_theme_name) || ('Genesis' == $parent_headers_name)) && ($genesis_func_exist)) {				
+				$using_genesis_framework=true;				
+			}			
+		}	
+		
+		return $using_genesis_framework;
+	}
+	
+	/**
 	 * Method for loading correct template files for using with WooCommerce Views
 	 * @access public
 	 * @return array
@@ -2465,6 +2534,12 @@ class Class_WooCommerce_Views {
 		$complete_template_files_list = $theme->get_files( 'php', 1,true);
 		$complete_template_files_list = $this->wc_views_filter_only_relevant_wc_templates_innerdir($complete_template_files_list );
 		$headers_for_theme_files=$theme->get_page_templates();
+
+		//Retrieve stylesheet directory URI for the current theme/child theme 
+		$get_stylesheet_directory_data=get_stylesheet_directory();
+		
+		//Checked for Genesis Frameworks which uses specialized loops
+		$is_using_genesis= $this->wc_views_is_using_genesis_framework($theme);
 	
 		if ((is_array($complete_template_files_list)) && (!(empty($complete_template_files_list)))) {
 	    $correct_templates_list= array();
@@ -2483,13 +2558,21 @@ class Class_WooCommerce_Views {
 	          if ($layouts_plugin_status) {
 	          	global $wpddlayout;
 	          	//Layouts activated
-	          	if (method_exists($wpddlayout,'template_have_layout')) {
-	          		$is_theme_template_has_ddlayout= $wpddlayout->template_have_layout($key);	          		
-	          	}	          	
+
+	          	//Ensure single-product is checked at correct path
+	          	$template_lower_case= strtolower($key);
+	          	if ((strpos($template_lower_case, 'single-product.php') !== false)) {
+	          		//This is a single product template at the user theme directory
+	          		$key = str_replace($get_stylesheet_directory_data, "", $values);	          			
+	          		$key =ltrim($key,'/');          			
+	          	}
+	          	
+	          	$is_theme_template_has_ddlayout= $this->wcviews_template_have_layout($key);	          		
+	          		          	
 	          } else {
 	          	//Layouts inactive, lets fallback to usual PHP looped templates
 	          	//Emerson: Qualified theme templates should contain WP loops for WC hooks and Views to work
-	          	$is_theme_template_looped= $this->check_if_php_template_contains_wp_loop($values);	          	
+	          	$is_theme_template_looped= $this->check_if_php_template_contains_wp_loop($values, $is_using_genesis);	          	
 	          }
 	          
 	          //Add those qualified PHP templates only once
@@ -2546,10 +2629,54 @@ class Class_WooCommerce_Views {
 	}
 	
 	/**
+	 * Method for verifying if the template has a call to ddlayout (with child theme compatibility)
+	 * $file is a complete path to the theme directory to be checked
+	 * @access public
+	 * @return string
+	 */
+		
+	public function wcviews_template_have_layout( $file )
+	{
+	
+		$bool = false;
+	
+		$file_abs_child  = get_stylesheet_directory() . '/' . $file;	
+		$file_abs_parent = get_template_directory() . '/' . $file;
+		
+		//Check for file existence 
+		//In WordPres child themes, if template exist in child theme directory
+		//It overrides the parent, so check if it exists in child first
+		//If not check if it exists on parent directory
+		
+		$file_abs ='';
+		
+		if (file_exists($file_abs_child)) {
+			//It exists in child
+			$file_abs = $file_abs_child;			
+		} elseif (file_exists($file_abs_parent)) {
+		    $file_abs = $file_abs_parent;	
+		}
+
+		if (!(empty($file_abs))) {
+			//Let's retrieved the contents of this template
+			$file_data = @file_get_contents( $file_abs );
+	
+			if ($file_data !== false) {
+				if (strpos($file_data, 'the_ddlayout') !== false) {
+					$bool = true;
+				}
+			}	
+		}	 
+	
+		return $bool;
+	}	
+	
+	/**
 	 * Method for getting the theme name based on template path
 	 * @access public
 	 * @return string
 	 */	
+	
 	public function get_theme_name_based_on_path($template_path,$get_custom_theme_info) {		
 		
 		//Set empty string
@@ -2676,6 +2803,7 @@ class Class_WooCommerce_Views {
 		$is_a_single_template = $this->wcviews_array_find('single', $exploded_template_file_name);
 		$is_a_product_template = $this->wcviews_array_find('product', $exploded_template_file_name);
 		$is_a_layouts_template= $this->wcviews_array_find('layouts', $exploded_template_file_name);
+		$is_a_prod_archive_template= $this->wcviews_array_find('archive-product', $exploded_template_file_name);
 	
 		//Append word 'Theme' only when its not on the theme name		
 		$theme_append=$this->theme_append_wcviews_name_correctly($theme_name);
@@ -2706,14 +2834,20 @@ class Class_WooCommerce_Views {
 			}
 			
 			return $custom_post_template;
-	    } else {			
-			$custom_template=$theme_append.' '.__('custom template','woocommerce_views');
+	    } else {
+	    		
+	    	if ($is_a_prod_archive_template  !== false) {		
+				$custom_template=$theme_append.' '.__('Custom Product Archive Template','woocommerce_views');
+	    	} else {
+	    		$custom_template=$theme_append.' '.__('Custom Template','woocommerce_views');
+	    	}
+	    	
 			return $custom_template;
 	    }
 	 
 	}
 	
-	public function check_if_php_template_contains_wp_loop($template) {
+	public function check_if_php_template_contains_wp_loop($template,$is_using_genesis=false) {
 	
 		$handle = fopen($template, "r");
 		$contents = fread($handle,filesize($template));
@@ -2722,9 +2856,18 @@ class Class_WooCommerce_Views {
 		$the_post_key = $this->wcviews_array_find('the_post()', $pieces);
 		$the_loop_key = $this->wcviews_array_find('loop', $pieces);
 	
+		$the_genesis_key =false;
+		
+		if ($is_using_genesis) {
+		    //Genesis Framework Activated, check if this is single products
+			$template_basename= basename($template);
+			if ('single-product.php' == $template_basename) {
+				$the_genesis_key = $this->wcviews_array_find('genesis()', $pieces);
+			}
+		}
 		fclose($handle);
 	
-		if ((($have_post_key) && ($the_post_key)) || ($the_loop_key)) {
+		if ((($have_post_key) && ($the_post_key)) || ($the_loop_key) || ($the_genesis_key)) {
 			return TRUE;
 		} else {
 			return FALSE;
@@ -2835,25 +2978,7 @@ class Class_WooCommerce_Views {
 	/*Not anymore used starting version 2.0, public function remains for backward compatibility*/
 	public function wpv_woo_add_to_cart($atts) {
 	
-		global $post, $wp_query, $wpdb;
-		
-		$product_id = $post->ID;
-		$current_page = $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
-		$current_page = strpos($current_page, '?') ? $current_page . '&' : $current_page . '?';
-		
-		$get_variation_term_name = $wpdb->get_row("SELECT term_id FROM $wpdb->terms WHERE name = 'variable'");
-		$get_variation_term_id = $get_variation_term_name->term_id;
-		
-		$is_product_with_variations = $wpdb->get_row("SELECT * FROM $wpdb->term_relationships WHERE object_id = '$product_id' AND term_taxonomy_id = '$get_variation_term_id'");
-		if(!empty($is_product_with_variations)) $is_product_with_variations = TRUE;
-		
-		if(!$is_product_with_variations){
-			$out = '<a href="'. $current_page .'add-to-cart='. $product_id .'" rel="nofollow" data-product_id="'. $product_id .'" class="button add_to_cart_button product_type_simple">'. __('Add to cart', 'woocommerce_views') .'</a>';
-		} else {
-			$out = '<a href="'. get_permalink($product_id) .'" rel="nofollow" data-product_id="'. $product_id .'" class="button add_to_cart_button product_type_variable">'. __('Select options', 'woocommerce_views') .'</a>';
-		}
-		
-		return $out;
+		_deprecated_function( 'wpv-wooaddcart', '2.5.1','wpv-woo-buy-options' );
 	}
 	
 	/**Emerson: NEW VERSION
@@ -3034,8 +3159,29 @@ class Class_WooCommerce_Views {
 	        
 	        
 			if (isset($product)) {
-				ob_start();				
-				woocommerce_template_loop_add_to_cart();	
+				ob_start();	
+				if (isset($atts['show_variation_options'])) {
+				   //Variation option is set
+				   $show_variation_options=trim($atts['show_variation_options']);
+				   $show_variation_options=strtolower($show_variation_options);
+				   if ('yes' == $show_variation_options) {
+				   	//User wants to display variation options on listing pages
+					   	if('variable' == $product->product_type  ) {
+					   		//This is a variable product, display.
+					   		do_action( 'woocommerce_variable_add_to_cart');
+					   	} else {
+	                        //Not variable product, ignore it just display the usual thing
+					   		woocommerce_template_loop_add_to_cart();
+					   	}
+				   } else {
+				   	 	//Here user sets a different value for show variation options, its not 'yes', so just display the usual thing.
+				   		woocommerce_template_loop_add_to_cart();
+				   }
+				} else {
+					//Variation option is not yet, just display normally	
+					woocommerce_template_loop_add_to_cart();
+				}
+					
 				return ob_get_clean();
 			} else {
 	             return '';
@@ -3254,7 +3400,17 @@ class Class_WooCommerce_Views {
 	    $placeholder_height=$image_dimensions_for_place_holder[1];
 	    $image_src_source=simplexml_load_string($imagehtml);
 	    $image_src_source_url= (string) $image_src_source->attributes()->src;
-	    $output_image_placeholder_html='<img src="'.$image_src_source_url.'" alt="Placeholder" width="'.$placeholder_width.'" height="'.$placeholder_height.'" />';
+	    
+	    //New in version 2.5.1, ensure placeholder width and height is enforced.
+	    //Use style="width:[$placeholder_width]px;height:[$placeholder_height]px;"
+	    
+	    /** In pixels */
+	    //Set responsive width   
+	    $placeholder_width_pixels= '100%';
+	    $placeholder_height_pixels= $placeholder_height.'px';	    
+	    
+	    $output_image_placeholder_html='<img src="'.$image_src_source_url.'" alt="Placeholder" style="width:'.$placeholder_width_pixels.';height:'.$placeholder_height_pixels.'" />';
+	    
 	    return $output_image_placeholder_html;
 		
 	}
@@ -3889,69 +4045,16 @@ class Class_WooCommerce_Views {
 	/*[wpv_woo_add_to_cart_box] is not anymore used starting version 2.0, public function remains for backward compatibility*/
 	public function wpv_woo_add_to_cart_box($atts) {    
 	
-	global $post, $wpdb, $woocommerce;
-	
-	if ( ! isset( $atts['style'] ) ) $atts['style'] = 'border:4px solid #ccc; padding: 12px;';
-	
-	if ( 'product' == $post->post_type ) {
-	
-		$product =$this->wcviews_setup_product_data($post);
-	
-		ob_start();
-		?>
-<p class="product woocommerce" style="<?php echo $atts['style']; ?>">
-	
-				<?php echo $product->get_price_html(); ?>
-	
-				<?php woocommerce_template_loop_add_to_cart(); ?>
-	
-			</p><?php
-	
-			return ob_get_clean();
-	
-		} elseif ( 'product_variation' == $post->post_type ) {
-	
-			$product = get_product( $post->post_parent );
-	
-			$GLOBALS['product'] = $product;
-	
-			$variation = get_product( $post );
-	
-			ob_start();
-			?>
-<p class="product product-variation" style="<?php echo $atts['style']; ?>">
-	
-				<?php echo $product->get_price_html(); ?>
-	
-				<?php
-	
-				$link 	= $product->add_to_cart_url();
-	
-				$label 	= apply_filters('add_to_cart_text', __( 'Add to cart', 'woocommerce_views' ));
-	
-				$link = add_query_arg( 'variation_id', $variation->variation_id, $link );
-	
-				foreach ($variation->variation_data as $key => $data) {
-					if ($data) $link = add_query_arg( $key, $data, $link );
-				}
-	
-				printf('<a href="%s" rel="nofollow" data-product_id="%s" class="button add_to_cart_button product_type_%s">%s</a>', esc_url( $link ), $product->id, $product->product_type, $label);
-	
-				?>
-	
-			</p><?php
-	
-			return ob_get_clean();
-	
-		}
+		_deprecated_function( 'wpv-wooaddcartbox', '2.5.1','wpv-woo-buy-options' );
+		
 	}
 	
 	public function wpv_woo_remove_from_cart($atts) {
-		
+		_deprecated_function( 'wpv-wooremovecart', '2.5.1' );
 	}
 	
 	public function wpv_woo_cart_url($atts) {
-		
+		_deprecated_function( 'wpv-woo-carturl', '2.5.1' );
 	}
 	
 	public function wpv_woo_add_shortcode_in_views_popup($items){
@@ -4106,7 +4209,14 @@ class Class_WooCommerce_Views {
 				'wpv-woo-product-meta',
 				'Basic',
 				''
-		);		
+		);
+		//[wpv-woo-cart-count]
+		$items['WooCommerce']['woocommercecartcount'] = array(
+				'Cart Count',
+				'wpv-woo-cart-count',
+				'Basic',
+				''
+		);				
 
 		return $items;
 		
@@ -4269,6 +4379,14 @@ class Class_WooCommerce_Views {
 		$items[] = array(
 				'Product meta',
 				'wpv-woo-product-meta',
+				'WooCommerce',
+				''
+		);	
+
+		//[wpv-woo-cart-count]
+		$items[] = array(
+				'Cart Count',
+				'wpv-woo-cart-count',
 				'WooCommerce',
 				''
 		);		
@@ -5468,6 +5586,9 @@ class Class_WooCommerce_Views {
 		$complete_template_files_list = $this->wc_views_filter_only_relevant_wc_templates_innerdir ( $complete_template_files_list );
 		//$headers_for_theme_files = $theme->get_page_templates ();
 		
+		//Retrieve stylesheet directory URI for the current theme/child theme
+		$get_stylesheet_directory_data=get_stylesheet_directory();
+		
 		if ((is_array ( $complete_template_files_list )) && (! (empty ( $complete_template_files_list )))) {
 			$correct_templates_list = array ();
 			$layouts_plugin_status = $this->wc_views_check_status_of_layouts_plugin ();
@@ -5483,20 +5604,17 @@ class Class_WooCommerce_Views {
 					$is_theme_template_looped = FALSE;
 					
 					if ($layouts_plugin_status) {
-						global $wpddlayout;
-						// Layouts activated
-						if (method_exists ( $wpddlayout, 'template_have_layout' )) {
-							$alternative_path_one= get_template_directory() . DIRECTORY_SEPARATOR . $key;
-							$alternative_path_two= get_template_directory() . DIRECTORY_SEPARATOR . 'woocommerce'.DIRECTORY_SEPARATOR.$key;
-							if (!( file_exists( $alternative_path_one ) )) {
-								//Does not exist in theme root, try the other alternative
-								if (file_exists( $alternative_path_two )) {
-									//Exists
-									$key='woocommerce/'.$key;
-								}
-							}
-							$is_theme_template_has_ddlayout = $wpddlayout->template_have_layout ( $key );
+						//Layouts plugin activated
+						//Ensure archive-product.php is checked at correct path
+						$template_lower_case= strtolower($key);
+						if ((strpos($template_lower_case, 'archive-product.php') !== false)) {
+							//This is an archive product template at the user theme directory
+							$key = str_replace($get_stylesheet_directory_data, "", $values);
+							$key =ltrim($key,'/');
 						}
+						
+						$is_theme_template_has_ddlayout= $this->wcviews_template_have_layout($key);						
+						
 					} else {
 						// Layouts inactive, lets fallback to usual PHP looped templates
 						// Emerson: Qualified theme templates should contain WP loops for WC hooks and Views to work
@@ -5566,7 +5684,7 @@ class Class_WooCommerce_Views {
   		$correct_template_list_final=array();
   	
   		//The defaults array
-  		$defaults_name_array=array('woocommerce/archive-product.php'=>__('Theme custom product archive template','woocommerce_views'));
+  		$defaults_name_array=array('woocommerce/archive-product.php'=>__('Theme Custom Product Archive Template','woocommerce_views'));
   		 
   		if (is_array($correct_template_list)) {
   	
@@ -5887,16 +6005,42 @@ class Class_WooCommerce_Views {
   	
   		global $woocommerce;
   	
-  		if ((is_shop()) ||
-  			    (is_product_category()) ||
-                (is_product_tag()) ||
-  				(is_product_taxonomy())) {  	
-
-  			$file='archive-product.php';
-  			$template = $woocommerce->plugin_path() . '/templates/' . $file;
-  	
+  		if (is_object($woocommerce)) {
+  			
+  		    //OK, We have WooCommerce activated
+  		    //These functions are safe to use
+  			if ((is_shop()) ||
+  					(is_product_category()) ||
+  					(is_product_tag()) ||
+  					(is_product_taxonomy())) {
+  						
+  						/** EMERSON: These are not rendered or read when using the setting 'WooCommerce Views plugin default product archive template' */
+  						/** This setting is found in 'Product Archive Template File' section in WooCommerce Views settings.
+  						/** This is only read if the user is selecting the setting 'WooCommerce Plugin Default Archive Templates'*/
+  						
+  						/** However, there are cases beyond WooCommerce Views and WooCommerce plugin controls where there are archive template overrides present in the theme */
+  						/** For example using woocommerce.php in the theme root */
+  						
+  						/** According to WC note: http://docs.woothemes.com/document/template-structure/
+  						 *  When creating woocommerce.php in your theme’s folder, you won’t then be able to override the 
+  						 *  woocommerce/archive-product.php custom template (in your theme) as woocommerce.php has the priority over all other template files. 
+  						 *  This is intended to prevent display issues.
+  						 */
+  						/** Presence of this wooommerce.php template file assumes user wants to render this and not default WooCommerce core plugin templates */
+  						/** So let's checked if the template to be filtered is woocommerce.php and let it pass */
+  						
+  						$basename_template = basename($template);
+  						
+  						if ('woocommerce.php' != $basename_template) {
+  							
+  							//Template is not the woocommerce.php, proceed to loading WC core archive default template
+  							$file='archive-product.php';
+  							$template = $woocommerce->plugin_path() . '/templates/' . $file;
+  						}
+  						 
+  					}		    				
   		}
-  	
+
   		return $template;
   	}
   	
@@ -6078,5 +6222,137 @@ class Class_WooCommerce_Views {
   				}
   			}
   		}  		
+  	}
+  	
+  	/**
+  	 * Displays the number of items added in WooCommerce Cart
+  	 * Please synchronize any changes on this method with 'woocommerce_views_add_to_cart_fragment'
+  	 * Original source is derived from this doc: http://docs.woothemes.com/document/show-cart-contents-total/
+  	 * Since 2.5.1
+  	 * @access public
+  	 * @return void
+  	 */
+  	
+  	public function wpv_woo_cart_count_func($atts) {
+  		
+  		global $woocommerce;
+  		
+  		ob_start();
+  		
+  		if (is_object($woocommerce)) {
+           //WooCommerce plugin activated
+           //Let's checked the cart count
+           
+            $cart_count=WC()->cart->cart_contents_count;
+            $cart_count= intval($cart_count); 
+            
+            //Add count to class
+            $cart_class = $cart_count;
+
+            if ($cart_count < 1) {
+                //Nothing is added on cart
+                $cart_count='';    
+                $cart_class = 0;
+            }
+	?>	        
+	        <span class='wcviews_cart_count_output wcviews_cart_count_<?php echo $cart_class;?>'><?php echo $cart_count; ?></span>
+	<?php 	       
+	  		return ob_get_clean();
+  		}
+  	}
+  	
+  	/**
+  	 * Ajaxify version-Displays the number of items added in WooCommerce Cart
+  	 * Original source is derived from this doc: http://docs.woothemes.com/document/show-cart-contents-total/
+  	 * Since 2.5.1
+  	 * @access public
+  	 * @return void
+  	 */
+  	public function woocommerce_views_add_to_cart_fragment( $fragments ) {
+
+  		global $woocommerce;
+  	
+  		ob_start();
+  	
+	  	if (is_object($woocommerce)) {
+	  		//WooCommerce plugin activated
+	  		//Let's checked the cart count
+	  		 
+	  		$cart_count=WC()->cart->cart_contents_count;
+	  		$cart_count= intval($cart_count);
+
+	  		//Add count to class
+	  		$cart_class = $cart_count;
+	  		
+	  		if ($cart_count < 1) {
+	  			//Nothing is added on cart
+	  			$cart_count='';
+	  			$cart_class = 0;
+	  			 
+	  		}
+	?>
+			<span class='wcviews_cart_count_output wcviews_cart_count_<?php echo $cart_class;?>'><?php echo $cart_count; ?></span>  	
+	<?php 		  		
+	  		//Doing AJAX	
+	  		$fragments['span.wcviews_cart_count_output'] = ob_get_clean();
+	  		return $fragments;
+
+	  	}
+  	}
+  	
+  	/**
+  	 * JS handler for WooCommerce Views onsale shortcode so it will display properly on Views AJAX paginated pages.
+  	 * Since 2.5.1
+  	 * @access public
+  	 * @return array
+  	 */
+  	public function wcviews_onsale_pagination_callback_func($view_settings, $view_id) {
+  		
+  	   //Step1, we need to ensure 'WooCommerce' plugin is activated
+  		global $woocommerce;
+  		 
+  		if (is_object($woocommerce)) {
+  			//Step2. We need to check for Views that loads 'product' post type
+  			//This 'product' post type is now WooCommerce controlled
+  			if (isset($view_settings['post_type'])) {  				
+  				$post_types=$view_settings['post_type'];  				
+  				if (in_array('product',$post_types)) {
+  					
+  				    //Product post type set  				    	
+  				    //Step3,we need to check if pagination is enabled to AJAX  				    
+  				    if (isset($view_settings['pagination']['mode'])) {
+  				    	
+  				    	$pagination_mode=$view_settings['pagination']['mode'];
+  				    	
+  				    	if ('paged' == $pagination_mode) {
+  				    		
+  				    		//It's paginated
+  				    		//Check if we have callback_next set, don't override user-defined functions
+  				    		$call_back_set=false;
+  				    		if (isset($view_settings['pagination']['callback_next'])) {  				    		   
+  				    		   //Set, let's checked if defined.
+  				    		   $call_back_next=$view_settings['pagination']['callback_next'];
+  				    		   if (!(empty( $call_back_next))) {  				    		   	
+  				    		   	  //Defined,
+  				    		   	  $call_back_set=true;  				    		   	
+  				    		   }
+  				    		}
+
+  				    		if (!($call_back_set)) {
+  				    		   //Let's load default WooCommerce Views JS onsale shortcode pagination handler  				    		   	
+  				    		   	$view_settings['pagination']['callback_next'] = 'wcviews_onsale_pagination_callback';
+  				    		}
+  				    	}
+  				        	
+  				    }
+  					
+  				}
+  				
+  			}
+  		}
+  	
+  	   //For anything else, return unfiltered settings
+  	   return $view_settings;
+  		
   	}
 }

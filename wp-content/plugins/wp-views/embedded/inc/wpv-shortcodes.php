@@ -27,6 +27,7 @@ $wpv_shortcodes['wpv-post-featured-image'] = array('wpv-post-featured-image', __
 $wpv_shortcodes['wpv-post-comments-number'] = array('wpv-post-comments-number', __('Comments number', 'wpv-views'), 'wpv_shortcode_wpv_comments_number');
 $wpv_shortcodes['wpv-post-edit-link'] = array('wpv-post-edit-link', __('Edit Link', 'wpv-views'), 'wpv_shortcode_wpv_post_edit_link');
 $wpv_shortcodes['wpv-post-type'] = array('wpv-post-type', __('Post type', 'wpv-views'), 'wpv_shortcode_wpv_post_type');
+$wpv_shortcodes['wpv-post-format'] = array('wpv-post-format', __('Post format', 'wpv-views'), 'wpv_shortcode_wpv_post_format');
 $wpv_shortcodes['wpv-post-status'] = array('wpv-post-status', __('Post status', 'wpv-views'), 'wpv_shortcode_wpv_post_status');
 $wpv_shortcodes['wpv-post-class'] = array('wpv-post-class', __('Post class', 'wpv-views'), 'wpv_shortcode_wpv_post_class');
 
@@ -53,11 +54,13 @@ $wpv_shortcodes['wpv-taxonomy-archive'] = array('wpv-taxonomy-archive', __('Taxo
 
 $wpv_shortcodes['wpv-bloginfo'] = array('wpv-bloginfo', __('Bloginfo value', 'wpv-views'), 'wpv_bloginfo');
 $wpv_shortcodes['wpv-search-term'] = array('wpv-search-term', __('Search term', 'wpv-views'), 'wpv_search_term');
+$wpv_shortcodes['wpv-archive-title'] = array('wpv-archive-title', __('Archive title', 'wpv-views'), 'wpv_archive_title');
 $wpv_shortcodes['wpv-archive-link'] = array('wpv-archive-link', __('Archive link', 'wpv-views'), 'wpv_archive_link');
-$wpv_shortcodes['wpv-current-user'] = array('wpv-current-user', __('Current user info', 'wpv-views'), 'wpv_current_user');
 
 //User shortcodes
+$wpv_shortcodes['wpv-current-user'] = array('wpv-current-user', __('Current user info', 'wpv-views'), 'wpv_current_user');
 $wpv_shortcodes['wpv-user'] = array('wpv-user', __('Show user data', 'wpv-views'), 'wpv_user');
+$wpv_shortcodes['wpv-login-form'] = array('wpv-login-form', __('Login Form', 'wpv-views'), 'wpv_shortcode_wpv_login_form');
 
 if (defined('WPV_WOOCOMERCE_VIEWS_SHORTCODE')) {
 	$wpv_shortcodes['wpv-wooaddcart'] = array('wpv-wooaddcart', __('Add to cart button', 'wpv-views'), 'wpv-wooaddcart');
@@ -195,6 +198,35 @@ function wpv_search_term( $attr ) {
 }
 
 /**
+ * Views-Shortcode: wpv-archive-title
+ *
+ * Description: Display archive title for current type of archive.
+ *
+ * Parameters: None
+ *
+ * Example usage:
+ * At title of the archive. [wpv-archive-title]
+ *
+ * Link: 
+ *
+ * Note: Inspired partly by https://developer.wordpress.org/reference/functions/the_archive_title/
+ *
+ */
+function wpv_archive_title( $attr ) {
+    $out = '';
+    
+    if ( function_exists( 'get_the_archive_title' ) /* WP 4.1+ */ ) {
+        $out = get_the_archive_title();
+    } else {
+        $out = wpv_get_the_archive_title();
+    }
+    
+    apply_filters( 'wpv_shortcode_debug', 'wpv-archive-title', json_encode( $attr ), '', '', $out );
+    
+    return $out;
+}
+
+/**
  * Views-Shortcode: wpv-archive-link
  *
  * Description: Display archive link for selected post type.
@@ -302,6 +334,56 @@ function wpv_current_user($attr){
 	}
 	apply_filters('wpv_shortcode_debug','wpv-current-user', json_encode($attr), '', 'Data received from cache', $out);
 	return $out;
+}
+
+/**
+ * Views-Shortcode: wpv-login-form
+ *
+ * Description: Display WordPress login form.
+ *
+ * Parameters:
+ *  "redirect_url" redirects to this URL after successful login. Absolute URL.
+ *  "allow_remember" displays the "Remember me" feature (checkbox)
+ *  "remember_default" sets "allow_remember" checked status by default
+ *
+ * Example usage:
+ *  [wpv-if evaluate="[wpv-current-user info="logged_in"]" condition="true"]
+ *  [/wpv-if]
+ *  [wpv-login-form]
+ *
+ * Link:
+ *
+ * Note:
+ *  Façade for http://codex.wordpress.org/Function_Reference/wp_login_form
+ */
+function wpv_shortcode_wpv_login_form( $atts ) {
+    global $current_user;
+    if((int)$current_user->ID > 0) {
+        /* Do not display anything if a user is already logged in */
+        return '';
+    }
+    
+    // WordPress gets the current URL this way
+    $current_url = set_url_scheme( 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
+    
+    extract( shortcode_atts(
+                    array(
+        'redirect_url' => $current_url,
+        'allow_remember' => false,
+        'remember_default' => false,
+                    ), $atts )
+    );
+
+    $args = array(
+        'echo' => false,
+        'redirect' => $redirect_url, /* Use absolute URLs */
+        'remember' => $allow_remember,
+        'value_remember' => $remember_default
+    );
+
+    $out = wp_login_form( $args );
+    apply_filters( 'wpv_shortcode_debug', 'wpv-login-form', json_encode( $atts ), '', '', $out );
+    return $out;
 }
 
 /**
@@ -558,13 +640,10 @@ function wpv_shortcode_wpv_post_link($atts){
 	if(!empty($post)){
 
 		$post_id = $post->ID;
-
+		// Adjust for WPML support
 		// If WPML is enabled, $post_id should contain the right ID for the current post in the current language
 		// However, if using the id attribute, we might need to adjust it to the translated post for the given ID
-		global $sitepress;
-		if ( isset( $sitepress ) ){
-			$post_id = icl_object_id( $post_id, get_post_type( $post_id ), false, $sitepress->get_current_language());
-		}
+		$post_id = apply_filters( 'translate_object_id', $post_id, $post->post_type, true, null );
 
 		$post_link = wpv_get_post_permalink( $post_id );
 
@@ -683,19 +762,6 @@ function wpv_shortcode_wpv_post_body($atts){
 
 	static $stop_infinite_loop_keys;
 
-	/**
-	* Save the current filters applied in the the_content hook
-	*
-	* We need this because running an apply_filters('the_content', $something) will prevent filters with higher priority from being run:
-	* http://core.trac.wordpress.org/ticket/17817
-	*
-	* This is specially important when using a wpv-post-body shortcode inside a Content Template applied to a post OR as a wpv-if condition
-	* because we switch the content in a the_content filter hook with priority 1 and all the other filters do not get applied
-	* OR we apply the do_shortcode filter way ahead of its time -at priority 9 instead of 11-, so it never fires again and all other shortcodes are not expanded
-	*
-	* Note that we only modify that list if suppress_filters is true, but we always store and restore it
-	*/
-	$current_the_content_filters = $GLOBALS['wp_filter']['the_content'];
 	if ( isset( $atts['suppress_filters'] ) && ( $atts['suppress_filters'] == 'true' ) ) {
 		$suppress_filters = true;
 	} else {
@@ -764,13 +830,11 @@ function wpv_shortcode_wpv_post_body($atts){
 
 		// Remove the icl language switcher to stop WPML from add the
 		// "This post is avaiable in XXXX" twice.
-		// Keep this:
-		// - if suppress_filters = false, we still need to remove this filter and restore it after
-		// - if suppress_filters = true, we will remove the filter later, but we need to know that this needs to be restored by the flag $icl_filter_removed
+		// Keep this: we need to know that this needs to be restored by the flag $icl_filter_removed
 		global $icl_language_switcher;
 		$icl_filter_removed = false;
-		if(isset($icl_language_switcher)) {
-			$icl_filter_removed = remove_filter('the_content', array($icl_language_switcher, 'post_availability'), 100);
+		if ( isset( $icl_language_switcher ) ) {
+			$icl_filter_removed = remove_filter( 'the_content', array( $icl_language_switcher, 'post_availability' ), 100 );
 		}
 
 		// Check for infinite loops where a View template contains a
@@ -786,42 +850,16 @@ function wpv_shortcode_wpv_post_body($atts){
 
 		if ( $suppress_filters ) {
 
-			$wpv_the_content_filters_whitelist = array(
-			// WordPress filters for the_content, except wptexturize and convert_chars - https://icanlocalize.basecamphq.com/projects/7393061-toolset/todo_items/172863698/comments
-			// This needs to be periodically checked, because WordPress might change its filters
-			'do_shortcode', 'convert_smilies', 'wpautop', 'shortcode_unautop', 'prepend_attachment', 'capital_P_dangit',
-			// Our filters for the_content
-			'WPV_wpcf_record_post_relationship_belongs', 'wpv_resolve_internal_shortcodes', 'wpv_resolve_wpv_if_shortcodes'
-			);
-
-			foreach ($GLOBALS['wp_filter']['the_content'] as $filter_level=>$filter_level_list){
-				foreach ($filter_level_list as $filter_id => $filter_data){
-					if(!in_array($filter_id, $wpv_the_content_filters_whitelist)){
-						unset($GLOBALS['wp_filter']['the_content'][$filter_level][$filter_id]);
-					}
-				}
-			}
-			// Add WordPress embed filters
-			if ( isset( $GLOBALS['wp_embed'] ) ) {
-				add_filter( 'the_content', array( $GLOBALS['wp_embed'], 'run_shortcode' ), 8 );
-				add_filter( 'the_content', array( $GLOBALS['wp_embed'], 'autoembed' ), 8 );
-			}
-			// Add the filter so the wpv-post-body shortcode works in Views loops
-			add_filter('the_content', array($WPV_templates, 'the_content'), 1, 1);
-
 			/**
-			* wpv_the_content_filters_whitelist_action action
+			* wpv_filter_wpv_the_content_suppressed
 			*
-			* Executes the wpv_the_content_filters_whitelist_action action in wpv-post-body shortcodes with attribute suppress_filters="true"
+			* Mimics the the_content filter on wpv-post-body shortcodes with attribute suppress_filters="true"
+			* Check WPV_template::init()
 			*
-			* Allows for third party plugins to restore their filters here if needed
-			*
-			* Since 1.4
+			* Since 1.8.0
 			*/
-			do_action('wpv_the_content_filters_whitelist_action');
 
-			// Apply the remaining filters
-			$out .= apply_filters('the_content', $post->post_content);
+			$out .= apply_filters( 'wpv_filter_wpv_the_content_suppressed', $post->post_content );
 
 		} else {
 			$out .= apply_filters('the_content', $post->post_content);
@@ -853,54 +891,11 @@ function wpv_shortcode_wpv_post_body($atts){
 		}
 	}
 
-	/**
-	* Restore the original list of filters to be applied to the the_content filter hook
-	*
-	* Also, tell WordPress to sort again the $GLOBALS['wp_filter']['the_content'] list if it needs to apply it again
-	* This is needed because by the time we compose the $current_the_content_filters backup we do not know if the list of callbacks is already sorted
-	* This is needed because when nesting filters into the the_content filter hook, like when using wpv-post-body inside a wpv-if condition, the remaining filters were not applied
-	*/
-	$GLOBALS['wp_filter']['the_content'] = $current_the_content_filters;
-	global $merged_filters;
-	unset( $merged_filters[ 'the_content' ]);
-
 	$WPVDebug->add_log_item( 'output', $out );
 	$WPVDebug->wpv_debug_end();
 
 	apply_filters('wpv_shortcode_debug','wpv-post-body', json_encode($atts), '', 'Output shown in the Nested elements section');
 	return $out;
-}
-
-/**
- * Display the text after apply the_content filters. Ignore not native WodPress filters or our own Views filters for internal shortcodes and wpv-if evaluations.
- *
- * @param $content => Content for applying
- *
- * @return $content => The content after applying a white list of filters
- *
- * NOTE: DEPRECATED
- *
- */
-function wpv_the_clean_content($content){
-	$white_filters_list = array(
-	// WordPress filters for the_content, except wptexturize and convert_chars - https://icanlocalize.basecamphq.com/projects/7393061-toolset/todo_items/172863698/comments
-	'do_shortcode', 'convert_smilies', 'wpautop', 'shortcode_unautop', 'prepend_attachment', 'capital_P_dangit',
-	// Our filters for the_content
-	'WPV_wpcf_record_post_relationship_belongs', 'wpv_resolve_internal_shortcodes', 'wpv_resolve_wpv_if_shortcodes'
-	);
-	$current_filters = $GLOBALS['wp_filter']['the_content'];
-	foreach ($GLOBALS['wp_filter']['the_content'] as $filter_level=>$filter_level_list){
-		if ( $filter_level != '1' ) {
-		foreach ($filter_level_list as $filter_id => $filter_data){
-			if(!in_array($filter_id, $white_filters_list)){
-			//	unset($GLOBALS['wp_filter']['the_content'][$filter_level][$filter_id]);
-			}
-		}
-		}
-	}
-	apply_filters('the_content', $content);
-	$GLOBALS['wp_filter']['the_content'] = $current_filters;
-	return $content;
 }
 
 /**
@@ -1162,12 +1157,10 @@ function wpv_shortcode_wpv_post_url($atts) {
 
 		$post_id = $post->ID;
 
+		// Adjust for WPML support
 		// If WPML is enabled, $post_id should contain the right ID for the current post in the current language
 		// However, if using the id attribute, we might need to adjust it to the translated post for the given ID
-		global $sitepress;
-		if ( isset( $sitepress ) ) {
-			$post_id = icl_object_id( $post_id, get_post_type( $post_id ), false, $sitepress->get_current_language());
-		}
+		$post_id = apply_filters( 'translate_object_id', $post_id, $post->post_type, true, null );
 
 		$out = wpv_get_post_permalink( $post_id );
 
@@ -1306,6 +1299,49 @@ function wpv_shortcode_wpv_post_type($atts){
 
 	apply_filters('wpv_shortcode_debug','wpv-post-class', json_encode($atts), '', 'Data received from get_post_class()', $out);
 	return $out;
+}
+
+/**
+ * Views-Shortcode: wpv-post-format
+ *
+ * Description: Display the post format (standard|aside|chat|gallery|link|image|quote|status|video|audio|). 
+ * If post type doesn't support post formats, returns empty string.
+ *
+ * Parameters:
+ * This takes no parameters.
+ *
+ * Example usage:
+ *  [wpv-if evaluate="'[wpv-post-format]' = 'aside'"]
+ *      This is aside format
+ *  [/wpv-if]
+ *
+ * Link:
+ *
+ * Note:
+ * This function returns "standard" instead of <tt>false</tt> as <a href="http://codex.wordpress.org/Function_Reference/get_post_format">get_post_format</a> page recommends.
+ * 
+ */
+function wpv_shortcode_wpv_post_format( $atts ) {
+    $post_id_atts = new WPV_wpcf_switch_post_from_attr_id( $atts );
+
+    extract(
+            shortcode_atts( array(), $atts )
+    );
+
+    $out = '';
+    global $post;
+    if ( !empty( $post ) ) {
+        $post_format = get_post_format( $post->ID );
+        if ( $post_format !== false ) {
+            $out = $post_format;
+        } else {
+            $out = 'standard';
+        }
+    }
+
+    apply_filters( 'wpv_shortcode_debug', 'wpv-post-format', json_encode( $atts ), '', 'Data received from cache', $out );
+
+    return $out;
 }
 
 /**
@@ -2023,6 +2059,7 @@ function add_short_codes_to_js($types, $editor, $call_back = null){
 							$editor->add_insert_shortcode_menu($shortcode[1], $shortcode[0].' info="login"', __('Basic', 'wpv-views'));
 							 break;
 						 case 'wpv-user':
+						 case 'wpv-login-form':
 						 case 'wpv-taxonomy-archive':
 						 case 'wpv-comment-title':
 						 case 'wpv-comment-body':
@@ -2056,7 +2093,11 @@ function add_short_codes_to_js($types, $editor, $call_back = null){
 	// Content templates.
 	if (in_array('body-view-templates-posts', $types)) {
 		// we need to add the available views.
-		$view_template_available = $wpdb->get_results("SELECT ID, post_name, post_title FROM {$wpdb->posts} WHERE post_type='view-template' AND post_status in ('publish')");
+		$view_template_available = $wpdb->get_results(
+			"SELECT ID, post_name, post_title FROM {$wpdb->posts} 
+			WHERE post_type = 'view-template' 
+			AND post_status in ('publish')"
+		);
 		foreach($view_template_available as $view_template) {
 			$editor->add_insert_shortcode_menu($view_template->post_title, 'wpv-post-body view_template="' . $view_template->post_name . '"', __('Content template', 'wpv-views'));
 			$index += 1;
@@ -2067,12 +2108,23 @@ function add_short_codes_to_js($types, $editor, $call_back = null){
 	if (in_array('body-view-templates', $types)) {
 		global $pagenow, $typenow;
 		if ( "view-template" != $typenow || !in_array( $pagenow, array( 'post-new.php' ) ) ) {
+			$values_to_prepare = array();
+			$values_to_prepare[] = 'view-template';
 			$exclude = '';
 			if ( in_array( $pagenow, array( 'post.php' ) ) && isset( $_GET["post"] ) ) {
 				$this_template = (int) $_GET["post"];
-				$exclude = " AND ID != {$this_template}";
+				$exclude = " AND ID != %d ";
+				$values_to_prepare[] = $this_template;
 			}
-			$view_template_available = $wpdb->get_results("SELECT ID, post_name, post_title FROM {$wpdb->posts} WHERE post_type='view-template' AND post_status in ('publish') {$exclude}");
+			$view_template_available = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT ID, post_name, post_title FROM {$wpdb->posts} 
+					WHERE post_type = %s 
+					AND post_status in ('publish') 
+					{$exclude}",
+					$values_to_prepare
+				)
+			);
 			foreach($view_template_available as $view_template) {
 			if ($call_back) {
 				call_user_func($call_back, $index, $view_template->post_name, '', __('Content template', 'wpv-views'), 'wpv-post-body view_template="' . $view_template->post_name . '"');
@@ -2112,13 +2164,17 @@ function add_short_codes_to_js($types, $editor, $call_back = null){
 		|| in_array( 'taxonomy-view', $types )
 		|| in_array( 'post-view', $types )
 	) {
-		$view_available = $wpdb->get_results( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type='view' AND post_status in ('publish')" );
+		$view_available = $wpdb->get_results( 
+			"SELECT ID, post_title FROM {$wpdb->posts} 
+			WHERE post_type='view' 
+			AND post_status in ('publish')" 
+		);
 		foreach ( $view_available as $view ) {
 			if ( $WP_Views->is_archive_view( $view->ID ) ) {
 				// Archive Views - add only if in_array( 'archives', $types )
 				if ( in_array( 'archives', $types ) ) {
-					$editor->add_insert_shortcode_menu( $view->post_title, 'wpv-view name="' . $view->post_title . '"', __( 'Archive', 'wpv-views' ) );
-					$index += 1;
+                    $editor->add_insert_shortcode_menu( $view->post_title, 'wpv-view name="' . $view->post_title . '"', __( 'Archive', 'wpv-views' ) );
+                    $index += 1;
 				}
 			} else {
 				if ( in_array( 'view', $types ) ) {
@@ -2178,8 +2234,17 @@ function add_short_codes_to_js($types, $editor, $call_back = null){
 				}
 			}
 		}
-	}
-
+        
+        // wpv-login-form
+        $editor->add_insert_shortcode_menu( $wpv_shortcodes['wpv-login-form'][1], $wpv_shortcodes['wpv-login-form'][0], __( 'Basic', 'wpv-views' ) );
+        $index += 1;
+    }
+    
+    // FIXME: What is the best menu group for this shortcode? Is it limited to some contexts?
+    // Archive Title
+    $editor->add_insert_shortcode_menu( $wpv_shortcodes['wpv-archive-title'][1], $wpv_shortcodes['wpv-archive-title'][0], __( 'Basic', 'wpv-views' ) );
+    $index += 1;
+    
 	if (in_array('wpml', $types)) {
 		global $sitepress;
 
@@ -2217,7 +2282,7 @@ function add_short_codes_to_js($types, $editor, $call_back = null){
 	}
 
 
-	return $index;
+    return $index;
 }
 
 function wpv_post_taxonomies_shortcode() {

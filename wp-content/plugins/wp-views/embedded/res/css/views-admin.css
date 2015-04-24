@@ -40,16 +40,28 @@
 	border-radius: 0 4px;
 }
 
+.toolset-views .wpv-combo {
+	display: inline-block;
+}
+
 .wpv-taglike-list {
 	overflow: hidden;
 }
 	.wpv-taglike-list li {
 		display: inline-block;
 		background: #e9e9e9;
-	/*	float: left;*/
 		margin: 5px 10px 5px 0;
 		padding: 2px 8px;
 		vertical-align: bottom;
+		-webkit-transition: all 0.15s linear;
+		-moz-transition: all 0.15s linear;
+		-ms-transition: all 0.15s linear;
+		-o-transition: all 0.15s linear;
+		transition: all 0.15s linear;
+	}
+	
+	.wpv-taglike-list li.remove {
+		background: orange;
 	}
 
 .wpv-mightlong-list,
@@ -119,23 +131,18 @@
 
 .toolset-views .icon-remove-sign,
 .toolset-views .icon-warning-sign,
-.toolset-views .icon-warning-sign:hover,
-.toolset-help .icon-remove-sign {
+.toolset-views .icon-warning-sign:hover {
 	color: #d54e21;
 }
 .toolset-views .icon-remove,
-.toolset-views .icon-remove-sign,
-.toolset-help .icon-remove,
-.toolset-help .icon-remove-sign {
+.toolset-views .icon-remove-sign {
 	vertical-align: middle;
 	font-size: 16px;
 	opacity: .6;
 	cursor: pointer;
 }
 .toolset-views .icon-remove:hover,
-.toolset-views .icon-remove-sign:hover,
-.toolset-help .icon-remove:hover,
-.toolset-help .icon-remove-sign:hover {
+.toolset-views .icon-remove-sign:hover {
 	opacity: 1;
 }
 
@@ -259,7 +266,7 @@
 	.wpv-layout-section,
 	.wpv-help-section {
 		margin-top: 20px;
-		width: 930px;
+		max-width: 930px;
 	}
 
 	.wpv-query-section:before,
@@ -437,7 +444,8 @@
 				.wpv-setting .update-button-wrap .toolset-alert {
 					float: left;
 				}
-				.wpv-setting .update-button-wrap .spinner {
+				.wpv-setting .update-button-wrap .spinner,
+				.wpv-settings-save-all .spinner {
 					display: inline-block;
 					float: none;
 					margin: 0 5px;
@@ -794,6 +802,10 @@
 			color: #f6921e;
 		}
 		
+		.wpv-settings-content-filter .filter-list .wpv-filter-title-notice.wpv-filter-title-notice-error {
+			color: #d54e21;
+		}
+		
 		.wpv-settings-content-filter .filter-list .wpv-filter-options-set {
 			margin: 0 0 10px 20px;
 		}
@@ -888,6 +900,10 @@
 				color: red;
 			}
 			
+			.wpv-settings-content-filter .wpv-filter-multiple-element p.toolset-alert {
+				margin: 0 10px 15px;
+			}
+			
 			.wpv-settings-content-filter .filter-list .wpv-filter-multiple-element-options {
 				position: relative;
 				margin: 0;
@@ -895,8 +911,10 @@
 			}
 			
 			.wpv-settings-content-filter .filter-list .wpv-filter-multiple-element-options-mode {
-				margin: 20px 0 0 40px;
-				padding: 0 0 10px;
+				margin: 10px 0;
+				padding: 10px;
+				background: #f9f9f9;
+				border: solid 1px #dfdfdf;
 			}
 			
 			.wpv-settings-content-filter .filter-list .wpv-filter-multiple-element-delete {
@@ -916,7 +934,7 @@
 		
 		.wpv-settings-content-filter .filter-list .filter-row-multiple .wpv-filter-multiple-summary-item {
 			display: block;
-			padding-left: 20px;
+			padding: 0 10px 0 20px;
 		}
 		
 				.wpv-settings-content-filter .filter-doc-help {
@@ -996,14 +1014,24 @@
 	}
 /* Settings section: Loops selection END */
 
-/* Settings section: Media manager */
+/* Settings section: Save all sections at once */
 .wpv-settings-save-all {
 	background-color: #F1F1F1;
 }
-	.wpv-settings-save-all .update-button-wrap {
+	.wpv-settings-save-all p {
 		margin: 0;
 	}
-/* Settings section: Media manager END */
+	
+	.wpv-settings-save-all .update-button-wrap {
+		float: right;
+		padding: 10px 0 10px 10px;
+	}
+	
+	.wpv-settings-save-all .wpv-message-container {
+		float: left;
+		margin-top: 5px;
+	}
+/* Settings section: Save all sections at once END */
 
 /* Settings section: Module Manager */
 .wpv-setting .modman-inline-module-manager .spinner {
@@ -1783,8 +1811,13 @@
 /* ----------------- */
 
 .wpv-general-actions-bar {
-	width: 900px;
-	transition: all 1s linear;
+	max-width: 900px;
+	background: #f1f1f1;
+	transition: all 1s linear, width 1ms;
+}
+
+.toolset-views-embedded .wpv-general-actions-bar {
+	max-width: 930px;
 }
 
 .wpv-general-actions-bar.wpv-action-success,
@@ -1798,7 +1831,6 @@
 	top: 0;
 	z-index: 999;
 	border-bottom: 1px solid #ccc;
-	background: #f1f1f1;
 }
 
 /* if wp toolbar is active and editor toolbar has fixed position */
@@ -1808,4 +1840,158 @@
 
 .wpv-general-actions-bar-fixed .wpv-title-section {
 	margin-top: 81px;
+}
+
+.wpv-general-actions-bar-fixed .toolset-views-embedded .wpv-title-section {
+	margin-top: 208px;
+}
+
+
+/* ************************************************************************** *\
+ 		Tab design for admin screens
+\* ************************************************************************** */
+
+/*
+ * Note: Added selectors with "wpv-admin-tabs" prefix. Those are meant to be generic and used on all pages with this
+ *     Tab design. --Jan
+ */
+
+/* This is the computed style of .wp-filter on WordPress 4.1 */
+.wpv-settings-filter,
+.wpv-admin-tabs {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    -webkit-box-sizing: border-box;
+    -webkit-font-smoothing: subpixel-antialiased;
+    color: #555;
+    display: inline-block;
+    font-family: "Open Sans",sans-serif;
+    font-size: 13px;
+    height: auto;
+    margin: 12px 0 25px;
+    min-height: 100%;
+    min-width: 600px;
+    outline: 0;
+    padding: 0 20px;
+    position: relative;
+    width: 100%;
+}
+ 
+/* Computed version of WP4.1 .filter-links */
+.wpv-settings-filter-links,
+.wpv-admin-tabs-links {
+    display: inline-block;
+    line-height: 1.4em;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Computed version of WP4.1 .filter-links > li */
+.wpv-settings-filter-links > li,
+.wpv-admin-tabs-links > li {
+    display: inline-block;
+    margin: 0;
+}
+
+/* Computed version of WP4.1 .filter-links .current */
+.wpv-settings-filter-links .current,
+.wpv-admin-tabs-links .current {
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    border-bottom: 4px solid #666;
+    color: #222;
+}
+
+/* Computed version of WP4.1 .filter-links li > a */
+.wpv-settings-filter-links li > a,
+.wpv-admin-tabs-links li > a {
+    border-bottom: 4px solid #fff;
+    color: #666;
+    cursor: pointer;
+    display: inline-block;
+    margin: 0 10px;
+    outline: 0;
+    padding: 15px 0;
+    text-decoration: none;
+    transition-duration: .05s;
+    transition-property: border,background,color;
+    transition-timing-function: ease-in-out;
+    -webkit-transition-duration: .05s;
+    -webkit-transition-property: border,background,color;
+    -webkit-transition-timing-function: ease-in-out;
+}
+
+
+.wpv-settings-tab-content {
+    background-color: #fff;
+    border-spacing: 0;
+    border: 1px solid #dedede;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    color: #444;
+    font-family: "Open Sans",sans-serif;
+    margin: 0 0 16px;
+    outline: 0;
+    word-wrap: break-word;
+    -webkit-font-smoothing: subpixel-antialiased;
+}
+
+
+/* ************************************************************************** *\
+ 		CodeMirror specific styles for Views
+\* ************************************************************************** */
+
+/* custom shortcode overlay parser */
+.cm-s-default span.cm-shortcode {color: #ed8027;}
+/* custom highlight styles*/
+.cm-s-default .wpv-codemirror-highlight {
+	background-color: #FFFF66;
+}
+
+.wpv-codemirror-panel {
+	position: relative;
+	background-color: #fcf8e3;
+    border-color: #ccc;
+    border-style: solid solid none;
+    border-width: 1px 1px medium;
+    color: #c09853;
+    padding: 5px 35px;
+}
+
+.wpv-codemirror-panel.wpv-codemirror-panel-success {
+	background-color: #dff0d8;
+	color: #468847;
+}
+
+.wpv-codemirror-panel.wpv-codemirror-panel-error {
+	background-color: #f2dede;
+	color: #b94a48;
+}
+
+.js-wpv-codemirror-panel-close {
+	position: absolute;
+	top: 6px;
+	left: 15px;
+}
+
+
+/* ************************************************************************** *\
+ 		Views embedded listing pages
+\* ************************************************************************** */
+
+
+/* Ensure _minimal_ table cell height. http://stackoverflow.com/questions/5675591/css-min-height-and-vertical-alignmiddle */
+.wpv-embedded-listing-table td {
+    height: 30px;
+    vertical-align: middle;
+}
+
+.wpv-embedded-listing-table td ul {
+    margin: 0;
 }

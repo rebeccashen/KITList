@@ -5,7 +5,7 @@
   Description: Lets you add e-commerce functionality to any site, running any theme.
   Author: OnTheGoSystems
   Author URI: http://www.onthegosystems.com
-  Version: 2.5
+  Version: 2.5.1
  */
 /**
  * include plugin class
@@ -18,7 +18,7 @@ if(defined('WOOCOMMERCE_VIEWS_PATH')) return;
 
 define('WOOCOMMERCE_VIEWS_PATH', dirname(__FILE__) . '/Class_WooCommerce_Views.php');
 
-define('WC_VIEWS_VERSION', '2.5');
+define('WC_VIEWS_VERSION', '2.5.1');
 
 if(!class_exists('Class_WooCommerce_Views'))
 {

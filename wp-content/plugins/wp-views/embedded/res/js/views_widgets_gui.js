@@ -361,6 +361,10 @@ WPViews.LayoutsWidgetsGUI = function( $ ) {
 	
 	// Manage selected widget changes
 	
+	$( document ).on( 'change keyup input cut paste', self.container_selector + ' .js-wpv-widget-form-target-suggest-title:not(.js-wpv-suggest-on)', function() {
+		self.initialize_suggest();
+	});
+	
 	$( document ).on( 'js_event_ddl_widget_cell_widget_type_changed', 'select[name="ddl-layout-widget_type"]', function( event, widget_id ) {
 		var container = $( this ).closest( self.container_selector );
 		self.set_form_widget_data( container, function() {

@@ -483,39 +483,80 @@ function wpv_pagination_rollover_add_slide($id, $settings = array()) {
 function wpv_pagination_rollover_js() {
     $rollovers = wpv_pagination_rollover_add_slide('get');
 
-    if (!empty($rollovers)) {
+    if ( ! empty( $rollovers ) ) {
         global $WP_Views;
         $out = '';
         wpv_pagination_js();
-		
         ?>
         <script type="text/javascript">
-            jQuery(document).ready(function(){
+            jQuery( document ).ready( function() {
         <?php
-        foreach ($rollovers as $id => $rollover) {
-            $spinner_image = $rollover['pagination']['spinner_image'];
+        foreach ( $rollovers as $id => $rollover ) {
+			if ( 
+				! isset( $rollover['pagination']['spinner'] ) 
+				|| empty( $rollover['pagination']['spinner'] )
+			) {
+				$spinner = 'default';
+			} else {
+				$spinner = esc_js( $rollover['pagination']['spinner'] );
+			}
+			$spinner_image= '';
+			if ( 'default' == $spinner ) {
+				$spinner_image = isset( $rollover['pagination']['spinner_image'] ) ? esc_url( $rollover['pagination']['spinner_image'] ) : '';
+			} else if ( 'uploaded' == $spinner ) {
+				$spinner_image = isset( $rollover['pagination']['spinner_image_uploaded'] ) ? esc_url( $rollover['pagination']['spinner_image_uploaded'] ) : '';
+			}
 			// $spinner_image might contain SSL traces, adjust if needed
-			if ( !is_ssl() ) {
+			if ( ! is_ssl() ) {
 				$spinner_image = str_replace( 'https://', 'http://', $spinner_image );
 			}
+			// Make sure we have all the needed data
+			if ( 
+				! isset( $rollover['rollover']['effect'] ) 
+				|| empty ( $rollover['rollover']['effect'] )
+			) {
+				$rollover['rollover']['effect'] = 'fade';
+			}
+			if ( 
+				! isset( $rollover['rollover']['speed'] ) 
+				|| empty( $rollover['rollover']['speed'] )
+			) {
+				$rollover['rollover']['speed'] = 5;
+			}
+			if ( ! isset( $rollover['rollover']['count'] ) ) {
+				$rollover['rollover']['count'] = 0;
+			}
+			if ( 
+				! isset( $rollover['pagination']['cache_pages'] ) 
+				|| empty( $rollover['pagination']['cache_pages'] )
+			) {
+				$rollover['pagination']['cache_pages'] = 1;
+			}
+			if ( 
+				! isset( $rollover['pagination']['preload_pages'] ) 
+				|| empty( $rollover['pagination']['preload_pages'] )
+			) {
+				$rollover['pagination']['preload_pages'] = 1;
+			}
+			if ( ! isset( $rollover['pagination']['callback_next'] ) ) {
+				$rollover['pagination']['callback_next'] = '';
+			}
 			$out .= 'jQuery("#wpv-view-layout-' . $id . '").wpvRollover({id: "' . $id . '"'
-                    . ', effect: "' . $rollover['rollover']['effect']
-                    . '", speed: ' . $rollover['rollover']['speed']
-                    . ', page: 1, count: ' . $rollover['rollover']['count']
-                    . ', cache_pages:' . $rollover['pagination']['cache_pages']
-                    . ', preload_pages:' . $rollover['pagination']['preload_pages']
-                    . ', spinner:"' . $rollover['pagination']['spinner'] . '"'
-                    . ', spinner_image:"' . $spinner_image . '"'
-                    . ', callback_next:"' . $rollover['pagination']['callback_next'] . '"'
+                    . ', effect: "' . esc_js( $rollover['rollover']['effect'] ) . '"'
+                    . ', speed: ' . esc_js( $rollover['rollover']['speed'] )
+                    . ', page: 1'
+					. ', count: ' . esc_js( $rollover['rollover']['count'] )
+                    . ', cache_pages: ' . esc_js( $rollover['pagination']['cache_pages'] )
+                    . ', preload_pages: ' . esc_js( $rollover['pagination']['preload_pages'] )
+                    . ', spinner: "' . $spinner . '"'
+                    . ', spinner_image: "' . $spinner_image . '"'
+                    . ', callback_next: "' . esc_js( $rollover['pagination']['callback_next'] ) . '"'
                     . '});' . "\r\n";
         }
         echo $out;
-
         ?>
                 });
-                        
         </script>
-
         <?php
     }
 }
@@ -552,13 +593,21 @@ function wpv_ajax_get_page($post_data) {
     }
 
 
-    $_GET['wpv_paged'] = esc_attr($post_data['page']);
-    $_GET['wpv_view_count'] = esc_attr($post_data['view_number']);
-    if (isset($post_data['wpv_column_sort_id']) && esc_attr($post_data['wpv_column_sort_id']) != 'undefined' && esc_attr($post_data['wpv_column_sort_id']) != '') {
-        $_GET['wpv_column_sort_id'] = esc_attr($post_data['wpv_column_sort_id']);
+    $_GET['wpv_paged'] = intval( esc_attr( $post_data['page'] ) );
+    $_GET['wpv_view_count'] = esc_attr( $post_data['view_number'] );
+    if (
+		isset( $post_data['wpv_column_sort_id'] ) 
+		&& esc_attr( $post_data['wpv_column_sort_id'] ) != 'undefined' 
+		&& esc_attr( $post_data['wpv_column_sort_id'] ) != '' 
+	) {
+        $_GET['wpv_column_sort_id'] = esc_attr( $post_data['wpv_column_sort_id'] );
     }
-    if (isset($post_data['wpv_column_sort_dir']) && esc_attr($post_data['wpv_column_sort_dir']) != 'undefined' && esc_attr($post_data['wpv_column_sort_dir']) != '') {
-        $_GET['wpv_column_sort_dir'] = esc_attr($post_data['wpv_column_sort_dir']);
+    if (
+		isset( $post_data['wpv_column_sort_dir'] ) 
+		&& esc_attr( $post_data['wpv_column_sort_dir'] ) != 'undefined' 
+		&& esc_attr( $post_data['wpv_column_sort_dir'] ) != ''
+	) {
+        $_GET['wpv_column_sort_dir'] = esc_attr( $post_data['wpv_column_sort_dir'] );
     }
     
 	// $post_data['get_params'] holds arbitrary URL parameters from the page triggering the pagination
@@ -636,11 +685,14 @@ function wpv_ajax_get_page($post_data) {
 
     global $post, $authordata, $id;
 
-    if (isset($post_data['post_id'])) {
-		$_GET['wpv_post_id'] = esc_attr($post_data['post_id']); // we need to set this for the post_type_dont_include_current_page setting to work
-        $post_id = esc_attr($post_data['post_id']);
-        $post = get_post($post_id);
-        $authordata = new WP_User($post->post_author);
+    if ( 
+		isset( $post_data['post_id'] ) 
+		&& is_numeric( $post_data['post_id'] )
+	) {
+		$_GET['wpv_post_id'] = esc_attr( $post_data['post_id'] ); // we need to set this for the post_type_dont_include_current_page setting to work
+        $post_id = esc_attr( $post_data['post_id'] );
+        $post = get_post( $post_id );
+        $authordata = new WP_User( $post->post_author );
         $id = $post->ID;
     }
 

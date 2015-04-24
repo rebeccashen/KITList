@@ -176,11 +176,21 @@ function wpv_filter_shortcode_start($atts){
                 $sort_dir = strtolower($view_settings['users_order']);
             }
 
-            if (isset($_GET['wpv_column_sort_id']) && esc_attr($_GET['wpv_column_sort_id']) != '' && isset($_GET['wpv_view_count']) && esc_attr($_GET['wpv_view_count']) == $WP_Views->get_view_count()) {
-                $sort_id = esc_attr($_GET['wpv_column_sort_id']);
+            if (
+				isset( $_GET['wpv_column_sort_id'] ) 
+				&& esc_attr( $_GET['wpv_column_sort_id'] ) != '' 
+				&& isset( $_GET['wpv_view_count'] ) 
+				&& esc_attr( $_GET['wpv_view_count'] ) == $WP_Views->get_view_count() 
+			) {
+                $sort_id = esc_attr( $_GET['wpv_column_sort_id'] );
             }
-            if (isset($_GET['wpv_column_sort_dir']) && esc_attr($_GET['wpv_column_sort_dir']) != '' && isset($_GET['wpv_view_count']) && esc_attr($_GET['wpv_view_count']) == $WP_Views->get_view_count()) {
-                $sort_dir = esc_attr($_GET['wpv_column_sort_dir']);
+            if (
+				isset( $_GET['wpv_column_sort_dir'] ) 
+				&& esc_attr( $_GET['wpv_column_sort_dir'] ) != '' 
+				&& isset( $_GET['wpv_view_count'] ) 
+				&& esc_attr( $_GET['wpv_view_count'] ) == $WP_Views->get_view_count()
+			) {
+                $sort_dir = esc_attr( $_GET['wpv_column_sort_dir'] );
             }
             
             $out .= '<input id="wpv_column_sort_id" type="hidden" name="wpv_column_sort_id" value="' . $sort_id . '" />';
@@ -497,8 +507,8 @@ function wpv_items_count($atts){
 
     global $WP_Views;
 
-	if ( isset($WP_Views->current_view) ){
-    	$view_settings = get_post_meta($WP_Views->current_view, '_wpv_settings', true);
+	if ( isset( $WP_Views->current_view ) ) {
+		$view_settings = $WP_Views->get_view_settings( $WP_Views->current_view );
     }
 	$out = '';
 	
@@ -552,8 +562,8 @@ function wpv_found_count($atts){
 
     global $WP_Views;
 
-	if ( isset($WP_Views->current_view) ){
-    	$view_settings = get_post_meta($WP_Views->current_view, '_wpv_settings', true);
+	if ( isset( $WP_Views->current_view ) ) {
+		$view_settings = $WP_Views->get_view_settings( $WP_Views->current_view );
     }
 	$out = '';
 	
@@ -907,6 +917,26 @@ function wpv_shortcode_wpv_control($atts) {
 		// Render the taxonomy control
 		return wpv_render_taxonomy_control( $atts );
     }
+	
+	// Before doing anything else, rule out textfields
+	if ( $type == 'textfield' ) {
+		// Textfield field
+		$default_value = '';
+		if ( isset( $_GET[ $url_param ] ) ) {
+			$default_value = stripslashes( urldecode( sanitize_text_field( $_GET[ $url_param ] ) ) );
+		}
+		
+		// Render the form content
+		$element = wpv_form_control( array(
+				'field' => array(
+						'#type' => 'textfield',
+						'#id' => 'wpv_control_textfield_' . $url_param,
+						'#name' => $url_param,
+						'#attributes' => array( 'style' => '', 'class' => 'js-wpv-filter-trigger-delayed'  ),
+						'#inline' => true,
+						'#value' => $default_value ) ) );
+		return $element;
+	}
     
 	// Check if the View has dependency enabled
     $view_settings = $WP_Views->get_view_settings();
@@ -939,6 +969,7 @@ function wpv_shortcode_wpv_control($atts) {
 	} else {
 		$field_real_name = _wpv_get_field_real_slug( $field );
 	}
+	
 	$display_values_trans = false; // flag to whether the display_values need to be translated
 	$out = '';
 	
@@ -999,28 +1030,66 @@ function wpv_shortcode_wpv_control($atts) {
 			$aux_query_count = null;
 		} else {
 			// When there is a selected value, create a pseudo-cache based on all the other filters
+			// Note that checkboxes filters can generate nested meta_query entries
 			$query = wpv_get_dependant_view_query_args();
 			$aux_cache_query = null;
 			$filter_full_list = true;
 			if ( isset( $query['meta_query'] ) && is_array( $query['meta_query'] ) ) {
 				foreach ( $query['meta_query'] as $qt_index => $qt_val ) {
-					if ( is_array( $qt_val ) && isset( $qt_val['key'] ) && $qt_val['key'] == $field_real_name ) {
-						if ( $compare_function == 'BETWEEN' ) {
-							if ( $qt_val['compare'] == 'BETWEEN' && $current_value_key !== false ) {
-								$passed_values = is_array( $qt_val['value'] ) ? $qt_val['value'] : array_map( 'trim', explode( ',', $qt_val['value'] ) );
-								if ( $current_value_key < 1 && isset( $passed_values[1] ) ) {
-									$query['meta_query'][ $qt_index ]['compare'] = '<=';
-									$query['meta_query'][ $qt_index ]['value']= $passed_values[1];
-								} else if ( $current_value_key > 0 && isset( $passed_values[0] ) ) {
-									$query['meta_query'][ $qt_index ]['compare'] = '>=';
-									$query['meta_query'][ $qt_index ]['value']= $passed_values[0];
+					if ( is_array( $qt_val ) ) {
+						foreach ( $qt_val as $qt_val_key => $qt_val_val ) {
+							if ( 
+								$qt_val_key == 'key' 
+								&& $qt_val_val == $field_real_name
+							) {
+								if ( $compare_function == 'BETWEEN' ) {
+									if ( 
+										$qt_val['compare'] == 'BETWEEN' 
+										&& $current_value_key !== false 
+									) {
+										$qt_val['value'] = isset( $qt_val['value'] ) ? $qt_val['value'] : '';
+										$passed_values = is_array( $qt_val['value'] ) ? $qt_val['value'] : array_map( 'trim', explode( ',', $qt_val['value'] ) );
+										if ( $current_value_key < 1 && isset( $passed_values[1] ) ) {
+											$query['meta_query'][ $qt_index ]['compare'] = '<=';
+											$query['meta_query'][ $qt_index ]['value']= $passed_values[1];
+										} else if ( $current_value_key > 0 && isset( $passed_values[0] ) ) {
+											$query['meta_query'][ $qt_index ]['compare'] = '>=';
+											$query['meta_query'][ $qt_index ]['value']= $passed_values[0];
+										}
+									} else {
+										unset( $query['meta_query'][ $qt_index ] );
+									}
+									// if $compare_function is BETWEEN and we have a meta_query not using BETWEEN, we have a partial query here, so keep it
+								} else {
+									unset( $query['meta_query'][$qt_index] );
 								}
-							} else {
-								unset( $query['meta_query'][ $qt_index ] );
+							} else if ( 
+								is_array( $qt_val_val ) 
+								&& isset( $qt_val_val['key'] ) 
+								&& $qt_val_val['key'] == $field_real_name
+							) {
+								if ( $compare_function == 'BETWEEN' ) {
+									if ( 
+										$qt_val_val['compare'] == 'BETWEEN' 
+										&& $current_value_key !== false 
+									) {
+										$qt_val_val['value'] = isset( $qt_val_val['value'] ) ? $qt_val_val['value'] : '';
+										$passed_values = is_array( $qt_val_val['value'] ) ? $qt_val_val['value'] : array_map( 'trim', explode( ',', $qt_val_val['value'] ) );
+										if ( $current_value_key < 1 && isset( $passed_values[1] ) ) {
+											$query['meta_query'][ $qt_index ][ $qt_val_key ]['compare'] = '<=';
+											$query['meta_query'][ $qt_index ][ $qt_val_key ]['value']= $passed_values[1];
+										} else if ( $current_value_key > 0 && isset( $passed_values[0] ) ) {
+											$query['meta_query'][ $qt_index ][ $qt_val_key ]['compare'] = '>=';
+											$query['meta_query'][ $qt_index ][ $qt_val_key ]['value']= $passed_values[0];
+										}
+									} else {
+										unset( $query['meta_query'][ $qt_index ][ $qt_val_key ] );
+									}
+									// if $compare_function is BETWEEN and we have a meta_query not using BETWEEN, we have a partial query here, so keep it
+								} else {
+									unset( $query['meta_query'][$qt_index][ $qt_val_key ] );
+								}
 							}
-							// if $compare_function is BETWEEN and we have a meta_query not using BETWEEN, we have a partial query here, so keep it
-						} else {
-							unset( $query['meta_query'][$qt_index] );
 						}
 					}
 				}
@@ -1043,7 +1112,7 @@ function wpv_shortcode_wpv_control($atts) {
 		// Expensive, but not sure if more than wp_list_filter though
 	}
 	
-	// Management of multiseleft
+	// Management of multiselect
 	$multi = '';
 	if ( $type == 'multi-select') {
 		$type = 'select';
@@ -1150,16 +1219,33 @@ function wpv_shortcode_wpv_control($atts) {
 			// If it is not a Types field OR is a Types field without options
 
 			global $wpdb;
+			$values_to_prepare = array();
+			$values_to_prepare[] = $auto_fill;
 			$wpdb_where = '';
 			if ( isset( $view_settings['post_type'] )
 				&& is_array( $view_settings['post_type'] )
-				&& ! in_array( 'any', $view_settings['post_type'] ) )
-			{
-				$wpdb_where .= " AND p.post_type IN ( '" . implode( "','", $view_settings['post_type'] ) . "' ) ";
+				&& ! empty( $view_settings['post_type'] )
+				&& ! in_array( 'any', $view_settings['post_type'] ) 
+			) {
+				$post_type_count = count( $view_settings['post_type'] );
+				$post_type_placeholders = array_fill( 0, $post_type_count, '%s' );
+				$wpdb_where .= " AND p.post_type IN (" . implode( ",", $post_type_placeholders ) . ") ";
+				foreach ( $view_settings['post_type'] as $pt ) {
+					$values_to_prepare[] = $pt;
+				}
 			}
-			if ( isset( $view_settings['post_status'] ) && is_array( $view_settings['post_status'] ) ) {
+			if ( 
+				isset( $view_settings['post_status'] ) 
+				&& is_array( $view_settings['post_status'] ) 
+				&& ! empty( $view_settings['post_status'] )
+			) {
 				if ( ! in_array( 'any', $view_settings['post_status'] ) ) {
-					$wpdb_where .= " AND p.post_status IN ( '" . implode( "','", $view_settings['post_status'] ) . "' ) ";
+					$post_status_count = count( $view_settings['post_status'] );
+					$post_status_placeholders = array_fill( 0, $post_status_count, '%s' );
+					$wpdb_where .= " AND p.post_status IN (" . implode( ",", $post_status_placeholders ) . ") ";
+					foreach ( $view_settings['post_status'] as $ps ) {
+						$values_to_prepare[] = $ps;
+					}
 				}
 			} else {
 				$status = array( 'publish' );
@@ -1183,11 +1269,15 @@ function wpv_shortcode_wpv_control($atts) {
 					$wpdb_orderby = "ORDER BY pm.meta_value ASC";
 					break;
 			}
-			$db_values = $wpdb->get_col( $wpdb->prepare(
+			$db_values = $wpdb->get_col( 
+				$wpdb->prepare(
 					"SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm LEFT JOIN {$wpdb->posts} p ON p.ID = pm.post_id 
-					WHERE pm.meta_key = %s AND pm.meta_value IS NOT NULL AND pm.meta_value != '' {$wpdb_where} 
+					WHERE pm.meta_key = %s AND pm.meta_value IS NOT NULL AND pm.meta_value != '' 
+					{$wpdb_where} 
 					{$wpdb_orderby}",
-					$auto_fill ) );
+					$values_to_prepare 
+				) 
+			);
         }
         
         /**
@@ -1473,14 +1563,16 @@ function wpv_shortcode_wpv_control($atts) {
                 
                 if ( count( $values_arr ) != count( $options ) ) {
 					// if the $values_arr has one more item than $options, there is a repeating value: the default one added to the beginning
-					// NOTE not sure about this: on both cases the default_value is the first element
 					$default_value = reset( $options );
 				} else {
-					// so the default value in this case is the first element in $values_arr
-					$default_value = $values_arr[0];
-					// except if this is a radios input, when we do not force any default value
-					if ( $type == 'radios' ) {
+					if ( 
+						$type == 'radios' 
+						|| $multi == 'multiple'
+					) {
 						$default_value = '';
+					} else {
+						// so the default value in this case is the first element in $values_arr
+						$default_value = isset( $values_arr[0] ) ? $values_arr[0] : '';
 					}
 				}
 				if ( $type == 'radios' ) {
@@ -2186,7 +2278,7 @@ function wpv_render_datepicker( $url_param, $date_format, $default_date = '' ) {
     $out .= '<input type="hidden" class="js-wpv-date-param-' . $url_param . '-format" name="' . $url_param . '-format" value="' . $date_format . '" />';
 	//if ( $default_date != 'NONE' ){
 	if ( $date != '' ) {
-    	$datepicker_date = date( 'dmy', intval( $date ) );
+    	$datepicker_date = date( 'dmY', intval( $date ) );
 	}
     $out .= '<input type="hidden" data-param="' . $url_param . '" class="wpv-date-front-end js-wpv-date-front-end-' . $url_param . '" value="' . $datepicker_date . '"/>';
 	
@@ -2259,7 +2351,8 @@ class Walker_Category_select extends Walker {
 							$pid = str_replace( $blog_id . ':', '', $pid );
 						}
 						if ( in_array( $pid, $WP_Views->returned_ids_for_parametric_search ) && is_array( $tax_array ) && count( $tax_array ) > 0 ) {
-							$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+							//$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+							$this_post_taxes = wp_list_pluck( $tax_array, 'term_id', 'term_id' );
 							$this->posts_to_taxes[$pid] = $this_post_taxes;
 						}
 					}
@@ -2282,7 +2375,8 @@ class Walker_Category_select extends Walker {
 					if ( isset( $wpv_data_cache[$taxonomy . '_relationships'] ) && is_array( $wpv_data_cache[$taxonomy . '_relationships'] ) ) {
 						foreach ( $wpv_data_cache[$taxonomy . '_relationships'] as $pid => $tax_array ) {
 							if ( is_array( $tax_array ) && count( $tax_array ) > 0 ) {
-								$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+								//$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+								$this_post_taxes = wp_list_pluck( $tax_array, 'term_id', 'term_id' );
 								$this->posts_to_taxes[$pid] = $this_post_taxes;
 							}
 						}
@@ -2403,7 +2497,8 @@ class Walker_Category_radios extends Walker {
 							$pid = str_replace( $blog_id . ':', '', $pid );
 						}
 						if ( in_array( $pid, $WP_Views->returned_ids_for_parametric_search ) && is_array( $tax_array ) && count( $tax_array ) > 0 ) {
-							$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+							//$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+							$this_post_taxes = wp_list_pluck( $tax_array, 'term_id', 'term_id' );
 							$this->posts_to_taxes[$pid] = $this_post_taxes;
 						}
 					}
@@ -2426,7 +2521,8 @@ class Walker_Category_radios extends Walker {
 					if ( isset( $wpv_data_cache[$taxonomy . '_relationships'] ) && is_array( $wpv_data_cache[$taxonomy . '_relationships'] ) ) {
 						foreach ( $wpv_data_cache[$taxonomy . '_relationships'] as $pid => $tax_array ) {
 							if ( is_array( $tax_array ) && count( $tax_array ) > 0 ) {
-								$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+								//$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+								$this_post_taxes = wp_list_pluck( $tax_array, 'term_id', 'term_id' );
 								$this->posts_to_taxes[$pid] = $this_post_taxes;
 							}
 						}
@@ -2596,7 +2692,7 @@ if ( !class_exists( 'WPV_Walker_Category_Checklist' ) ) {
 								$pid = str_replace( $blog_id . ':', '', $pid );
 							}
 							if ( in_array( $pid, $WP_Views->returned_ids_for_parametric_search ) && is_array( $tax_array ) && count( $tax_array ) > 0 ) {
-								$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+								$this_post_taxes = wp_list_pluck( $tax_array, 'term_id', 'term_id' );
 								$this->posts_to_taxes[$pid] = $this_post_taxes;
 							}
 						}
@@ -2619,7 +2715,7 @@ if ( !class_exists( 'WPV_Walker_Category_Checklist' ) ) {
 						if ( isset( $wpv_data_cache[$taxonomy . '_relationships'] ) && is_array( $wpv_data_cache[$taxonomy . '_relationships'] ) ) {
 							foreach ( $wpv_data_cache[$taxonomy . '_relationships'] as $pid => $tax_array ) {
 								if ( is_array( $tax_array ) && count( $tax_array ) > 0 ) {
-									$this_post_taxes = array_combine( array_values( array_keys( $tax_array ) ) , array_keys( $tax_array ) );
+									$this_post_taxes = wp_list_pluck( $tax_array, 'term_id', 'term_id' );
 									$this->posts_to_taxes[$pid] = $this_post_taxes;
 								}
 							}
@@ -2922,6 +3018,11 @@ add_shortcode('wpv-control', 'wpv_shortcode_wpv_control');
 
 function wpv_recursive_post_hierarchy( $post_types = array(), $level = 0 ) {
 	$parents_array = array();
+	if ( ! is_array( $post_types ) ) {
+		// Sometimes, when saving the Content Selection section with no post type selected, this is not an array
+		// That can happen when switching to list taxonomy terms or users without selecting a post type first
+		return $parents_array;
+	}
 	if ( function_exists( 'wpcf_pr_get_belongs' ) && $level < 5 ) {
 		foreach ( $post_types as $post_type_slug ) {
 			$this_parents = wpcf_pr_get_belongs( $post_type_slug );
@@ -3180,7 +3281,7 @@ function wpv_shortcode_wpv_control_item( $atts, $value ) {
 			'date' => 'post_date',
 			'date_modified' => 'post_modified',
 			'comment_count' => 'comment_count' );
-	if( !isset( $allowed_orderby_values[ $orderby ] ) ) {
+	if( ! isset( $allowed_orderby_values[ $orderby ] ) ) {
 		$orderby = 'title';
 	}
 	// Now $orderby contains a valid column name at all times.
@@ -3257,21 +3358,33 @@ function wpv_shortcode_wpv_control_item( $atts, $value ) {
 	}
 	
 	if ( $this_tree_roof == $ancestor_type ) {
+		$values_to_prepare = array();
 		// Adjust query for WPML support
 		$wpml_join = $wpml_where = "";
-		if (isset($sitepress) && function_exists('icl_object_id')) {
+		if (
+			isset( $sitepress ) 
+			&& function_exists( 'icl_object_id' )
+		) {
 			$current_pt_translatable = $sitepress->is_translated_post_type( $ancestor_type );
 			if ( $current_pt_translatable ) {
-				$wpml_current_language = esc_sql($sitepress->get_current_language());
+				$wpml_current_language = $sitepress->get_current_language();
 				$wpml_join = " JOIN {$wpdb->prefix}icl_translations t ";
-				$wpml_where = " AND p.ID = t.element_id AND t.language_code = '{$wpml_current_language}' ";
+				$wpml_where = " AND p.ID = t.element_id AND t.language_code = %s ";
+				$values_to_prepare[] = $wpml_current_language;
 			}
 		}
+		$values_to_prepare[] = $ancestor_type;
 		$pa_results = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT p.ID, p.post_title
 				FROM {$wpdb->posts} p {$wpml_join}
-				WHERE p.post_status = 'publish' AND p.post_type = '{$ancestor_type}' {$wpml_where}
-				ORDER BY p.{$orderby} {$order}" );
+				WHERE p.post_status = 'publish' 
+				{$wpml_where} 
+				AND p.post_type = %s 
+				ORDER BY p.{$orderby} {$order}",
+				$values_to_prepare
+			)
+		);
 	} else {
 		$aux_position_array = array_keys( $ancestor_tree_array, $ancestor_type );
 		if ( count( $aux_position_array ) > 1 ) {
@@ -3306,13 +3419,27 @@ function wpv_shortcode_wpv_control_item( $atts, $value ) {
 		if ( isset( $query_here['meta_query'] ) ) {
 			$query_here['meta_query']['relation'] = 'AND';
 			$aux_relationship_query = new WP_Query( $query_here );
-			if ( is_array( $aux_relationship_query->posts ) && count( $aux_relationship_query->posts ) ) {
+			if ( 
+				is_array( $aux_relationship_query->posts ) 
+				&& count( $aux_relationship_query->posts ) 
+			) {
 				// If there are posts with those requirements, get their ID and post_title
+				// We do not really need sanitization here, as $aux_relationship_query->posts only contains IDs come from the database, but still
+				$values_to_prepare = array();
+				$aux_rel_count = count( $aux_relationship_query->posts );
+				$aux_rel_placeholders = array_fill( 0, $aux_rel_count, '%d' );
+				foreach ( $aux_relationship_query->posts as $aux_rel_id ) {
+					$values_to_prepare[] = $aux_rel_id;
+				}
 				$pa_results = $wpdb->get_results(
+					$wpdb->prepare(
 						"SELECT ID, post_title
 						FROM {$wpdb->posts}
-						WHERE post_status = 'publish' AND ID IN ('" . implode("','", $aux_relationship_query->posts) . "')
-						ORDER BY {$orderby} {$order}" );
+						WHERE post_status = 'publish' AND ID IN (" . implode( ",", $aux_rel_placeholders ) . ")
+						ORDER BY {$orderby} {$order}",
+						$values_to_prepare
+					)
+				);
 			} else {
 				//If there are no posts with those requeriments, render no posts
 				$pa_results = array();
@@ -3544,7 +3671,15 @@ function wpv_shortcode_wpv_control_item( $atts, $value ) {
 					'#inline' => true,
 					'#after' => '<br />'
 				);
-				if ( $this_tree_ground == $ancestor_type && $dependant && count( $pa_results ) == 0 && ( !isset( $_GET[$url_param] ) || $_GET[$url_param] != '' ) ) {
+				if ( 
+					$this_tree_ground == $ancestor_type 
+					&& $dependant 
+					&& count( $pa_results ) == 0 
+					&& (
+						! isset( $_GET[$url_param] ) 
+						|| $_GET[$url_param] != '' 
+					)
+				) {
 					$options[$default_label]['#disable'] = 'true';
 					$options[$default_label]['#labelclass'] = 'wpv-parametric-disabled';
 				}
@@ -3554,13 +3689,19 @@ function wpv_shortcode_wpv_control_item( $atts, $value ) {
 			if ( $ancestor_type == $this_tree_ground ) {
 				$element['field']['#name'] = $url_param;
 				$element['field']['#id'] = 'wpv_control_' . $type . '_' . $url_param;
-				if ( isset( $_GET[$url_param] ) && $_GET[$url_param] != 0 ) {
+				if ( 
+					isset( $_GET[$url_param] ) 
+					&& $_GET[$url_param] != 0 
+				) {
 					$element['field']['#default_value'] = $_GET[$url_param];
 				}
 			} else {
 				$element['field']['#name'] = $url_param . '-' . $ancestor_type;
 				$element['field']['#id'] = 'wpv_control_' . $type . '_' . $url_param . '_' . $ancestor_type;
-				if ( isset( $_GET[$url_param . '-' . $ancestor_type] ) ) {
+				if ( 
+					isset( $_GET[$url_param . '-' . $ancestor_type] ) 
+					&& $_GET[$url_param . '-' . $ancestor_type] != 0 
+				) {
 					$element['field']['#default_value'] = $_GET[$url_param . '-' . $ancestor_type];
 				}
 			}

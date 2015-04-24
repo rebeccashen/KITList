@@ -5,18 +5,18 @@ Plugin URI: http://wp-types.com/?utm_source=viewsplugin&utm_campaign=views&utm_m
 Description: When you need to create lists of items, Views is the solution. Views will query the content from the database, iterate through it and let you display it with flair. You can also enable pagination, search, filtering and sorting by site visitors.
 Author: OnTheGoSystems
 Author URI: http://www.onthegosystems.com
-Version: 1.7
+Version: 1.8
 */
 
 if(defined('WPV_VERSION')) return;
 
-define('WPV_VERSION', '1.7');
+define('WPV_VERSION', '1.8');
 define('WPV_PATH', dirname(__FILE__));
 define('WPV_PATH_EMBEDDED', dirname(__FILE__) . '/embedded');
 define('WPV_FOLDER', basename(WPV_PATH));
 // define('WPV_URL', plugins_url() . '/' . WPV_FOLDER); NOTE fix SSL possible problems below
 if ( ( defined( 'FORCE_SSL_ADMIN' ) && FORCE_SSL_ADMIN ) || is_ssl() ) {
-    define('WPV_URL', rtrim( str_replace( 'http://', 'https://', plugins_url() ), '/' ) . '/' . WPV_FOLDER );
+	define('WPV_URL', rtrim( str_replace( 'http://', 'https://', plugins_url() ), '/' ) . '/' . WPV_FOLDER );
 }else{
 	define('WPV_URL', plugins_url() . '/' . WPV_FOLDER );
 }
@@ -30,6 +30,16 @@ if ( is_ssl() ) {
 // load on the go resources
 require WPV_PATH_EMBEDDED . '/onthego-resources/loader.php';
 onthego_initialize(WPV_PATH_EMBEDDED . '/onthego-resources/', WPV_URL_EMBEDDED . '/onthego-resources/');
+
+// Views Settings
+require WPV_PATH_EMBEDDED . '/inc/wpv-settings-embedded.php';
+require WPV_PATH . '/inc/wpv-settings.php';
+$WPV_settings = new WPV_Settings;
+
+
+// WPV_View
+require_once WPV_PATH_EMBEDDED . '/inc/wpv-view.class.php';
+
 
 // Module Manager integration
 require WPV_PATH_EMBEDDED . '/inc/wpv-module-manager.php';
@@ -94,6 +104,8 @@ require_once( WPV_PATH_EMBEDDED . '/inc/wpv-filter-post-relationship-embedded.ph
 require_once( WPV_PATH . '/inc/filters/wpv-filter-post-relationship.php');
 require_once( WPV_PATH_EMBEDDED . '/inc/wpv-filter-id-embedded.php');
 require_once( WPV_PATH . '/inc/filters/wpv-filter-id.php');
+require_once( WPV_PATH_EMBEDDED . '/inc/wpv-filter-date-embedded.php');
+require_once( WPV_PATH . '/inc/filters/wpv-filter-date.php');
 //Filters for users. 
 require_once( WPV_PATH_EMBEDDED . '/inc/wpv-filter-users-embedded.php');
 require_once( WPV_PATH . '/inc/filters/wpv-filter-users.php');
@@ -102,6 +114,11 @@ require_once( WPV_PATH . '/inc/filters/wpv-filter-user-field.php');
 
 
 require WPV_PATH . '/inc/wpv-plugin.class.php';
+
+require_once( WPV_PATH_EMBEDDED . '/inc/third-party/wpv-framework-api.php');
+
+// Including files for listing pages
+require_once( WPV_PATH . '/inc/wpv-listing-common.php');
 
 //Including files with redesign for views listings and editing
 require_once( WPV_PATH . '/inc/redesign/wpv-views-listing-page.php');
@@ -134,6 +151,8 @@ require WPV_PATH_EMBEDDED . '/inc/wpv-readonly-embedded.php';
 
 require WPV_PATH . '/inc/wpv-admin-update-help.php';
 require WPV_PATH . '/inc/wpv-admin-notices.php';
+
+require WPV_PATH_EMBEDDED . '/inc/wpv-api.php';
 
 register_activation_hook(__FILE__, 'wpv_views_plugin_activate');
 register_deactivation_hook(__FILE__, 'wpv_views_plugin_deactivate');

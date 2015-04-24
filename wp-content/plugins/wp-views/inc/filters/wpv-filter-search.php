@@ -82,7 +82,8 @@ class WPV_Search_Filter {
 		$filters['post_search'] = array(
 			'name' => __( 'Post search', 'wpv-views' ),
 			'present' => 'search_mode',
-			'callback' => array( 'WPV_Search_Filter', 'wpv_add_new_filter_post_search_list_item' )
+			'callback' => array( 'WPV_Search_Filter', 'wpv_add_new_filter_post_search_list_item' ),
+			'group' => __( 'Post filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -148,6 +149,7 @@ class WPV_Search_Filter {
 			<div id="wpv-filter-post-search" class="js-wpv-filter-options js-wpv-filter-post-search-options">
 				<?php WPV_Search_Filter::wpv_render_post_search_options( $view_settings ); ?>
 			</div>
+			<div class="js-wpv-filter-toolset-messages"></div>
 			<span class="filter-doc-help">
 				<?php echo sprintf(__('%sLearn about filtering for a specific text string%s', 'wpv-views'),
 					'<a class="wpv-help-link" href="' . WPV_FILTER_BY_SPECIFIC_TEXT_LINK . '" target="_blank">',
@@ -169,38 +171,81 @@ class WPV_Search_Filter {
 	*/
 
 	static function wpv_filter_post_search_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_search_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_search_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
-		parse_str( $_POST['filter_options'], $filter_search );
 		$change = false;
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+		$view_id = $_POST['id'];
+		parse_str( $_POST['filter_options'], $filter_search );
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
 		if ( ! isset( $filter_search['post_search_value'] ) ) {
 			$filter_search['post_search_value'] = '';
 		}
-		if ( ! isset( $view_array['search_mode'] ) || $filter_search['search_mode'] != $view_array['search_mode'] ) {
-			$change = true;
-			$view_array['search_mode'] = $filter_search['search_mode'];
-		}
-		if ( ! isset( $view_array['post_search_value'] ) || sanitize_text_field( $filter_search['post_search_value'] ) != $view_array['post_search_value'] ) {
-			$change = true;
-			$view_array['post_search_value'] = sanitize_text_field( $filter_search['post_search_value'] );
-		}
-		if ( ! isset( $view_array['post_search_content'] ) || $filter_search['post_search_content'] != $view_array['post_search_content'] ) {
-			$change = true;
-			$view_array['post_search_content'] = $filter_search['post_search_content'];
+		$settings_to_check = array(
+			'search_mode',
+			'post_search_value',
+			'post_search_content'
+		);
+		foreach ( $settings_to_check as $set ) {
+			if ( 
+				isset( $filter_search[$set] ) 
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_search[$set] != $filter_search[$set] 
+				)
+			) {
+				if ( is_array( $filter_search[$set] ) ) {
+					$filter_search[$set] = array_map( 'sanitize_text_field', $filter_search[$set] );
+				} else {
+					$filter_search[$set] = sanitize_text_field( $filter_search[$set] );
+				}
+				$change = true;
+				$view_array[$set] = $filter_search[$set];
+			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
 		$filter_search['search_mode'] = $filter_search['search_mode'][0];
-		echo wpv_get_filter_post_search_summary_txt( $filter_search );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Post search filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_post_search_summary_txt( $filter_search )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -230,9 +275,33 @@ class WPV_Search_Filter {
 	*/
 
 	static function wpv_filter_post_search_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_search_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_search_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 		if ( isset( $view_array['search_mode'] ) ) {
@@ -245,8 +314,12 @@ class WPV_Search_Filter {
 			unset( $view_array['post_search_content'] );
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Post search filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );;
 	}
 	
 	/**
@@ -289,7 +362,8 @@ class WPV_Search_Filter {
 		$filters['taxonomy_search'] = array(
 			'name' => __( 'Taxonomy search', 'wpv-views' ),
 			'present' => 'taxonomy_search_mode',
-			'callback' => array( 'WPV_Search_Filter', 'wpv_add_new_filter_taxonomy_search_list_item' )
+			'callback' => array( 'WPV_Search_Filter', 'wpv_add_new_filter_taxonomy_search_list_item' ),
+			'group' => __( 'Taxonomy filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -355,6 +429,7 @@ class WPV_Search_Filter {
 			<div id="wpv-filter-taxonomy-search" class="js-wpv-filter-options js-wpv-filter-taxonomy-search-options">
 				<?php WPV_Search_Filter::wpv_render_taxonomy_search_options( $view_settings ); ?>
 			</div>
+			<div class="js-wpv-filter-toolset-messages"></div>
 		</div>
 		<?php
 		$res = ob_get_clean();
@@ -370,34 +445,80 @@ class WPV_Search_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_search_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_search_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_search_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
-		parse_str( $_POST['filter_options'], $filter_search );
 		$change = false;
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+		$view_id = $_POST['id'];
+		parse_str( $_POST['filter_options'], $filter_search );
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
 		if ( ! isset( $filter_search['taxonomy_search_value'] ) ) {
 			$filter_search['taxonomy_search_value'] = '';
 		}
-		if ( ! isset( $view_array['taxonomy_search_mode'] ) || $filter_search['taxonomy_search_mode'] != $view_array['taxonomy_search_mode'] ) {
-			$change = true;
-			$view_array['taxonomy_search_mode'] = $filter_search['taxonomy_search_mode'];
-		}
-		if ( ! isset( $view_array['taxonomy_search_value'] ) || sanitize_text_field( $filter_search['taxonomy_search_value'] ) != $view_array['taxonomy_search_value'] ) {
-			$change = true;
-			$view_array['taxonomy_search_value'] = sanitize_text_field( $filter_search['taxonomy_search_value'] );
+		$settings_to_check = array(
+			'taxonomy_search_mode',
+			'taxonomy_search_value'
+		);
+		foreach ( $settings_to_check as $set ) {
+			if ( 
+				isset( $filter_search[$set] ) 
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_search[$set] != $filter_search[$set] 
+				)
+			) {
+				if ( is_array( $filter_search[$set] ) ) {
+					$filter_search[$set] = array_map( 'sanitize_text_field', $filter_search[$set] );
+				} else {
+					$filter_search[$set] = sanitize_text_field( $filter_search[$set] );
+				}
+				$change = true;
+				$view_array[$set] = $filter_search[$set];
+			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			$result = update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
 		$filter_search['taxonomy_search_mode'] = $filter_search['taxonomy_search_mode'][0];
-		echo wpv_get_filter_taxonomy_search_summary_txt( $filter_search );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Taxonomy filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_taxonomy_search_summary_txt( $filter_search )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -427,9 +548,33 @@ class WPV_Search_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_search_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_search_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_search_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 		if ( isset( $view_array['taxonomy_search_mode'] ) ) {
@@ -439,8 +584,12 @@ class WPV_Search_Filter {
 			unset( $view_array['taxonomy_search_value'] );
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Taxonomy search filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 
 	/**
@@ -464,13 +613,12 @@ class WPV_Search_Filter {
 		<h4><?php _e( 'How to search', 'wpv-views' ); ?></h4>
 		<ul class="wpv-filter-options-set">
 			<li>
-				<?php $checked = $view_settings['search_mode'] == 'specific' ? 'checked="checked"' : ''; ?>
-				<input type="radio" id="wpv-search-mode-specific" class="js-wpv-post-search-mode" name="search_mode[]" value="specific" <?php echo $checked; ?> />
+				<input type="radio" id="wpv-search-mode-specific" class="js-wpv-post-search-mode" name="search_mode[]" value="specific" <?php checked( $view_settings['search_mode'], 'specific' ); ?> />
 				<label for="wpv-search-mode-specific"><?php _e( 'Search for a specific text:', 'wpv-views' ); ?></label>
 				<!-- MAYBE DEPRECATED -->
 				<input type="hidden" name="filter_by_search" value="1"/>
 				<!-- it was used to prevent duplications, not used anymore I think -->
-				<input type='text' name="post_search_value" value="<?php echo $view_settings['post_search_value']; ?>" />
+				<input type='text' name="post_search_value" value="<?php echo esc_attr( $view_settings['post_search_value'] ); ?>" />
 			</li>
 			<li>
 				<?php $checked = ( $view_settings['search_mode'] == 'manual' || $view_settings['search_mode'] == 'visitor' ) ? 'checked="checked"' : ''; ?>
@@ -512,10 +660,9 @@ class WPV_Search_Filter {
 			<h4><?php _e( 'How to search', 'wpv-views' ); ?></h4>
 			<ul class="wpv-filter-options-set">
 				<li>
-					<?php $checked = $view_settings['taxonomy_search_mode'] == 'specific' ? 'checked="checked"' : ''; ?>
-					<input type="radio" id="wpv-taxonomy-search-mode-specific" name="taxonomy_search_mode[]" value="specific" <?php echo $checked; ?> />
+					<input type="radio" id="wpv-taxonomy-search-mode-specific" name="taxonomy_search_mode[]" value="specific" <?php checked( $view_settings['taxonomy_search_mode'], 'specific' ); ?> />
 					<label for="wpv-taxonomy-search-mode-specific"><?php _e( 'Search for a specific text:', 'wpv-views' ); ?></label>
-					<input type='text' name="taxonomy_search_value" value="<?php echo $view_settings['taxonomy_search_value']; ?>" />
+					<input type='text' name="taxonomy_search_value" value="<?php echo esc_attr( $view_settings['taxonomy_search_value'] ); ?>" />
 				</li>
 				<li>
 					<?php $checked = ( $view_settings['taxonomy_search_mode'] == 'manual' || $view_settings['taxonomy_search_mode'] == 'visitor' ) ? 'checked="checked"' : ''; ?>

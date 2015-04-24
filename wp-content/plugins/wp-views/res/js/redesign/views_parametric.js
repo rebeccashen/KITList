@@ -146,8 +146,7 @@ var WPV_ParametricFilterWindow = function() {
 		jqp('.js-wpv-filter-edit-toolbar  .js-code-editor-toolbar-button-cred-icon').parent().parent()
 		],
 		toolbar = jqp('.js-wpv-filter-extra-section .wpv-setting'),
-		errors_cont = jqp('<div class="js-error-container"></div>')
-		, cats_hide = [
+		cats_hide = [
 		edit_hide,
 		add_hide,
 		WPV_ParametricSearchButton.button.parent(),
@@ -177,7 +176,6 @@ var WPV_ParametricFilterWindow = function() {
 			toogle_buttons_visibility( slide_hide, toolbar, true );
 			break;
 		}
-		toolbar.prepend( errors_cont );
 
 		button_hide_if_tax_view( cats_hide, button, toolbar );
 	};
@@ -231,7 +229,7 @@ var WPV_ParametricFilterWindow = function() {
 
 		if( !data || typeof data.fieldRaw == 'undefined' || !data.fieldRaw )
 		{
-			jqp('.js-wpv-parametric-dialog-tolset-messages') .wpvToolsetMessage({
+			jqp('.js-wpv-parametric-dialog-toolset-messages') .wpvToolsetMessage({
 				text:WPV_Parametric.make_valid_selection,
 				stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 				close:true
@@ -571,7 +569,7 @@ var WPV_ParametricFilterWindow = function() {
 		}
 		else
 		{
-			jqp('.js-wpv-parametric-dialog-tolset-messages').wpvToolsetMessage({
+			jqp('.js-wpv-parametric-dialog-toolset-messages').wpvToolsetMessage({
 				text:problems_inserting_new_shortcode,
 				stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 				close:true
@@ -622,7 +620,7 @@ var WPV_ParametricFilterWindow = function() {
 				//	return;
 
 				if( !shortcode ) {
-					jqp('.js-wpv-parametric-dialog-tolset-messages').wpvToolsetMessage({
+					jqp('.js-wpv-parametric-dialog-toolset-messages').wpvToolsetMessage({
 						text:WPV_Parametric.something_bad,
 						type:'error',
 						stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
@@ -901,12 +899,14 @@ var WPV_ParametricFilterWindow = function() {
 
 				jqp( '.js-wpv-missing-filter-container, .js-wpv-no-filters-container' ).hide();
 
+				WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, args.Data.insert, false, 'success' );
+				/*
 				WPV_parametric_local.message.container.wpvToolsetMessage({
 					text:args.Data.insert,
 					type:'info',
 					onClose: function()
 					{
-						/*
+						
 						if( !WPV_parametric_local.add_submit.has_submit( WPV_parametric_local.add_submit.get_text_area_content() ) )
 						{
 							WPV_parametric_local.add_submit.open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
@@ -916,9 +916,10 @@ var WPV_ParametricFilterWindow = function() {
 								, fadeOut:WPV_parametric_local.message.fadeOutLong
 							});
 						}
-						*/
+						
 					}
 				});
+				*/
 
 				//tell filters section we created a new filter.
 				var params = {
@@ -949,12 +950,15 @@ var WPV_ParametricFilterWindow = function() {
 			}
 			else if( args.Data.error )
 			{
+				WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.db_insert_problem + args.Data.error, true, 'error' );
+				/*
 				WPV_parametric_local.message.container.wpvToolsetMessage({
 					text:WPV_Parametric.db_insert_problem + args.Data.error,
 					type:'error',
 					stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 					close:true
 				});
+				*/
 
 				console.error( args.Data.error );
 			}
@@ -962,12 +966,15 @@ var WPV_ParametricFilterWindow = function() {
 		catch( e )
 		{
 			console.error( e.message );
+			WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, e.message, true, 'error' );
+			/*
 			WPV_parametric_local.message.container.wpvToolsetMessage({
 				text:e.message,
 				type:'error',
 				stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 				close:true
 			});
+			*/
 		}
 	};
 
@@ -985,7 +992,7 @@ var WPV_ParametricFilterWindow = function() {
 
 	self.addButtons = function()
 	{
-		WPV_parametric_local.message.container = jqp(".js-wpv-filter-extra-section .wpv-setting .js-error-container");
+		WPV_parametric_local.message.container = jqp(".js-wpv-filter-extra-section .wpv-setting .js-wpv-parametric-error-container");
 
 		self.createFilterAction();
 		self.editFilterAction();
@@ -999,11 +1006,14 @@ var WPV_ParametricFilterWindow = function() {
 			//build the data object to be sent to the server
 			if( !self.move_cursor_if_no_content_within( ) && !self.editor.cursorWithin(self.text_area, 'wpv-filter-controls', '/wpv-filter-controls') )
 			{
+				WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+				/*
 				WPV_ParametricFilterWindow.errorPlaceHolder = WPV_parametric_local.message.container.wpvToolsetMessage({
 					text:WPV_Parametric.place_cursor_inside_wpv_controls,
 					stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 					close:true
 				});
+				*/
 				return false;
 			}
 
@@ -1027,12 +1037,15 @@ var WPV_ParametricFilterWindow = function() {
 			}
 			else
 			{
+				WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.select_post_types, true, 'error' );
+				/*
 				WPV_parametric_local.message.container.wpvToolsetMessage({
 					text:WPV_Parametric.select_post_types,
 					stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 					close:true,
 					fadeOut:'fast'
 				});
+				*/
 
 			}
 
@@ -1048,11 +1061,14 @@ var WPV_ParametricFilterWindow = function() {
 
 			if(  !short_code )
 			{
+				WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_valid_control_shortcodes, true, 'error' );
+				/*
 				WPV_parametric_local.message.container.wpvToolsetMessage({
 					text:WPV_Parametric.place_cursor_inside_valid_control_shortcodes,
 					stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 					close:true
 				});
+				*/
 				return null;
 			}
 
@@ -1062,11 +1078,14 @@ var WPV_ParametricFilterWindow = function() {
 			{
 				self.short_code_editable = parser.getShortCodeRawString();
 				if ( ~self.short_code_editable.indexOf(']') ) {//alert('wpv-control not valid');
+					WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_valid_control_shortcodes, true, 'error' );
+					/*
 					WPV_ParametricFilterWindow.errorPlaceHolder = WPV_parametric_local.message.container.wpvToolsetMessage({
 						text: WPV_Parametric.place_cursor_inside_valid_control_shortcodes,
 						stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 						close:true
 					});
+					*/
 					return null;
 				} else {
 					ret = parser.getShortCodeObject();
@@ -1078,11 +1097,14 @@ var WPV_ParametricFilterWindow = function() {
 			{
 				self.short_code_editable = parser.getShortCodeRawString();
 				if ( ~self.short_code_editable.indexOf(']') ) {//alert('wpv-control-set not valid');
+					WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_valid_control_shortcodes, true, 'error' );
+					/*
 					WPV_ParametricFilterWindow.errorPlaceHolder = WPV_parametric_local.message.container.wpvToolsetMessage({
 						text: WPV_Parametric.place_cursor_inside_valid_control_shortcodes,
 						stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 						close:true
 					});
+					*/
 					return null;
 				} else {
 					ret = parser.getShortCodeObject();
@@ -1093,27 +1115,36 @@ var WPV_ParametricFilterWindow = function() {
 			else if ( current_place == 'wpv-control-item' ) {//alert('in wpv-control-item');
 				self.short_code_editable = parser.getShortCodeRawString();
 				if ( ~self.short_code_editable.indexOf(']') ) {//alert('wpv-control-item not valid');
+					WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_valid_control_shortcodes, true, 'error' );
+					/*
 					WPV_ParametricFilterWindow.errorPlaceHolder = WPV_parametric_local.message.container.wpvToolsetMessage({
 						text: WPV_Parametric.place_cursor_inside_valid_control_shortcodes,
 						stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 						close:true
 					});
+					*/
 				} else {
+					WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_control_set, true, 'error' );
+					/*
 					WPV_ParametricFilterWindow.errorPlaceHolder = WPV_parametric_local.message.container.wpvToolsetMessage({
 						text: WPV_Parametric.place_cursor_inside_wpv_control_set,
 						stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 						close:true
 					});
+					*/
 				}
 				return null;
 			}
 			else
 			{
+				WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_valid_control_shortcodes, true, 'error' );
+				/*
 				WPV_ParametricFilterWindow.errorPlaceHolder = WPV_parametric_local.message.container.wpvToolsetMessage({
 					text: WPV_Parametric.place_cursor_inside_valid_control_shortcodes,
 					stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 					close:true
 				});
+				*/
 				return null;
 			}
 
@@ -1153,26 +1184,40 @@ var WPV_ParametricFilterWindow = function() {
 			//if(  WPV_Parametric.debug ) console.log( "THE DATA FOR EDIT FIELD TO SEND TO SERVER::: ", params.edit_field );
 			//return;
 
-			if( null != obj )
-			{
-				if( params.post_types )
-				{
-					proxy.loader.loadShow( jqp(this).parent().parent() );
-					jqp(this).prop('disabled', true );
-					proxy.ajaxCall( params, ajaxurl, 'post', ajaxCreateCallback, [jqp(this)] );
-				}
-				else
-				{
+			if ( null != obj ) {
+				if ( params.post_types ) {
+					if (
+						params.edit_field.field
+						|| params.edit_field.taxonomy
+						|| params.edit_field.ancestors
+					) {
+						proxy.loader.loadShow( jqp(this).parent().parent() );
+						jqp(this).prop('disabled', true );
+						proxy.ajaxCall( params, ajaxurl, 'post', ajaxCreateCallback, [jqp(this)] );
+					} else {
+						WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.editing_manual_filter, true, 'error' );
+						/*
+						WPV_parametric_local.message.container.wpvToolsetMessage({
+							text:WPV_Parametric.editing_manual_filter,
+							stay:true,
+							fadeOut:WPV_parametric_local.message.fadeOutLong,
+							close:true
+						});
+						*/
+					}
+				} else {
+					WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.select_post_types, true, 'error' );
+					/*
 					WPV_parametric_local.message.container.wpvToolsetMessage({
 						text:WPV_Parametric.select_post_types,
-						stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
+						type:'error',
+						stay:true,
+						fadeOut:WPV_parametric_local.message.fadeOutLong,
 						close:true
 					});
-
+					*/
 				}
-			}
-			else
-			{
+			} else {
 				//if(  WPV_Parametric.debug ) console.log("problems in getting the shortcode")
 			}
 			return false;
@@ -1270,12 +1315,15 @@ var WPV_ParametricFilterWindow = function() {
 
 		if( args.Data && args.Data.error )
 		{
+			WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, args.Data.error, true, 'error' );
+			/*
 			WPV_parametric_local.message.container.wpvToolsetMessage({
 				text:args.Data.error,
 				type: 'error',
 				stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 				close:true
 			});
+			*/
 			return false;
 		}
 
@@ -1289,12 +1337,15 @@ var WPV_ParametricFilterWindow = function() {
 		catch(e)
 		{
 			console.error(WPV_Parametric.ajax_error, e.message );
+			WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.data_loading_problem + e.message, true, 'error' );
+			/*
 			WPV_parametric_local.message.container.wpvToolsetMessage({
 				text:WPV_Parametric.data_loading_problem + e.message,
 				type: 'error'
 				,stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 				close:true
 			});
+			*/
 		}
 	};
 
@@ -3008,12 +3059,15 @@ var WPV_ParametricViewModel = function() {
 							{
 								if( self.loading ) self.loader.loadHide();
 
+								WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, "Error: " + textStatus + " " + errorThrown, true, 'error' );
+								/*
 								WPV_parametric_local.message.container.wpvToolsetMessage({
 									text:"Error: " + textStatus +" "+ errorThrown,
 									type: 'error',
 									stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 									close:true
 								});
+								*/
 
 								console.error( "Error: ", textStatus, errorThrown );
 								return false;
@@ -3043,22 +3097,28 @@ var WPV_ParametricViewModel = function() {
 								if( data.Data && data.Data.error )
 								{
 									console.error( data.Data.error );
+									WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, data.Data.error, true, 'error' );
+									/*
 									WPV_parametric_local.message.container.wpvToolsetMessage({
 										text:data.Data.error,
 										type:'error',
 										stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 										close:true
 									});
+									*/
 
 								}
 								else if( data.Data && data.Data.message )
 								{
+									WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, data.Data.message, true, 'success' );
+									/*
 									WPV_parametric_local.message.container.wpvToolsetMessage({
 										text:data.Data.message,
 										type:'info',
 										stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 										close:true
 									});
+									*/
 
 								}
 								else if( data.Data && !data.Data.error)
@@ -3071,9 +3131,12 @@ var WPV_ParametricViewModel = function() {
 									}
 									else
 									{
+										WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.ajax_callback_undefined, true, 'error' );
+										/*
 										WPV_parametric_local.message.container.wpvToolsetMessage({
 											text:WPV_Parametric.ajax_callback_undefined
 										});
+										*/
 									}
 
 								}
@@ -3531,8 +3594,7 @@ jqp.fn.caret = function (begin, end)
 				, label = jqp('<span class="button-label" />')
 				, toolbar = jqp('.js-wpv-filter-edit-toolbar')
 				, list = jqp('<li class="js-editor-addon-button-wrapper" />')
-				, filter_box = jqp('#js-row-post_search')
-				, open_message;
+				, filter_box = jqp('#js-row-post_search');
 
 				self.codemirror_highlight_options = {
 					className: 'wpv-codemirror-highlight'
@@ -3647,7 +3709,7 @@ jqp.fn.caret = function (begin, end)
 
 				self.has_search = function( area )
 				{
-					return ~area.search( /\[wpv-filter-search-box]/ ) == 0 ? false : true ;
+					return ( ~area.search( /\[wpv-filter-search-box/ ) == 0 && ~area.search( /\url_param=\"wpv_post_search\"/ ) == 0 ) ? false : true ;
 				};
 
 				self.cursorInside = function( area, start, end )
@@ -3676,11 +3738,14 @@ jqp.fn.caret = function (begin, end)
 						}
 						else if( !self.pwin.move_cursor_if_no_content_within( ) && !self.cursorInside() )
 						{
+							WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+							/*
 							open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_controls,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+							*/
 							return false;
 						}
 						else if( self.has_filter() )
@@ -3888,7 +3953,6 @@ jqp.fn.caret = function (begin, end)
 				, label = jqp('<span class="button-label" />')
 				, toolbar = jqp('.js-wpv-filter-edit-toolbar')
 				, list = jqp('<li class="js-editor-addon-button-wrapper" />')
-				, open_message
 				, dialog = null;
 
 				self.codemirror_highlight_options = {
@@ -3996,11 +4060,14 @@ jqp.fn.caret = function (begin, end)
 						dialog = null;
 						if( !self.cursorInside() )
 						{
+							WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+							/*
 							open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_controls,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+							*/
 							return false;
 						} else {
 							self.openDialog();
@@ -4070,7 +4137,6 @@ jqp.fn.caret = function (begin, end)
 							href:'.js-spinner-button-dialog',
 							open: true,
 							onComplete: function() {
-								open_message = open_message || WPV_parametric_local.add_submit.open_message;
 								jqp('.js-spinner-button-dialog #spinner_shortcode_container_type').val('div');
 								jqp('.js-spinner-button-dialog #spinner_shortcode_container_classname').val('');
 								jqp('.js-spinner-button-dialog #spinner_shortcode_spinner_position').val('before');
@@ -4080,11 +4146,14 @@ jqp.fn.caret = function (begin, end)
 							}
 						});
 					} else {
+						WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_filter, true, 'error' );
+						/*
 						open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_filter,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+						*/
 					}
 				};
 				return this;
@@ -4102,7 +4171,6 @@ jqp.fn.caret = function (begin, end)
 				, label = jqp('<span class="button-label" />')
 				, toolbar = jqp('.js-wpv-filter-edit-toolbar')
 				, list = jqp('<li class="js-editor-addon-button-wrapper" />')
-				, open_message
 				, dialog = null;
 
 				self.codemirror_highlight_options = {
@@ -4190,11 +4258,14 @@ jqp.fn.caret = function (begin, end)
 						dialog = null;
 						if( !self.cursorInside() )
 						{
+							WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+							/*
 							open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_controls,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+							*/
 							return false;
 						} else {
 							self.openDialog();
@@ -4276,11 +4347,14 @@ jqp.fn.caret = function (begin, end)
 							}
 						});
 					} else {
+						WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+						/*
 						open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_controls,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+						*/
 					}
 				};
 				return this;
@@ -4302,7 +4376,6 @@ jqp.fn.caret = function (begin, end)
 				, label = jqp('<span class="button-label" />')
 				, toolbar = jqp('.js-wpv-filter-edit-toolbar')
 				, list = jqp('<li class="js-editor-addon-button-wrapper" />')
-				, open_message
 				, dialog = null;
 
 				self.codemirror_highlight_options = {
@@ -4401,11 +4474,14 @@ jqp.fn.caret = function (begin, end)
 						}
 						if( !!self.pwin.move_cursor_if_no_content_within( ) && !self.cursorInside() )
 						{
+							WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+							/*
 							open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_controls,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+							*/
 							return false;
 						}
 						dialog = null;
@@ -4488,11 +4564,14 @@ jqp.fn.caret = function (begin, end)
 							}
 						});
 					} else {
+						WPViews.view_edit_screen.codemirror_panel( codemirror_views_query, WPV_Parametric.place_cursor_inside_wpv_controls, true, 'error' );
+						/*
 						open_message = WPV_parametric_local.message.container.wpvToolsetMessage({
 								text:WPV_Parametric.place_cursor_inside_wpv_controls,
 								stay:true, fadeOut:WPV_parametric_local.message.fadeOutLong,
 								close:true
 							});
+						*/
 					}
 				};
 				return this;

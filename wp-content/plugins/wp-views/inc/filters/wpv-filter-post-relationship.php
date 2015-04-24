@@ -78,7 +78,8 @@ class WPV_Post_Relationship_Filter {
 				'name' => __( 'Post relationship - Post is a child of', 'wpv-views' ),
 				'present' => 'post_relationship_mode',
 				'callback' => array( 'WPV_Post_Relationship_Filter', 'wpv_add_new_filter_post_relationship_list_item' ),
-				'args' => $post_type
+				'args' => $post_type,
+				'group' => __( 'Post filters', 'wpv-views' )
 			);
 		}
 		return $filters;
@@ -132,16 +133,15 @@ class WPV_Post_Relationship_Filter {
 	*/
 
 	static function wpv_get_list_item_ui_post_post_relationship( $view_settings = array() ) {
-		global $wpdb, $sitepress;
 		if ( isset( $view_settings['post_relationship_mode'] ) && is_array( $view_settings['post_relationship_mode'] ) ) {
 			$view_settings['post_relationship_mode'] = $view_settings['post_relationship_mode'][0];
 		}
-		if ( isset( $sitepress ) && function_exists( 'icl_object_id' ) && isset( $view_settings['post_relationship_id'] ) ) {
+		if (
+			isset( $view_settings['post_relationship_id'] ) 
+			&& ! empty( $view_settings['post_relationship_id'] )
+		) {
 			// Adjust for WPML support
-			$target_post_type = $wpdb->get_var( "SELECT post_type FROM {$wpdb->posts} WHERE ID='{$view_settings['post_relationship_id']}'" );
-			if ( $target_post_type ) {
-				$view_settings['post_relationship_id'] = icl_object_id( $view_settings['post_relationship_id'], $target_post_type, true );
-			}
+			$view_settings['post_relationship_id'] = apply_filters( 'translate_object_id', $view_settings['post_relationship_id'], 'any', true, null );
 		}
 		if ( ! isset( $view_settings['post_type'] ) ) {
 			$view_settings['post_type'] = array();
@@ -182,37 +182,82 @@ class WPV_Post_Relationship_Filter {
 	*/
 
 	static function wpv_filter_post_relationship_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_relationship_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_relationship_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$change = false;
+		$view_id = intval( $_POST['id'] );
 		parse_str( $_POST['filter_options'], $filter_relationship );
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
 		if ( ! isset( $filter_relationship['post_relationship_id'] ) ) {
 			$filter_relationship['post_relationship_id'] = 0;
 		}
 		$settings_to_check = array(
 			'post_relationship_mode',
+			'post_relationship_id',
 			'post_relationship_shortcode_attribute',
 			'post_relationship_url_parameter',
-			'post_relationship_id'
+			'post_relationship_framework'
 		);
 		foreach ( $settings_to_check as $set ) {
-			if ( ! isset( $view_array[$set] ) || $filter_relationship[$set] != $view_array[$set] ) {
+			if ( 
+				isset( $filter_relationship[$set] ) 
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_relationship[$set] != $view_array[$set] 
+				)
+			) {
+				if ( is_array( $filter_relationship[$set] ) ) {
+					$filter_relationship[$set] = array_map( 'sanitize_text_field', $filter_relationship[$set] );
+				} else {
+					$filter_relationship[$set] = sanitize_text_field( $filter_relationship[$set] );
+				}
 				$change = true;
 				$view_array[$set] = $filter_relationship[$set];
 			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			$result = update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
-		echo wpv_get_filter_post_relationship_summary_txt( $filter_relationship );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Specific users filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_post_relationship_summary_txt( $filter_relationship )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -245,17 +290,42 @@ class WPV_Post_Relationship_Filter {
 	*/
 
 	static function wpv_filter_post_relationship_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_relationship_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_relationship_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 		$to_delete = array(
 			'post_relationship_mode',
+			'post_relationship_id',
 			'post_relationship_shortcode_attribute',
 			'post_relationship_url_parameter',
-			'post_relationship_id',
-			'post_relationship_url_tree'
+			'post_relationship_url_tree',
+			'post_relationship_framework'
 		);
 		foreach ( $to_delete as $index ) {
 			if ( isset( $view_array[$index] ) ) {
@@ -275,8 +345,12 @@ class WPV_Post_Relationship_Filter {
 			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Post relationship filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -315,42 +389,38 @@ class WPV_Post_Relationship_Filter {
 			'post_relationship_mode' => 'current_page',
 			'post_relationship_id' => 0,
 			'post_relationship_shortcode_attribute' => 'wpvprchildof',
-			'post_relationship_url_parameter' => 'wpv-pr-child-of'
+			'post_relationship_url_parameter' => 'wpv-pr-child-of',
+			'post_relationship_framework' => ''
 		);
 		$view_settings = wp_parse_args( $view_settings, $defaults );
 		?>
 		<h4><?php _e( 'Select posts that are children of...', 'wpv-views' ); ?></h4>
 		<ul class="wpv-filter-options-set">
 			<li>
-				<input type="radio" id="post-relationship-mode-current-page" class="js-post-relationship-mode" name="post_relationship_mode[]" value="current_page" <?php checked( $view_settings['post_relationship_mode'], 'current_page' ); ?> />
+				<input type="radio" id="post-relationship-mode-current-page" class="js-post-relationship-mode" name="post_relationship_mode[]" value="current_page" <?php checked( $view_settings['post_relationship_mode'], 'current_page' ); ?> autocomplete="off" />
 				<label for="post-relationship-mode-current-page"><?php _e('Post where this View is inserted', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" id="post-relationship-mode-parent-view" class="js-post-relationship-mode" name="post_relationship_mode[]" value="parent_view" <?php checked( $view_settings['post_relationship_mode'], 'parent_view' ); ?> />
+				<input type="radio" id="post-relationship-mode-parent-view" class="js-post-relationship-mode" name="post_relationship_mode[]" value="parent_view" <?php checked( $view_settings['post_relationship_mode'], 'parent_view' ); ?> autocomplete="off" />
 				<label for="post-relationship-mode-parent-view"><?php _e('Post set by parent View', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" id="post-relationship-mode-shortcode" class="js-post-relationship-mode" name="post_relationship_mode[]" value="shortcode_attribute" <?php checked( $view_settings['post_relationship_mode'], 'shortcode_attribute' ); ?> />
-				<label for="post-relationship-mode-shortcode"><?php _e('Post with ID set by the shortcode attribute', 'wpv-views'); ?></label>
-				<input class="js-post-relationship-shortcode-attribute js-wpv-filter-validate" name="post_relationship_shortcode_attribute" data-type="shortcode" type="text" value="<?php echo $view_settings['post_relationship_shortcode_attribute']; ?>" />
-			</li>
-			<li>
-				<input type="radio" id="post-relationship-mode-url" class="js-post-relationship-mode" name="post_relationship_mode[]" value="url_parameter" <?php checked( $view_settings['post_relationship_mode'], 'url_parameter' ); ?> />
-				<label for="post-relationship-mode-url"><?php _e('Post with ID set by the URL parameter', 'wpv-views'); ?></label>
-				<input class="js-post-relationship-url-parameter js-wpv-filter-validate" name="post_relationship_url_parameter" data-type="url" type="text" value="<?php echo $view_settings['post_relationship_url_parameter']; ?>" />
-			</li>
-			<li>
-				<input type="radio" id="post-relationship-mode-this-page" class="js-post-relationship-mode" name="post_relationship_mode[]" value="this_page" <?php checked( $view_settings['post_relationship_mode'], 'this_page' ); ?> />
+				<input type="radio" id="post-relationship-mode-this-page" class="js-post-relationship-mode" name="post_relationship_mode[]" value="this_page" <?php checked( $view_settings['post_relationship_mode'], 'this_page' ); ?> autocomplete="off" />
 				<label for="post-relationship-mode-this-page"><?php _e('Specific:', 'wpv-views'); ?></label>
-				<select id="wpv_post_relationship_post_type" name="post_relationship_type" class="js-post-relationship-post-type" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_post_relationship_post_type_nonce' ); ?>">
+				<select id="wpv_post_relationship_post_type" name="post_relationship_type" class="js-post-relationship-post-type" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_post_relationship_post_type_nonce' ); ?>" autocomplete="off">
 				<?php
-				$post_types = get_post_types( array('public' => true), 'objects');
-				if ( $view_settings['post_relationship_id'] == 0 || $view_settings['post_relationship_id'] == '' ) {
+				$post_types = get_post_types( array( 'public' => true ), 'objects' );
+				if ( 
+					$view_settings['post_relationship_id'] == 0 
+					|| $view_settings['post_relationship_id'] == '' 
+				) {
 					$selected_type = 'page';
 				} else {
 					$selected_type = $wpdb->get_var( 
 						$wpdb->prepare(
-							"SELECT post_type FROM {$wpdb->prefix}posts WHERE ID=%d",
+							"SELECT post_type FROM {$wpdb->posts} 
+							WHERE ID = %d 
+							LIMIT 1",
 							$view_settings['post_relationship_id']
 						)
 					);
@@ -360,13 +430,47 @@ class WPV_Post_Relationship_Filter {
 				}
 				foreach ( $post_types as $post_type ) {
 					?>
-					<option value="<?php echo $post_type->name; ?>" <?php selected( $selected_type, $post_type->name ); ?>><?php echo $post_type->labels->singular_name; ?></option>
+					<option value="<?php echo esc_attr( $post_type->name ); ?>" <?php selected( $selected_type, $post_type->name ); ?>><?php echo $post_type->labels->singular_name; ?></option>
 					<?php 
 				}
 				?>
 				</select>
 				<?php wpv_show_posts_dropdown( $selected_type, 'post_relationship_id', $view_settings['post_relationship_id'] ); ?>
 			</li>
+			<li>
+				<input type="radio" id="post-relationship-mode-shortcode" class="js-post-relationship-mode" name="post_relationship_mode[]" value="shortcode_attribute" <?php checked( $view_settings['post_relationship_mode'], 'shortcode_attribute' ); ?> autocomplete="off" />
+				<label for="post-relationship-mode-shortcode"><?php _e('Post with ID set by the shortcode attribute', 'wpv-views'); ?></label>
+				<input class="js-post-relationship-shortcode-attribute js-wpv-filter-validate" name="post_relationship_shortcode_attribute" data-type="shortcode" type="text" value="<?php echo esc_attr( $view_settings['post_relationship_shortcode_attribute'] ); ?>" autocomplete="off" />
+			</li>
+			<li>
+				<input type="radio" id="post-relationship-mode-url" class="js-post-relationship-mode" name="post_relationship_mode[]" value="url_parameter" <?php checked( $view_settings['post_relationship_mode'], 'url_parameter' ); ?> autocomplete="off" />
+				<label for="post-relationship-mode-url"><?php _e('Post with ID set by the URL parameter', 'wpv-views'); ?></label>
+				<input class="js-post-relationship-url-parameter js-wpv-filter-validate" name="post_relationship_url_parameter" data-type="url" type="text" value="<?php echo esc_attr( $view_settings['post_relationship_url_parameter'] ); ?>" autocomplete="off" />
+			</li>
+			<?php
+			global $WP_Views_fapi;
+			if ( $WP_Views_fapi->framework_valid ) {
+				$framework_data = $WP_Views_fapi->framework_data
+			?>
+			<li>
+				<input type="radio" id="post-relationship-mode-framework" class="js-post-relationship-mode" name="post_relationship_mode[]" value="framework" <?php checked( $view_settings['post_relationship_mode'], 'framework' ); ?> autocomplete="off" />
+				<label for="post-relationship-mode-framework"><?php echo sprintf( __( 'Post with ID set by the %s key: ', 'wpv-views'), sanitize_text_field( $framework_data['name'] ) ); ?></label>
+				<select name="post_relationship_framework" autocomplete="off">
+					<option value=""><?php _e( 'Select a key', 'wpv-views' ); ?></option>
+					<?php
+					$fw_key_options = array();
+					$fw_key_options = apply_filters( 'wpv_filter_extend_framework_options_for_post_relationship', $fw_key_options );
+					foreach ( $fw_key_options as $index => $value ) {
+						?>
+						<option value="<?php echo esc_attr( $index ); ?>" <?php selected( $view_settings['post_relationship_framework'], $index ); ?>><?php echo $value; ?></option>
+						<?php
+					}
+					?>
+				</select>
+			</li>
+			<?php
+			}
+			?>
 		</ul>
 		<?php
 	}

@@ -23,6 +23,8 @@
 			?>
 		</p>
 		
+		<div class="js-wpv-message-container"></div>
+		
         <div class="wpv-dialog-content-tabs">
 			
             <div class="wpv-dialog-content-tab js-layout-wizard-tab" id="js-layout-wizard-layout-style" style="position:relative">

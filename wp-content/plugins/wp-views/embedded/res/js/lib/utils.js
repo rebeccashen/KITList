@@ -255,7 +255,7 @@ if ( typeof jQuery.fn.wpvToolsetHelp === 'undefined' ) {
 				prms.content = $('<p>' + prms.content + '</p>');
 			}
 
-			var $box = $('<div class="toolset-help ' + prms.classname + '"><div class="toolset-help-content"></div><div class="toolset-help-sidebar"><div class="toolset-help-sidebar-ico"></div></div></div>');
+			var $box = $('<div class="toolset-help ' + prms.classname + '"><div class="toolset-help-content"></div><div class="toolset-help-sidebar"></div></div>');
 
 		var $footer = $('<div class="toolset-help-footer"><button class="js-toolset-help-close js-toolset-help-close-forever button-secondary">'+ wpv_help_box_texts.wpv_dont_show_it_again +'</button><button class="js-toolset-help-close js-toolset-help-close-once button-primary">'+ wpv_help_box_texts.wpv_close +'</button></div>');
 
@@ -288,7 +288,7 @@ if ( typeof jQuery.fn.wpvToolsetHelp === 'undefined' ) {
 			}
 
 			if (prms.close === true) {
-				$('<i class="icon-remove-sign js-toolset-help-close js-toolset-help-close-main"></i>').appendTo($box);
+				$('<i class="icon-remove js-toolset-help-close js-toolset-help-close-main"></i>').appendTo($box);
 			}
 
 			// bind close event to all close buttons

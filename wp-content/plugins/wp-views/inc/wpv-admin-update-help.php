@@ -40,30 +40,55 @@ function views_update_help_wpv_if() {
 add_action('wp_ajax_wpv_scan_wpv_if', 'wpv_scan_wpv_if_callback');
 
 function wpv_scan_wpv_if_callback() {
-    global $wpdb, $sitepress, $WP_Views;
-
-    $nonce = $_POST["wpnonce"];
-    if (! wp_verify_nonce($nonce, 'views_update_help_wpv_if_nonce') ) die("Security check");
-
-    $needle = '%[wpv-if%';
+	if ( ! current_user_can( 'manage_options' ) ) {
+		die( "Untrusted user" );
+	}
+    if ( ! wp_verify_nonce( $_POST["wpnonce"], 'views_update_help_wpv_if_nonce' ) ) {
+		die( "Security check" );
+	}
+	global $wpdb, $sitepress, $WP_Views;
+	$values_to_prepare = array();
     
     $trans_join = '';
     $trans_where = '';
     $trans_meta_where = '';
     
-    if (isset($sitepress) && function_exists('icl_object_id')) {
+    if (
+		isset( $sitepress ) 
+		&& function_exists( 'icl_object_id' )
+	) {
 		$current_lang_code = $sitepress->get_current_language();
 		$trans_join = " JOIN {$wpdb->prefix}icl_translations t ";
-		$trans_where = " AND ID = t.element_id AND t.language_code =  '{$current_lang_code}' ";
-		$trans_meta_where = " AND post_id = t.element_id AND t.language_code =  '{$current_lang_code}' ";
+		$trans_where = " AND ID = t.element_id AND t.language_code = %s ";
+		$values_to_prepare[] = $current_lang_code;
     }
+	
+	$needle = '%[wpv-if%';
+	$values_to_prepare[] = $needle;
+	$values_to_prepare[] = $needle;
 
-    $q = "SELECT DISTINCT * FROM {$wpdb->posts} WHERE
-	( ID in (SELECT DISTINCT ID FROM {$wpdb->posts} {$trans_join} WHERE post_content LIKE '{$needle}' {$trans_where})
-	OR
-	ID in (SELECT DISTINCT post_id FROM {$wpdb->postmeta} {$trans_join} WHERE meta_value LIKE '{$needle}' {$trans_meta_where}) )
-	AND post_type NOT IN ('revision') AND post_status='publish'";
-    $res = $wpdb->get_results( $q, OBJECT );
+    $q = "SELECT DISTINCT * FROM {$wpdb->posts} {$trans_join}
+	WHERE post_status='publish' 
+	{$trans_where}
+	AND post_type NOT IN ('revision') 
+	AND ( 
+		ID IN (
+			SELECT DISTINCT ID FROM {$wpdb->posts} 
+			WHERE post_content LIKE %s
+		)
+		OR ID IN (
+			SELECT DISTINCT post_id FROM {$wpdb->postmeta} 
+			WHERE meta_value LIKE %s
+		) 
+	)
+	";
+    $res = $wpdb->get_results(
+		$wpdb->prepare(
+			$q,
+			$values_to_prepare
+		),
+		OBJECT 
+	);
 
 	$items = array();
 	$slug_to_label = array();

@@ -1,7 +1,7 @@
 /*
  * Repetitive JS.
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/toolset-forms/js/repetitive.js $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/js/repetitive.js $
  * $LastChangedDate: 2014-08-06 14:48:27 +0000 (Wed, 06 Aug 2014) $
  * $LastChangedRevision: 25705 $
  * $LastChangedBy: juan $

@@ -10,11 +10,6 @@
 * @since unknown
 */
 
-/*
-* Listing screens contants
-*/
-
-define ('WPV_ITEMS_PER_PAGE', 20);
 
 //define('WPV_EDIT_BACKGROUND', '#C9F0F5');// DEPRECATED Commented out in 1.7
 

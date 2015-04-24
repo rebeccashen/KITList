@@ -2,9 +2,9 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/toolset-forms/classes/class.field_factory.php $
- * $LastChangedDate: 2014-10-06 10:42:18 +0000 (Mon, 06 Oct 2014) $
- * $LastChangedRevision: 27766 $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.field_factory.php $
+ * $LastChangedDate: 2015-02-25 11:07:34 +0000 (Wed, 25 Feb 2015) $
+ * $LastChangedRevision: 31886 $
  * $LastChangedBy: marcin $
  *
  */
@@ -28,6 +28,17 @@ abstract class FieldFactory extends FieldAbstract
     {
         $cred_cred_settings = get_option( 'cred_cred_settings' );
         $this->_use_bootstrap = is_array($cred_cred_settings) && array_key_exists( 'use_bootstrap', $cred_cred_settings ) && $cred_cred_settings['use_bootstrap'];
+        $this->set_placeholder_as_attribute();
+    }
+
+    public function set_placeholder_as_attribute()
+    {
+        if ( !isset($this->_data['attribute']) ) {
+            $this->_data['attribute'] = array();
+        }
+        if ( isset($this->_data['placeholder']) && !empty($this->_data['placeholder'])) {
+            $this->_data['attribute']['placeholder'] = htmlentities(stripcslashes($this->_data['placeholder']));
+        }
     }
 
     public function set_metaform($metaform)
@@ -82,8 +93,11 @@ abstract class FieldFactory extends FieldAbstract
         return $value;
     }
 
-    public function getTitle()
+    public function getTitle($_title = false)
     {
+        if ( $_title && empty($this->_data['title']) && isset($this->_data['_title']) ) {
+            return $this->_data['_title'];
+        }
         return $this->_data['title'];
     }
 

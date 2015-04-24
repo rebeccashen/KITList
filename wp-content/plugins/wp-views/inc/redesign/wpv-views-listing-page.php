@@ -14,8 +14,8 @@ function wpv_admin_menu_views_listing_page() {
 		<div class="wpv-views-listing-page">
 			<?php
 				// 'trash' or 'publish'
-				$current_post_status = ( isset( $_GET["status"] ) && 'trash' == sanitize_text_field( $_GET["status"] ) ) ? 'trash' : 'publish';
-				$search_term = isset( $_GET["s"] ) ? urldecode( sanitize_text_field( $_GET["s"] ) ) : '';
+				$current_post_status = wpv_getget( 'status', 'publish', array( 'trash', 'publish' ) );
+				$search_term = urldecode( sanitize_text_field( wpv_getget( 's' ) ) );
 
 				// IDs of possible results and counts per post status
 				$views_pre_query_data = wpv_prepare_view_listing_query( 'normal', $current_post_status );
@@ -87,128 +87,24 @@ function wpv_admin_menu_views_listing_page() {
 
 	</div> <!-- .toolset-views" -->
 
-	<div class="popup-window-container"> <!-- placeholder for static colorbox popups -->
-
-		<!-- popup: create View -->
-		<div class="wpv-dialog create-view-form-dialog js-create-view-form-dialog">
-			<?php
-				wp_nonce_field('wp_nonce_create_view', 'wp_nonce_create_view');
-				printf(
-						'<input class="js-view-new-redirect" name="view_creation_redirect" type="hidden" value="%s" />',
-						// Careful, it is expected that this value really ends with "view_id=". View ID gets appended to it in JS.
-						admin_url( 'admin.php?page=views-editor&amp;view_id=') );
-			?>
-			<div class="wpv-dialog-header">
-				<h2><?php _e('Add a new View','wpv-views') ?></h2>
-				<i class="icon-remove js-dialog-close"></i>
-			</div>
-			<div class="wpv-dialog-content no-scrollbar">
-				<p>
-					<?php _e('A View loads content from the database and displays with your HTML.', 'wpv-views'); ?>
-				</p>
-				<p>
-					<strong><?php _e(' What kind of display do you want to create?','wpv-views'); ?></strong>
-				</p>
-				<ul>
-					<li>
-						<p>
-							<input type="radio" name="view_purpose" class="js-view-purpose" id="view_purpose_all" value="all" />
-							<label for="view_purpose_all"><?php _e('Display all results','wpv-views'); ?></label>
-							<span class="helper-text"><?php _e('The View will output all the results returned from the query section.', 'wpv-views'); ?></span>
-						</p>
-					</li>
-					<li>
-						<p>
-							<input type="radio" name="view_purpose" class="js-view-purpose" id="view_purpose_pagination" value="pagination" />
-							<label for="view_purpose_pagination"><?php _e('Display the results with pagination','wpv-views'); ?></label>
-							<span class="helper-text"><?php _e('The View will display the query results in pages.', 'wpv-views'); ?></span>
-						</p>
-					</li>
-					<li>
-						<p>
-							<input type="radio" name="view_purpose" class="js-view-purpose" id="view_purpose_slider" value="slider" />
-							<label for="view_purpose_slider"><?php _e('Display the results as a slider','wpv-views'); ?></label>
-							<span class="helper-text"><?php _e('The View will display the query results as slides.', 'wpv-views'); ?></span>
-						</p>
-					</li>
-					<li>
-						<p>
-							<input type="radio" name="view_purpose" class="js-view-purpose" id="view_purpose_parametric" value="parametric" />
-							<label for="view_purpose_parametric"><?php _e('Display the results as a parametric search','wpv-views'); ?></label>
-							<span class="helper-text"><?php _e('Visitors will be able to search through your content using different search criteria.', 'wpv-views'); ?></span>
-						</p>
-					</li>
-					<li>
-						<p>
-							<input type="radio" name="view_purpose" class="js-view-purpose" id="view_purpose_full" value="full" />
-							<label for="view_purpose_full"><?php _e('Full custom display mode','wpv-views'); ?></label>
-							<span class="helper-text"><?php _e('See all the View controls open and set up things manually..', 'wpv-views'); ?></span>
-						</p>
-					</li>
-				</ul>
-
-				<p>
-					<strong><label for="view_new_name"><?php _e('Name this View','wpv-views'); ?></label></strong>
-				</p>
-				<p>
-					<input type="text" name="view_new_name" id="view_new_name" class="js-new-post_title"
-							placeholder="<?php echo htmlentities( __('Enter title here', 'wpv-views'), ENT_QUOTES ); ?>"
-							data-highlight="<?php echo htmlentities( __('Now give this View a name', 'wpv-views'), ENT_QUOTES ); ?>" />
-				</p>
-				<div class="js-wpv-error-container"></div>
-			</div>
-
-			<div class="wpv-dialog-footer">
-				<?php wp_nonce_field('wp_nonce_create_view', 'wp_nonce_create_view'); ?>
-				<button class="button js-dialog-close"><?php _e('Cancel','wpv-views') ?></button>
-				<button class="button button-primary js-create-new-view"><?php _e('Create View','wpv-views') ?></button>
-			</div>
-		</div> <!-- .create-view-form-dialog -->
-
-		<!-- popup: duplicate View - take name for the new one -->
-
-		<div class="wpv-dialog js-duplicate-view-dialog">
-			<div class="wpv-dialog-header">
-				<h2><?php _e('Duplicate View','wpv-views') ?></h2>
-			</div>
-			<div class="wpv-dialog-content">
-                <p>
-                    <label for="duplicated_view_name"><?php _e('Name this View','wpv-views'); ?></label>
-                    <input type="text" value="" class="js-duplicated-view-name"
-							placeholder="<?php _e('Enter name here','wpv-views') ?>" name="duplicated_view_name" />
-                </p>
-                <div class="js-wpv-view-duplicate-error"></div>
-			</div>
-			<div class="wpv-dialog-footer">
-				<button class="button js-dialog-close"><?php _e('Cancel','wpv-views') ?></button>
-				<button class="button button-secondary js-duplicate-view" disabled="disabled"
-						data-nonce="<?php echo wp_create_nonce( 'wpv_duplicate_view_nonce' ); ?>"
-						data-error="<?php echo htmlentities( __('A View with that name already exists. Please use another name.', 'wpv-views'), ENT_QUOTES ); ?>">
-					<?php _e('Duplicate','wpv-views') ?>
-				</button>
-			</div>
-		</div> <!-- .js-duplicate-view-dialog -->
-
-	</div> <!-- .popup-window-container" -->
 	<?php
+
+	wpv_render_view_listing_dialog_templates();
 }
 
 
 /**
  * wpv_admin_view_listing_table
  *
- * Displays the content of the Views admin listing page: status, table and pagination
+ * Displays the content of the Views admin listing page: status, table and pagination.
  *
- * @param $view_ids array() of View IDs.
- * @param string $current_post_status
- *
- * @todo comment
+ * @param array $views_pre_query_data Array with IDs of possible results and counts per post status.
+ *     See wpv_prepare_view_listing_query() for details.
+ * @param string $current_post_status Status of posts to display. Can be 'publish' or 'trash'.
  *
  * @since unknown
  */
 function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_status ) {
-
-	global $wpdb;
 	
 	// array of URL modifiers
 	$mod_url = array(
@@ -494,6 +390,7 @@ function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_stat
 
 									echo wpv_admin_table_row_actions( $row_actions,	array(
 											"data-view-id" => $post->ID,
+											"data-view-title" => $post->post_title,
 											"data-viewactionnonce" => $view_action_nonce ) );
 								?>
 							</td>
@@ -595,27 +492,11 @@ function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_stat
 
 
 /**
- * Generates an Undo link for the 'trashed' message on Views listing.
+ * DEPRECATED.
  *
- * Please note that this function is also being currently used for WordPress Archives.
- *
- * @since 1.7
- * 
- * @see wpv_maybe_show_listing_message_undo filter.
+ * This is not used anywhere in Views.
  */ 
-function wpv_admin_view_listing_message_undo( $undo_link, $message_name, $affected_ids ) {
-	if( ( 'trashed' == $message_name ) && !empty( $affected_ids ) ) {
-		$undo_link = sprintf( '<a href="%s"	class="js-wpv-untrash" data-ids="%s" data-nonce="%s">%s</a>',
-				add_query_arg( array( 'page' => 'views', 'untrashed' => count( $affected_ids ) ), admin_url( 'admin.php' ) ),
-				urlencode( implode( ',', $affected_ids ) ),
-				wp_create_nonce( 'wpv_view_listing_actions_nonce' ),
-				__( 'Undo', 'wpv-views' ) );
-	}
-	return $undo_link;
-}
-
-
-function wpv_admin_menu_views_listing_row($post_id) { // DEPRECATED
+function wpv_admin_menu_views_listing_row($post_id) {
 
 	ob_start();
 	$post = get_post($post_id);

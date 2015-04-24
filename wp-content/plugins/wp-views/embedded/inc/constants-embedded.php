@@ -3,7 +3,7 @@
 /**
 * constants-embedded.php
 *
-*´Set some constants used along the whole embedded plugin
+*ï¿½Set some constants used along the whole embedded plugin
 *
 * @package Views
 *
@@ -11,16 +11,23 @@
 */
 
 /**
-* General space char
-*/
+ * General space char
+ */
 
 if ( ! defined( 'WPV_MESSAGE_SPACE_CHAR' ) ) {
 	define( 'WPV_MESSAGE_SPACE_CHAR', '&nbsp;' );
 }
 
 /**
-* Documentation links
-*/
+ * Listing screens contants
+ */
+
+define( 'WPV_ITEMS_PER_PAGE', 20 );
+
+
+/**
+ * Documentation links
+ */
 
 if ( ! defined( 'WPV_LINK_CREATE_PAGINATED_LISTINGS' ) ) {
 	define( 'WPV_LINK_CREATE_PAGINATED_LISTINGS', 'http://wp-types.com/documentation/user-guides/views-pagination/?utm_source=viewsplugin&utm_campaign=views&utm_medium=edit-view-create-paginated-listing-helpbox&utm_term=Creating paginated listings with Views' );

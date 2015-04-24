@@ -1,10 +1,10 @@
 <?php
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/toolset-forms/classes/class.skype.php $
- * $LastChangedDate: 2014-08-05 16:18:16 +0000 (Tue, 05 Aug 2014) $
- * $LastChangedRevision: 25657 $
- * $LastChangedBy: juan $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.skype.php $
+ * $LastChangedDate: 2015-03-20 10:02:23 +0000 (Fri, 20 Mar 2015) $
+ * $LastChangedRevision: 32518 $
+ * $LastChangedBy: francesco $
  *
  */
 require_once 'class.textfield.php';
@@ -14,29 +14,38 @@ class WPToolset_Field_Skype extends WPToolset_Field_Textfield
 
     protected $_defaults = array('skypename' => '', 'button_style' => 'btn2');
 
-    public function init(){
-        
-		add_action( 'admin_footer', array($this, 'editButtonTemplate') );
+    public function init()
+    {
+        add_action( 'admin_footer', array($this, 'editButtonTemplate') );
         add_action( 'wp_footer', array($this, 'editButtonTemplate') );
-        
-		wp_register_script( 'wptoolset-field-skype',
-                WPTOOLSET_FORMS_RELPATH . '/js/skype.js', array('jquery'),
-                WPTOOLSET_FORMS_VERSION, true );
+
+        wp_register_script(
+            'wptoolset-field-skype',
+            WPTOOLSET_FORMS_RELPATH . '/js/skype.js',
+            array('jquery'),
+            WPTOOLSET_FORMS_VERSION,
+            true
+        );
         wp_enqueue_script( 'wptoolset-field-skype' );
         add_thickbox();
         $translation = array('title' => esc_js( __( 'Edit Skype button', 'wpv-views' ) ) );
-        wp_localize_script( 'wptoolset-field-skype', 'wptSkypeData',
-                $translation );
-        
+        wp_localize_script( 'wptoolset-field-skype', 'wptSkypeData', $translation );
+        $this->set_placeholder_as_attribute();
     }
 
     public function enqueueStyles() {
-        
+
     }
 
     public function metaform() {
         $value = wp_parse_args( $this->getValue(), $this->_defaults );
-        $def_class='js-wpt-skypename js-wpt-cond-trigger';// What is this js-wpt-cond-trigger classname for?
+        $attributes = $this->getAttr();
+        if ( isset($attributes['class'] ) ) {
+            $attributes['class'] .= ' ';
+        } else {
+            $attributes['class'] = '';
+        }
+        $attributes['class'] = 'js-wpt-skypename js-wpt-cond-trigger';// What is this js-wpt-cond-trigger classname for?
         $form = array();
         $form[] = array(
             '#type' => 'textfield',
@@ -46,7 +55,7 @@ class WPToolset_Field_Skype extends WPToolset_Field_Textfield
             '#attributes' => array(),
             '#value' => $value['skypename'],
             '#validate' => $this->getValidationData(),
-            '#attributes' => array('class' => $def_class), // Mark to be checked as conditional
+            '#attributes' => $attributes,
             '#repetitive' => $this->isRepetitive(),
         );
         $form['style'] = array(
@@ -63,7 +72,7 @@ class WPToolset_Field_Skype extends WPToolset_Field_Textfield
             $button_element = array(
                 '#name' => '',
                 '#type' => 'button',
-                '#value' => esc_attr( __( 'Edit Skype button', 'wpv-views' ) ),
+                '#value' => esc_attr( __( 'Edit', 'wpv-views' ) )." Skype button",
                 '#attributes' => array('class' => 'js-wpt-skype-edit-button button button-small button-secondary'),
             );
 			/*
@@ -102,7 +111,7 @@ class WPToolset_Field_Skype extends WPToolset_Field_Textfield
     }
 
     public function editform( $config = null ) {
-        
+
     }
 
     public function mediaEditor(){
@@ -111,11 +120,11 @@ class WPToolset_Field_Skype extends WPToolset_Field_Textfield
 
     /**
      * Returns HTML formatted skype button.
-     * 
+     *
      * @param type $skypename
      * @param type $template
      * @param type $class
-     * @return type 
+     * @return type
      */
     function getButton( $skypename, $template = '', $class = false ) {
 
@@ -179,10 +188,10 @@ class WPToolset_Field_Skype extends WPToolset_Field_Textfield
 
     /**
      * Returns HTML formatted skype button image.
-     * 
+     *
      * @param type $skypename
      * @param type $template
-     * @return type 
+     * @return type
      */
     public function getButtonImage( $skypename = '', $template = '', $class = '' ) {
 

@@ -4,50 +4,59 @@ jQuery(document).ready(function($)  {
     var data_view_id = null;
 
 
-	// Duplicate View action after getting the new name
+	/**
+	 * Duplicate View action after getting the new name.
+	 *
+	 * @since unknown
+	 */ 
 	$(document).on('click','.js-duplicate-view', function () {
 
-		var newname = $('.js-duplicated-view-name').val();
+		var newName = $('.js-wpv-duplicated-title').val();
+		var nonce = $(this).data('nonce');
+		var viewId = $(this).data('view-id');
 
-		$('.js-duplicate-view').prop('disabled',true).addClass('button-secondary').removeClass('button-primary');
-		var spinnerContainer = $('<div class="spinner ajax-loader">').insertBefore($(this)).show();
+		disablePrimaryButton( $('.js-duplicate-view') );
+		showSpinnerBefore( $(this) );
 
-		if ( newname.length !== 0 ) {
+		if ( newName.length !== 0 ) {
 
 			var data = {
 				action: 'wpv_duplicate_this_view',
-				id: data_view_id, // read the global data_view_id variable
-				name: newname,
-				wpnonce :  $(this).data('nonce')
+				id: viewId, 
+				name: newName,
+				wpnonce : nonce
 			};
+			
 			var error = $(this).data('error');
 
 			$.ajax({
-				async:false,
-				type:"POST",
-				url:ajaxurl,
-				data:data,
-				success:function(response){
+				async: false,
+				type: "POST",
+				url: ajaxurl,
+				data: data,
+				success: function( response ) {
+					
 					if ( ( typeof(response) !== 'undefined' ) && ( response == data.id ) ) {
-						navigateWithURIParams(decodeURIParams());
+						
+						navigateWithURIParams( decodeURIParams() );
+						
 					} else if ( ( typeof(response) !== 'undefined' ) && ( response == 'error' ) ) {
-						$('.js-wpv-view-duplicate-error')
-							.wpvToolsetMessage({
-								text: error,
-								stay: true,
-								close: false,
-								type: ''
-							});
-						spinnerContainer.remove();
+						
+						$('.js-wpv-duplicate-error-container').wpvToolsetMessage({
+							text: error,
+							stay: true,
+							close: false,
+							type: ''
+						});
+						
+						hideSpinner();
+						
 					} else {
 						console.log( "Error: AJAX returned ", response );
 					}
 				},
 				error: function (ajaxContext) {
 					console.log( "Error: ", ajaxContext.responseText );
-				},
-				complete: function() {
-
 				}
 			});
 		}
@@ -66,7 +75,7 @@ jQuery(document).ready(function($)  {
 		var nonce = $(this).data('viewactionnonce');
 
 		// Act as if this was a bulk action.
-		deleteViewsConfirmation( [ viewId ], nonce );
+		trashdelViewsConfirmation( [ viewId ], nonce, 'delete' );
 	});
 
 
@@ -77,34 +86,35 @@ jQuery(document).ready(function($)  {
 	 */
 	$('.js-views-actions-duplicate').on('click', function(e) {
 		e.preventDefault();
-        data_view_id = $(this).data('view-id');
-		view_listing_action_nonce = $(this).data('viewactionnonce');
 
-		$('.js-wpv-view-duplicate-error .toolset-alert').remove();
+        var viewID = $(this).data('view-id');
+        var originalTitle = $(this).data('view-title');
+
+		$('.js-wpv-duplicate-error-container .toolset-alert').remove();
 
 		$.colorbox({
 			href: '.js-duplicate-view-dialog',
 			inline: true,
 			onComplete: function() {
-				var $input = $('.js-duplicated-view-name');
-				var $submitButton = $('.js-duplicate-view');
 
-				$input.focus().val('');
+				// Show name of the original
+				$('.js-duplicate-origin-title').append( originalTitle );
 
-				$input.keyup(function(){
-					$('.js-view-duplicate-error .toolset-alert').remove();
+
+				// Store View ID in a confirm button attribute
+				$('.js-duplicate-view').data( 'view-id', viewID );
+
+				$('.js-wpv-duplicated-title').focus().val('');
+
+				$('.js-wpv-duplicated-title').keyup(function() {
+					$('.js-wpv-duplicate-error-container .toolset-alert').remove();
 					if ( $(this).val().length !== 0 ) {
-						$submitButton
-							.prop('disabled', false)
-							.removeClass('button-secondary')
-							.addClass('button-primary');
+						enablePrimaryButton( $('.js-duplicate-view') );
 					} else {
-						$submitButton
-							.prop('disabled', true)
-							.removeClass('button-primary')
-							.addClass('button-secondary');
+						disablePrimaryButton( $('.js-duplicate-view') );
 					}
 				});
+				
 			}
 		});
 	});
@@ -117,42 +127,12 @@ jQuery(document).ready(function($)  {
 	 */
 	$('.js-views-actions-trash').on('click', function(e) {
 		e.preventDefault();
-        data_view_id = $(this).data('view-id');
-		view_listing_action_nonce = $(this).data('viewactionnonce');
 
-		// Show spinner
-		$(this).parents('.js-wpv-view-list-row').find('h3').append(' <div class="spinner ajax-loader"></div>');
-		$('.subsubsub').append('<div class="spinner ajax-loader"></div>');
+        var viewId = $(this).data('view-id');
+		var nonce = $(this).data('viewactionnonce');
 
-		var data = {
-			action: 'wpv_view_change_status',
-			id: data_view_id,
-			newstatus: 'trash',
-			wpnonce : view_listing_action_nonce
-		};
-
-		$.ajax({
-			async:false,
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function(response){
-				if ( (typeof(response) !== 'undefined') && (response == data.id)) {
-					var url_params = decodeURIParams();
-					url_params['paged'] = updatePagedParameter( url_params, 1 );
-					url_params['trashed'] = 1;
-					url_params['affected'] = response;
-					navigateWithURIParams( url_params );
-				} else {
-					console.log( "Error: AJAX returned ", response );
-				}
-			},
-			error: function (ajaxContext) {
-				console.log( "Error: ", ajaxContext.responseText );
-			},
-			complete: function() {	}
-		});
-
+		// Act as if this was a bulk action.
+		trashdelViewsConfirmation( [ viewId ], nonce, 'trash' )
 	});
 
 
@@ -246,13 +226,13 @@ jQuery(document).ready(function($)  {
 		var action = $('.js-wpv-views-listing-bulk-action-select.position-' + selectPosition).val();
 		switch(action) {
 			case 'trash':
-				trashViews( checkedViews, nonce );
+				trashdelViewsConfirmation( checkedViews, nonce, 'trash' );
 				break;
 			case 'restore-from-trash':
 				untrashViews( checkedViews, nonce );
 				break;
 			case 'delete':
-				deleteViewsConfirmation( checkedViews, nonce );
+				trashdelViewsConfirmation( checkedViews, nonce, 'delete' );
 				break;
 			default:
 				// do nothing
@@ -263,20 +243,24 @@ jQuery(document).ready(function($)  {
 
 
 	/**
-	 * Show a popup with confirmation message and a table of Views to be deleted, each View
+	 * Show a popup with confirmation message and a table of Views to be deleted or trashed, each View
 	 * with a "Scan" button with the same function as in the listing (see .js-scan-button).
 	 *
-	 * Views are deleted after clicking on .js-bulk-remove-view-permanent.
+	 * Views are deleted after clicking on .js-bulk-remove-view-permanent/trashed after clicking
+	 * on .js-bulk-confirm-view-trash.
+	 *
+	 * @param string view_action Type of action user should confirm. Can be 'delete' or 'trash'.
 	 *
 	 * @since 1.7
 	 */
-	function deleteViewsConfirmation( viewIDs, nonce ) {
+	function trashdelViewsConfirmation( viewIDs, nonce, view_action ) {
 	
 		// Do AJAX call to generate popup code
 		var data = {
-			action: 'wpv_view_bulk_delete_render_popup',
+			action: 'wpv_view_bulk_trashdel_render_popup',
 			ids: viewIDs,
-			wpnonce : nonce
+			wpnonce : nonce,
+			view_action: view_action
 		};
 
 		$.ajax({
@@ -344,6 +328,24 @@ jQuery(document).ready(function($)  {
 			complete: function() {	}
 		});
         
+	});
+
+
+	/**
+	 * Trash given Views and redirect to current page with 'trashed' message.
+	 *
+	 * @since 1.8
+	 */
+	$(document).on( 'click', '.js-bulk-confirm-view-trash', function(e) {
+		e.preventDefault();
+		
+		disablePrimaryButton( $(this) );
+		showSpinnerAfter( $(this) );
+		
+		var viewIDs = decodeURIComponent( $(this).data( 'view-ids' ) ).split( ',' );
+		var nonce = $(this).data( 'nonce' );
+
+		trashViews( viewIDs, nonce );        
 	});
 	 
 

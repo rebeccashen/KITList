@@ -130,8 +130,8 @@ function wpv_render_filter_td( $row, $id, $name, $summary_function, $selected, $
  * This is now merely a wrapper around wpv_view_default_settings() and wpv_view_default_layout_settings().
  * Feel free to use those functions directly instead.
  *
- * @param $settings Field: 'view_settings' or 'view_layout_settings'.
- * @param $purpose Purpose of the view: 'all', 'pagination', 'slide', 'parametric' or 'full'.
+ * @param string $settings Field: 'view_settings' or 'view_layout_settings'.
+ * @param string $purpose Purpose of the view: 'all', 'pagination', 'slide', 'parametric' or 'full'.
  *
  * @return array Array with desired values or an empty array if invalid parameters are provided.
  *
@@ -315,11 +315,12 @@ function wpv_view_default_layout_settings( $purpose ) {
 			break;
 
 		case 'slider':
-			// Generate full layout settings
-			$defaults = wpv_generate_views_layout_settings(
+			// Generate full loop output settings
+			$result = wpv_generate_view_loop_output(
 					'unformatted',
 					array(),
-					array( 'render_whole_html' => true ) );
+					array() );
+			$defaults = $result['loop_output_settings'];
 			break;
 
 		case 'parametric':
@@ -366,138 +367,16 @@ function wpv_wordpress_archives_defaults( $settings = 'view_settings' ) {
 }
 
 
-/**
- * Display pagination in admin listing pages.
- *
- * @param string $context the admin page where it will be rendered: 'views', 'view-templates' or 'view-archives'.
- * @param int $wpv_found_items
- * @param int $wpv_items_per_page
- * @param array $mod_url
-*/
-function wpv_admin_listing_pagination( $context = 'views', $wpv_found_items, $wpv_items_per_page = WPV_ITEMS_PER_PAGE, $mod_url = array() ) {
-	$page = ( isset( $_GET["paged"] ) ) ? (int) $_GET["paged"] : 1;
-	$pages_count = ceil( (int) $wpv_found_items / (int) $wpv_items_per_page );
-
-	if ( $pages_count > 1 ) {
-
-		$items_start = ( ( ( $page - 1 ) * (int) $wpv_items_per_page ) + 1 );
-		$items_end = ( ( ( $page - 1 ) * (int) $wpv_items_per_page ) + (int) $wpv_items_per_page );
-
-		if ( $page == $pages_count ) {
-			$items_end = $wpv_found_items;
-		}
-
-		$mod_url_defaults = array(
-				'orderby' => '',
-				'order' => '',
-				'search' => '',
-				'items_per_page' => '',
-				'status' => '',
-				's' => '' );
-		$mod_url = wp_parse_args( $mod_url, $mod_url_defaults );
-
-		?>
-		<div class="wpv-listing-pagination tablenav">
-			<div class="tablenav-pages">
-				<span class="displaying-num">
-					<?php _e( 'Displaying ', 'wpv-views' ); echo $items_start; ?> - <?php echo $items_end; _e(' of ', 'wpv-views'); echo $wpv_found_items; ?>
-				</span>
-
-				<?php
-
-					if ( $page > 1 ) {
-						printf(
-								'<a href="%s" class="wpv-filter-navigation-link">&laquo; %s</a>',
-								wpv_maybe_add_query_arg(
-										array(
-												'page' => $context,
-												'orderby' => $mod_url['orderby'],
-												'order' => $mod_url['order'],
-												'search' => $mod_url['search'],
-												'items_per_page' => $mod_url['items_per_page'],
-												'status' => $mod_url['status'],
-												'paged' => $page - 1,
-												's' => $mod_url['s'] ),
-										admin_url( 'admin.php' ) ),
-								__( 'Previous page','wpv-views' ) );
-					}
-
-					for ( $i = 1; $i <= $pages_count; $i++ ) {
-						$active = 'wpv-filter-navigation-link-inactive';
-						if ( $page == $i ) {
-							$active = 'js-active active current';
-						}
-
-						// If this is a last page, we'll add an argument indicating that.
-						$is_last_page = ( $i == $pages_count );
-
-						printf(
-								'<a href="%s" class="%s">%s</a>',
-								wpv_maybe_add_query_arg(
-										array(
-												'page' => $context,
-												'orderby' => $mod_url['orderby'],
-												'order' => $mod_url['order'],
-												'search' => $mod_url['search'],
-												'items_per_page' => $mod_url['items_per_page'],
-												'status' => $mod_url['status'],
-												'paged' => $i,
-												'last_page' => $is_last_page ? '1' : '',
-												's' => $mod_url['s'] ),
-										admin_url( 'admin.php' ) ),
-								$active,
-								$i );
-					}
-
-					if ( $page < $pages_count ) {
-
-						$is_last_page = ( ( $page + 1 )  == $pages_count );
-
-						printf(
-								'<a href="%s" class="wpv-filter-navigation-link">%s &raquo;</a>',
-								wpv_maybe_add_query_arg(
-										array(
-												'page' => $context,
-												'orderby' => $mod_url['orderby'],
-												'order' => $mod_url['order'],
-												'search' => $mod_url['search'],
-												'items_per_page' => $mod_url['items_per_page'],
-												'status' => $mod_url['status'],
-												'paged' => $page + 1,
-												'last_page' => $is_last_page ? '1' : '',
-												's' => $mod_url['s'] ),
-										admin_url( 'admin.php' ) ),
-								__( 'Next page','wpv-views' ) );
-					}
-
-				?>
-
-				<?php _e( 'Items per page', 'wpv-views' ); ?>
-				<select class="js-items-per-page">
-					<option value="10" <?php selected( $wpv_items_per_page == '10' ); ?> >10</option>
-					<option value="20" <?php selected( $wpv_items_per_page == '20' ); ?> >20</option>
-					<option value="50" <?php selected( $wpv_items_per_page == '50' ); ?> >50</option>
-				</select>
-				<a href="#" class="js-wpv-display-all-items"><?php _e( 'Display all items', 'wpv-views' ); ?></a>
-
-			</div><!-- .tablenav-pages -->
-		</div><!-- .wpv-listing-pagination -->
-	<?php } else if ( ( WPV_ITEMS_PER_PAGE != $wpv_items_per_page ) && ( $wpv_found_items > WPV_ITEMS_PER_PAGE ) ) { ?>
-		<div class="wpv-listing-pagination tablenav">
-			<div class="tablenav-pages">
-				<a href="#" class="js-wpv-display-default-items"><?php _e('Display 20 items per page', 'wpv-views'); ?></a>
-			</div><!-- .tablenav-pages -->
-		</div><!-- .wpv-listing-pagination -->
-	<?php }
-}
 
 // NOT needed for Views anymore DEPRECATED NOTE Layouts might find this usefull
 // DEPRECATED I would delete this, check other plugins usage
 function _wpv_get_all_views($view_query_mode) {
 	global $wpdb, $WP_Views;
-	// TODO clean this query, do not set prefix explicitely
-	$q = ("SELECT ID, post_title FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type = 'view'");
-	$all_views = $wpdb->get_results( $q );
+	$all_views = $wpdb->get_results( 
+		"SELECT ID, post_title FROM {$wpdb->posts} 
+		WHERE post_status = 'publish' 
+		AND post_type = 'view'"
+	);
 	foreach( $all_views as $key => $view ) {
 		$settings = $WP_Views->get_view_settings( $view->ID );
 		if( $settings['view-query-mode'] != $view_query_mode ) {
@@ -719,7 +598,10 @@ function wpv_create_content_template( $title, $suffix = '', $force = true, $cont
 			$template_title = $title . $real_suffix . $add;
 			$existing = $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT count(ID) FROM {$wpdb->posts} WHERE ( post_title = %s OR post_name = %s ) AND post_type = 'view-template' LIMIT 1",
+					"SELECT count(ID) FROM {$wpdb->posts} 
+					WHERE ( post_title = %s OR post_name = %s ) 
+					AND post_type = 'view-template' 
+					LIMIT 1",
 					$template_title,
 					$template_title
 				)
@@ -734,7 +616,10 @@ function wpv_create_content_template( $title, $suffix = '', $force = true, $cont
 		$template_title = $title . $real_suffix;
 		$existing = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT count(ID) FROM {$wpdb->posts} WHERE ( post_title = %s OR post_name = %s ) AND post_type = 'view-template' LIMIT 1",
+				"SELECT count(ID) FROM {$wpdb->posts} 
+				WHERE ( post_title = %s OR post_name = %s ) 
+				AND post_type = 'view-template' 
+				LIMIT 1",
 				$template_title,
 				$template_title
 			)
@@ -841,7 +726,10 @@ function wpv_create_view( $args ) {
 	// Check for already existing Views with that title
 	$existing = $wpdb->get_var(
 		$wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} WHERE ( post_title = %s OR post_name = %s ) AND post_type = 'view' LIMIT 1",
+			"SELECT ID FROM {$wpdb->posts} 
+			WHERE ( post_title = %s OR post_name = %s ) 
+			AND post_type = 'view' 
+			LIMIT 1",
 			$args["title"],
 			$args["title"]
 		)
@@ -876,6 +764,7 @@ function wpv_create_view( $args ) {
 		$create_loop_template_suffix = '';
 		$create_loop_template_content = '';
 		$create_loop_template_layout = '';
+		$add_archive_pagination = false;
 
 		switch ( $args['settings']["view-query-mode"] ) {
 			case 'archive':
@@ -889,6 +778,7 @@ function wpv_create_view( $args ) {
 				$create_loop_template_suffix = __('loop item', 'wpv-views' );
 				$create_loop_template_content = "<h1>[wpv-post-title]</h1>\n[wpv-post-body view_template=\"None\"]\n[wpv-post-featured-image]\n"
 					. sprintf(__('Posted by %s on %s', 'wpv-views'), '[wpv-post-author]', '[wpv-post-date]');
+				$add_archive_pagination = true;
 				break;
 			default:
 				$view_normal_defaults = wpv_view_defaults( 'view_settings', $args['settings']["view_purpose"] );
@@ -918,8 +808,8 @@ function wpv_create_view( $args ) {
 				}
 				// @todo here we should create the layout acordingly to the $create_loop_template_layout value
 				$view_normal_layout_defaults['layout_meta_html'] = str_replace(
-					'<wpv-loop>',
-					'<wpv-loop>[wpv-post-body view_template="' . $template_title . '"]',
+					"<wpv-loop>",
+					"<wpv-loop>\n\t\t\t[wpv-post-body view_template=\"" . $template_title . "\"]",
 					$view_normal_layout_defaults['layout_meta_html']
 				);
 				$view_normal_layout_defaults['included_ct_ids'] = $template_id;
@@ -929,6 +819,14 @@ function wpv_create_view( $args ) {
 				// I really hate this solution
 				update_post_meta( $id, '_wpv_first_time_load', 'on' );
 			}
+		}
+		
+		if ( $add_archive_pagination ) {
+			$view_normal_layout_defaults['layout_meta_html'] = str_replace(
+				"[/wpv-items-found]",
+				"[wpv-archive-pager-prev-page]\n\t\t[wpml-string context=\"wpv-views\"]Older posts[/wpml-string]\n\t[/wpv-archive-pager-prev-page]\n\t[wpv-archive-pager-next-page]\n\t\t[wpml-string context=\"wpv-views\"]Newer posts[/wpml-string]\n\t[/wpv-archive-pager-next-page]\n\t[/wpv-items-found]",
+				$view_normal_layout_defaults['layout_meta_html']
+			);
 		}
 
 		// Override the settings with our own
@@ -952,7 +850,7 @@ function wpv_create_view( $args ) {
 
 /* NOTE: This function is also called from Layouts plugin */
 function wpv_create_bootstrap_meta_html ($cols, $ct_title, $meta_html) {
-	global $WP_Views;
+	global $WPV_settings;
 
 	$col_num = 12 / $cols;
 	$output = '';
@@ -962,19 +860,18 @@ function wpv_create_bootstrap_meta_html ($cols, $ct_title, $meta_html) {
 
 	//Row style and cols class for bootstrap 2.0
 
-	$options = $WP_Views->get_options();
 	if (class_exists('WPDD_Layouts_CSSFrameworkOptions')) {
 		$bootstrap_ver = WPDD_Layouts_CSSFrameworkOptions::getInstance()->get_current_framework();
-		$options['wpv_bootstrap_version'] = str_replace('bootstrap-','',$bootstrap_ver);
+		$WPV_settings->wpv_bootstrap_version = str_replace('bootstrap-','',$bootstrap_ver);
 	}else{
 		//Load bootstrap version from views settings
-		if ( !isset($options['wpv_bootstrap_version']) ){
-			$options['wpv_bootstrap_version'] = 2;
-		}
-	}
+		if ( ! isset( $WPV_settings->wpv_bootstrap_version ) ) {
+            $WPV_settings->wpv_bootstrap_version = 2;
+        }
+    }
 
-	if ( $options['wpv_bootstrap_version'] == 2){
-		$row_style = ' row-fluid';
+	if ( $WPV_settings->wpv_bootstrap_version == 2 ) {
+        $row_style = ' row-fluid';
 		$col_style = 'span';
 	}
 
@@ -1005,434 +902,80 @@ function wpv_create_bootstrap_meta_html ($cols, $ct_title, $meta_html) {
 
 
 /**
- * Generate row actions div.
+ * Helper function for producing "current" CSS class for Tab design for admin screens when a condition is met.
  *
- * Taken from the WP_List_Table WordPress core class.
+ * Inspired by WordPress checked() and selected() functions. You can either provide two values, which will be then
+ * compared to each other, or one boolean value determining whether the class "current" should be produced.
  *
- * @since 1.7
+ * @param mixed|bool $first_value First value to compare with the second value or a boolean if second value is null.
+ * @param mixed|null $second_value Second value to compare or null if first value should be used as a boolean.
+ *     Default is null.
+ * @param bool $echo If true, the result will be also echoed.
  *
- * @link https://core.trac.wordpress.org/browser/tags/4.0/src//wp-admin/includes/class-wp-list-table.php#L443
+ * @return string The result: 'class="current"' or an empty string.
  *
- * @param array $actions List of actions. Action can be an arbitrary HTML code, while key of the element will be used
- * as a class of the wrapping span tag (so it may contain multiple class names separated by space).
- * @param array $custom_attributes List of custom attributes (key-value pairs) to be added to the wrapping span tag.
- * @param bool $always_visible Whether the actions should be always visible.
- *
- * @return string HTML code of the row actions div or empty string if no actions are provided.
- */
-function wpv_admin_table_row_actions( $actions, $custom_attributes = array(), $always_visible = false ) {
-	$action_count = count( $actions );
-	$i = 0;
+ * @since 1.8
+ */ 
+function wpv_current_class( $first_value, $second_value = null, $echo = true ) {
+	if( $second_value == null ) {
+		$condition = (bool) $first_value;
+	} else {
+		$condition = ( $first_value == $second_value );
+	}
+	
+	$result = $condition ? 'class="current"' : '';
 
-	if ( !$action_count ) {
-		return '';
+	if( $echo ) {
+		echo $result;
 	}
 
-	$custom_attributes_flat = array();
-	foreach( $custom_attributes as $attr => $value ) {
-		$custom_attributes_flat[] = sprintf( '%s="%s"', $attr, $value );
-	}
-	$custom_attributes_string = implode( ' ', $custom_attributes_flat );
-
-	$out = '<div class="' . ( $always_visible ? 'row-actions visible' : 'row-actions' ) . '">';
-	foreach ( $actions as $action => $link ) {
-		++$i;
-		( $i == $action_count ) ? $sep = '' : $sep = ' | ';
-		$out .= "<span class='$action' $custom_attributes_string>$link$sep</span>";
-	}
-	$out .= '</div>';
-
-	return $out;
+	return $result;
 }
 
 
 /**
- * Render controls for bulk actions on listing pages.
- *
- * Renders a select field and an Apply (submit) button in a 'bulkactions' div tag.
- *
- * @since 1.7
- *
- * @param array $actions Array of bulk actions to offer. Keys are action slugs, values are names to be shown to the user.
- * @param string $class Base name for the class attribute of rendered elements. Select field will have class
- *     "{$class}-select" and submit button "{$class}-submit".
- * @param array $submit_button_attributes An key-value array of additional attributes that will be added to the submit button.
- * @param string $position Position of bulk action fields. Usually they are rendered twice on a page, on the top and
- *     after the listing. This value is added as another class (specifically "position-{$position}") to the select and
- *     the submit button. It is used to determine the matching select field after user clicks on a submit button.
- *
- * @return Rendered HTML code.
- */
-function wpv_admin_table_bulk_actions( $actions, $class, $submit_button_attributes = array(), $position = 'top' ) {
-	$out = '<div class="alignleft actions bulkactions">';
-
-	$out .= sprintf( '<select class="%s">', $class . '-select position-' . $position );
-	$out .= sprintf( '<option value="-1" selected="selected">%s</option>', __( 'Bulk Actions', 'wpv-views' ) );
-
-	foreach( $actions as $action => $label ) {
-		$out .= sprintf( '<option value="%s">%s</option>', $action, $label );
-	}
-	$out .= '</select> ';
-
-	$submit_button_attributes_flat = '';
-	foreach( $submit_button_attributes as $attribute => $value ) {
-		$submit_button_attributes_flat .= sprintf( ' %s="%s" ', $attribute, $value );
-	}
-
-	$out .= sprintf(
-			'<input type="submit" value="%s" class="%s" data-position="%s" %s />',
-			__( 'Apply', 'wpv-views' ),
-			'button button-secondary ' . $class . '-submit',
-			$position,
-			$submit_button_attributes_flat );
-
-	$out .= '</div>';
-	return $out;
-}
-
-
-/**
- * Retrieve a modified URL with query string, omitting empty query arguments.
- *
- * Behaves exactly like add_query_arg(), except that it omits arguments with
- * value of empty string.
- *
- * @since 1.7
- *
- * @link http://codex.wordpress.org/Function_Reference/add_query_arg
- *
- * @param array $args Associative array of argument names and their values.
- * @param string $url Existing URL.
- *
- * @return New URL query string.
- */
-function wpv_maybe_add_query_arg( $args, $url ) {
-	foreach( $args as $key => $val ) {
-		if( '' === $val ) {
-			unset( $args[ $key ] );
-		}
-	}
-	return add_query_arg( $args, $url );
-}
-
-
-/**
- * Optionaly render a message on a listing page.
- *
- * If a given URL parameter is present that indicates a finished action, show a message. Value of this parameter is
- * supposed to be a number of affected posts.
- *
- * If more than one post was affected, a plural message is shown, otherwise a singular one.
- * Plural message is expected to contain one "%d" placeholder for the number of affected posts.
- *
- * This function also looks for a list of affected IDs (as comma-separated values in an URL parameter) and
- * if $has_undo is true, the filter wpv_maybe_show_listing_message_undo is applied to obtain an Undo link for
- * this action.
- *
- * The message will appear below the h2 tag.
- *
- * @since 1.7
- *
- * @param string $message_name Name of the URL parameter indicating this message should be rendered.
- * @param string $text_singular Message text that will be echoed when one post was affected.
- * @param string $text_plural Message text that will be echoed when more posts were affected.
- * @param bool $has_undo Indicates whether a filter should be applied to obtain an Undo link. Default is false.
- * @param string $affected_id_arg Name of the URL parameter possibly containing IDs of affected posts.
- */
-function wpv_maybe_show_listing_message( $message_name, $text_singular, $text_plural, $has_undo = false, $affected_id_arg = 'affected' ) {
-
-	if ( isset( $_GET[ $message_name ] ) ) {
-
-		// Number of affected posts
-		$message_value = $_GET[ $message_name ];
-		// IDs of affected posts (if set)
-		$affected_ids = isset( $_GET[ $affected_id_arg ] ) ? explode( ',', $_GET[ $affected_id_arg ] ) : array( );
-
-		if( $has_undo ) {
-
-			/**
-			 * Construct an "Undo" link for a message on listing page.
-			 *
-			 * Resulting string will be appended after message text.
-			 *
-			 * @since 1.7
-			 *
-			 * @param string $undo_html An Undo link to be appended after the message.
-			 * @param string $message_name Name of the message as it was passed to wpv_maybe_show_listing_message().
-			 * @param array $affected_ids IDs of posts affected by the action.
-			 */
-			$undo = ' ' . apply_filters( 'wpv_maybe_show_listing_message_undo', '', $message_name, $affected_ids );
-
-		} else {
-			$undo = '';
-		}
-
-		// Choose the appropriate message text.
-		if( $message_value > 1 ) {
-			$text = sprintf( $text_plural, $message_value );
-		} else {
-			$text = $text_singular;
-		}
-
-		$text .= $undo;
-
-
-		?>
-		<div id="message" class="updated below-h2">
-			<p><?php echo $text ?></p>
-		</div>
-		<?php
-	}
-}
-
-
-/**
- * Replace occurences of a View/Content Template/WordPress Archive ID by another ID in Views' options.
+ * Replace occurences of a View/Content Template/WordPress Archive ID by another ID in Views' settings.
  *
  * Specifically, all options starting with 'views_template_' are processed.
  *
- * @since 1.7
- *
  * @param int $replace_what The ID to be replaced.
  * @param int $replace_by New value.
- * @param mixed $options If null, Views options are obtained from global $WP_Views and also saved there afterwards.
+ * @param mixed $settings If null, Views options are obtained from global $WP_Views and also saved there afterwards.
  *     Otherwise, an array with Views options is expected and after processing it is not saved, but returned instead.
  *
- * @return Modified array of Views options if $options was provided, nothing otherwise.
+ * @return Modified array of Views options if $settings was provided, nothing otherwise.
+ *
+ * @since 1.7
  */
-function wpv_replace_views_template_options( $replace_what, $replace_by, $options = null ) {
-	if( null == $options ) {
-		global $WP_Views;
-		$options = $WP_Views->get_options();
+function wpv_replace_views_template_options( $replace_what, $replace_by, $settings = null ) {
+	if( null == $settings ) {
+        global $WPV_settings;
+        $settings = $WPV_settings;
 		$save_options = true;
 	} else {
 		$save_options = false;
 	}
 
-	foreach ( $options as $option_name => $option_value ) {
+	foreach ( $settings as $option_name => $option_value ) {
 		if ( ( strpos( $option_name, 'views_template_' ) === 0 )
 			&& $option_value == $replace_what )
 		{
-			$options[ $option_name ] = $replace_by;
+			$settings[ $option_name ] = $replace_by;
 		}
 	}
 
 	if( $save_options ) {
-		$WP_Views->save_options( $options );
+        $settings->save();
 	} else {
-		return $options;
+		return $settings;
 	}
 }
 
 
 /**
- * Modify arguments for WP_Query on listing pages when searching for a string in Views, Content Templates
- * or WordPress Archives.
+ * Generate default loop output settings (former layout settings) for a View, based on chosen loop output style
  *
- * This function will search for given string in titles and descriptions. It returns a modified array of arguments
- * for the "final" query on a listing page with the "post__in" argument containing array View/CT/WPA IDs where matching
- * string was found.
- *
- * Post meta key containing description will be determined from 'post_type' argument in $wpv_args.
- *
- * @param string $s Searched string (will be sanitized).
- * @param array $wpv_args Arguments for the listing WP_Query. They must contain the 'post_type' key with value
- *     either 'view' or 'view-template'.
- *
- * @return array Modified $wpv_args for the listing query.
- *
- * @since 1.7
- */
-function wpv_modify_wpquery_for_search( $s, $wpv_args ) {
-
-	$s_param = urldecode( sanitize_text_field( $s ) );
-	$results = array();
-
-	$search_args = $wpv_args;
-	$search_args['posts_per_page'] = '-1'; // return all posts
-	$search_args['fields'] = 'ids'; // return only post IDs
-
-	// First, search in post titles
-	$titles_search_args = $search_args;
-	$titles_search_args['s'] = $s_param;
-
-	$query_titles = new WP_Query( $titles_search_args );
-	$title_results = $query_titles->get_posts();
-	if( !is_array( $title_results ) ) {
-		$title_results = array();
-	}
-
-	// Now search in description.
-
-	// Determine description meta_key based on post type.
-	$description_key = '';
-	switch( $wpv_args['post_type'] ) {
-		// This covers both Views and WPAs.
-		case 'view':
-			$description_key = '_wpv_description';
-			break;
-		// Content templates.
-		case 'view-template':
-			$description_key = '_wpv-content-template-decription';
-			break;
-	}
-
-	$description_search_args = $search_args;
-	$description_search_args['meta_query'] = array(
-			array(
-				'key' => $description_key,
-				'value' => $s_param,
-				'compare' => 'LIKE' ) );
-
-	$query_description = new WP_Query( $description_search_args );
-	$description_results = $query_description->get_posts();
-	if( !is_array( $description_results ) ) {
-		$description_results = array();
-	}
-
-	// Merge results from both queries.
-	$results = array_unique( array_merge( $title_results, $description_results ) );
-
-	// Modify arguments for the final query
-	if ( count( $results ) == 0 ) {
-		$wpv_args['post__in'] = array( '0' );
-	} else {
-		$wpv_args['post__in'] = $results;
-	}
-
-	return $wpv_args;
-}
-
-
-/**
- * Prepare data for querying Views or WordPress Archives.
- *
- * Because Views and WPAs have the same post type and the information about this "query mode" is stored in a serialized
- * array in postmeta, we have to allways get all views (here views = posts of type "view"), parse it's settings from
- * postmeta (which is more complicated than it seems, see $WP_Views->get_view_settings()) and decide whether to
- * include it in possible results of the final query (that handles things like sorting, ordering, pagination).
- *
- * From all the possible results, we also need to count how many of them are published and trashed, because those numbers
- * also show up on listing pages.
- *
- * We can do all this with one query that will get all IDs, post status and the postmeta with serialized settings. Then,
- * based on post status and query mode, this function will produce an array of IDs of possible results.
- *
- * @param string|array $view_query_mode Query mode (kind of View object). It can be one string value or multiple values
- *     in an array. Usual values are 'normal' (for a View) or 'archive' (for a WPA), however there is also a deprecated
- *     value 'layouts-loop' for WPAs. @todo update this
- * @param string $listed_post_status Post status that is going to be queried: 'publish' or 'trash'.
- * @param array $additional_fields Optional. Additional fields to be queried from the database. Keys must be valid
- *     column names and values are their aliases. Makes sense only with $return_rows = true.
- * @param bool $return_rows Optional. If set to true, returned array will also contain the 'rows' element.
- * @param array $additional_where Optional. An array of additional conditions for the WHERE clause.
- *
- * @return array {
- *     @type int published_count Count of published posts of given query mode.
- *     @type int trashed_count Count of trashed posts of given query mode.
- *     @type int total_count Count of published+trashed posts of given query mode.
- *     @type array post__in An array of post IDs that have the right query mode and post status.
- *     @type array rows If $return_rows is true, this will contain the database results for views accepted in post__in.
- * }
- *
- * @since 1.7
- */
-function wpv_prepare_view_listing_query( $view_query_mode, $listed_post_status,
-		$additional_fields = array(), $return_rows = false, $additional_where = array() ) {
-	global $wpdb, $WP_Views;
-
-	// Build a string for SELECT from default and additional fields.
-	$select = array(
-			'ID AS id',
-			'posts.post_status AS post_status',
-			'postmeta.meta_value AS view_settings' );
-	foreach( $additional_fields as $field => $alias ) {
-		$select[] = "$field AS $alias";
-	}
-	$select_string = implode( ', ', $select );
-
-	// Build a string for WHERE from default and additional conditions.
-	$where = array(
-			"posts.post_type = 'view'",
-			"post_status IN ( 'publish', 'trash' )" );
-	$where = array_merge( $where, $additional_where );
-	$where_string = implode( ' AND ', $where );
-
-	/* Queries rows with post id, status, value of _wpv_settings meta (or null if it doesn't exist, notice the LEFT JOIN)
-	 * and additional fields. */
-	$query = "SELECT {$select_string}
-			FROM {$wpdb->posts} AS posts
-				LEFT JOIN {$wpdb->postmeta} AS postmeta
-				ON ( posts.ID = postmeta.post_id AND postmeta.meta_key = '_wpv_settings' )
-			WHERE ( {$where_string} )";
-	$views = $wpdb->get_results( $query );
-
-	$published_count = 0;
-	$trashed_count = 0;
-	$post_in = array();
-
-	// This will hold rows from the database if $return_rows is true.
-	$rows = array();
-
-	if( !is_array( $view_query_mode ) ) {
-		$view_query_mode = array( $view_query_mode );
-	}
-
-	/* For each result we need to determine if it's a View or a WPA. If it's what we want, decide by
-	 * it's post_status which counter to increment and whether to include into post__in (that means possible result
-	 * in the final listing query). */
-	foreach( $views as $view ) {
-
-		// Prepare the value of _wpv_settings postmeta in the same way get_post_meta( ..., ..., true ) would.
-		// If we don't get a value that makes sense, we just fall back to what would get_view_settings() do.
-		$meta_value = ( null == $view->view_settings ) ? null: maybe_unserialize( $view->view_settings );
-
-		// Get View settings without touching database again
-		$view_settings = $WP_Views->get_view_settings( $view->id, array(), $meta_value );
-
-		// It is the right kind of View?
-		if ( in_array( $view_settings['view-query-mode'], $view_query_mode ) ) {
-
-			// Update counters
-			if( 'publish' == $view->post_status ) {
-				++$published_count;
-			} else {
-				// Now post_status can be only 'trash' because of the condition in mysql query
-				++$trashed_count;
-			}
-
-			if( $listed_post_status == $view->post_status ) {
-				// This is a possible result of the final listing query
-				$post_in[] = $view->id;
-				if( $return_rows ) {
-					$rows[] = $view;
-				}
-			}
-		}
-	}
-
-	// If there are no results, we don't want any post to match anything in post__in.
-	if( count( $post_in ) == 0 ) {
-		$post_in[] = 0;
-	}
-
-	$ret = array(
-			'published_count' => $published_count,
-			'trashed_count' => $trashed_count,
-			'total_count' => $published_count + $trashed_count,
-			'post__in' => $post_in );
-	if( $return_rows ) {
-		$ret['rows'] = $rows;
-	}
-
-	return $ret;
-}
-
-
-/**
- * Generate default layout settings for a View, based on chosen layout style
- *
- * @param string $layout_style Loop output style name, which must be one of the following values:
+ * @param string $style Loop output style name, which must be one of the following values:
  *     - table
  *     - bootstrap-grid
  *     - table_of_fields
@@ -1441,7 +984,7 @@ function wpv_prepare_view_listing_query( $view_query_mode, $listed_post_status,
  *     - unformatted
  *
  * @param array $fields (
- *         Array of definitions of fields that will be present in the layout. If an element is not present, empty
+ *         Array of definitions of fields that will be present in the loop output. If an element is not present, empty
  *         string is used instead.
  *
  *         @type string $prefix Prefix, text before shortcode.
@@ -1455,46 +998,53 @@ function wpv_prepare_view_listing_query( $view_query_mode, $listed_post_status,
  * @param array $args(
  *         Additional arguments.
  *
- *         @type bool $include_field_names If the layout style is table_of_fields, determines whether the rendered
- *             layout will contain table header with field names. Optional. Default is true.
- *         @type int $tab_column_count Number of columns for the bootstrap-grid layout. Optional. Default is 1.
- *         @type int $bootstrap_column_count Number of columns for the table layout. Optional. Default is 1.
- *         @type int $bootstrap_version Version of Bootstrap. Mandatory for bootstrap-grid layout style, irrelephant
+ *         @type bool $include_field_names If the loop output style is table_of_fields, determines whether the rendered
+ *             loop output will contain table header with field names. Optional. Default is true.
+ *         @type int $tab_column_count Number of columns for the bootstrap-grid style. Optional. Default is 1.
+ *         @type int $bootstrap_column_count Number of columns for the table style. Optional. Default is 1.
+ *         @type int $bootstrap_version Version of Bootstrap. Mandatory for bootstrap-grid style, irrelephant
  *             otherwise. Must be 2 or 3.
- *         @type bool $add_container Argument for bootstrap-grid layout style. If true, enclose rendered html in a
+ *         @type bool $add_container Argument for bootstrap-grid style. If true, enclose rendered html in a
  *             container div. Optional. Default is false.
- *         @type bool $add_row_class Argument for bootstrap-grid layout style. If true, a "row" class will be added to
+ *         @type bool $add_row_class Argument for bootstrap-grid style. If true, a "row" class will be added to
  *             elements representing rows. For Bootstrap 3 it is added anyway. Optional. Default is false.
- *         @type bool $render_individual_columns Argument for bootstrap-grid layout style. If true, a wpv-item shortcode
+ *         @type bool $render_individual_columns Argument for bootstrap-grid style. If true, a wpv-item shortcode
  *             will be rendered for each singular column. Optional. Default is false.
- *         @type bool $render_whole_html If true, whole layout_meta_html value is rendered, otherwise only the wpv-loop
- *             and it's content. Optional. Default is false.
+ *         @type bool $render_only_wpv_loop If true, only the code that should be within "<!-- wpv-loop start -->" and
+ *             "<!-- wpv-loop end -->" tags is rendered. Optional. Default is false.
+ *         @type bool $use_loop_template Determines whether a Content Template will be used for field shortcodes.
+ *             If true, the content of the CT will be returned in the 'ct_content' element and the loop output will
+ *             contain shortcodes referencing it. In such case the argument loop_template_title is mandatory. Optional.
+ *             Default is false.
+ *         @type string $loop_template_title Title of the Content Template that should contain field shortcodes. Only
+ *             relevant if use_loop_template is true, and in such case it is mandatory.
  *     )
  *
- * @return  null|array Layout settings for a View (see below) or null on error.
+ * @return  null|array Null on error. Otherwise an array containing following elements:
  *     array(
- * TODO comment properly
- *         @type string $style
- *         @type string $layout_meta_html
- *         @type int $table_cols
- *         @type int $bootstrap_grid_cols
- *         @type string $bootstrap_grid_container '1' or ''
- *         @type string $bootstrap_grid_row_class '1' or ''
- *         @type string $bootstrap_grid_individual '1' or ''
- *         @type string $include_field_names '1' or ''
- *         @type array $fields
- *         @type array $real_fields
+ *         @type array loop_output_settings Loop Output settings for a View, as they should be stored in the database:
+ *             array(
+ *                 @type string $style
+ *                 @type string $layout_meta_html
+ *                 @type int $table_cols
+ *                 @type int $bootstrap_grid_cols
+ *                 @type string $bootstrap_grid_container '1' or ''
+ *                 @type string $bootstrap_grid_row_class '1' or ''
+ *                 @type string $bootstrap_grid_individual '1' or ''
+ *                 @type string $include_field_names '1' or ''
+ *                 @type array $fields
+ *                 @type array $real_fields
+ *             )
+ *         @type string ct_content Content of the Content Template (see use_loop_template argument for more info) or
+ *             an empty string.
  *     )
  *
  * @since 1.7
- *
- * @note on the render functions, replace spaces with tabs
  */
-function wpv_generate_views_layout_settings( $layout_style, $fields, $args ) {
+function wpv_generate_view_loop_output( $style, $fields, $args ) {
 
 	// Default values for arguments
-	$args = wp_parse_args(
-			$args,
+	$args = array_merge(
 			array(
 					'include_field_names' => true,
 					'tab_column_count' => 1,
@@ -1503,12 +1053,32 @@ function wpv_generate_views_layout_settings( $layout_style, $fields, $args ) {
 					'add_container' => false,
 					'add_row_class' => false,
 					'render_individual_columns' => false,
-					'render_whole_html' => false ) );
-	extract( $args );
+					'use_loop_template' => false,
+					'loop_template_title' => '',
+					'render_only_wpv_loop' => false ),
+			$args );
+					
+	// Avoid extract() and validate.
+	$include_field_names = ( true == $args['include_field_names'] ) ? true : false;
+	$tab_column_count = (int) $args['tab_column_count'];
+	$bootstrap_column_count = (int) $args['bootstrap_column_count'];
+	$bootstrap_version = in_array( $args['bootstrap_version'], array( 2, 3, 'undefined' ) ) ? $args['bootstrap_version'] : 'undefined';
+	$add_container = ( true == $args['add_container'] ) ? true : false;
+	$add_row_class = ( true == $args['add_row_class'] ) ? true : false;
+	$render_individual_columns = ( true == $args['render_individual_columns'] ) ? true : false;
+	$use_loop_template = ( true == $args['use_loop_template'] ) ? true : false;
+	$loop_template_title = $args['loop_template_title']; // can be anything
+	$render_only_wpv_loop = ( true == $args['render_only_wpv_loop'] ) ? true : false;
+
+	// Disallow empty title if we're creating new CT
+	if( ( true == $use_loop_template ) && empty( $loop_template_title ) ) {
+		//echo "use_loop_template";
+		return null;
+	}
 
 	// Results
-	$layout_settings = array(
-			'style' => $layout_style,  // this will be valid value, or we'll return null later
+	$loop_output_settings = array(
+			'style' => $style,  // this will be valid value, or we'll return null later
 			'additional_js'	=> '' );
 
 	// Ensure all field keys are present for all fields.
@@ -1526,68 +1096,72 @@ function wpv_generate_views_layout_settings( $layout_style, $fields, $args ) {
 	$fields = $fields_normalized;
 
 	// Render layout HTML
-	switch( $layout_style ) {
+	switch( $style ) {
 		case 'table':
-			$layout_meta_html = wpv_render_table_layout( $fields, $args );
+			$loop_output = wpv_render_table_layout( $fields, $args );
 			break;
 		case 'bootstrap-grid':
-			$layout_meta_html = wpv_render_bootstrap_grid_layout( $fields, $args );
+			$loop_output = wpv_render_bootstrap_grid_layout( $fields, $args );
 			break;
 		case 'table_of_fields':
-			$layout_meta_html = wpv_render_table_of_fields_layout( $fields, $args );
+			$loop_output = wpv_render_table_of_fields_layout( $fields, $args );
 			break;
 		case 'ordered_list':
-			$layout_meta_html = wpv_render_list_layout( $fields, 'ol' );
+			$loop_output = wpv_render_list_layout( $fields, $args, 'ol' );
 			break;
 		case 'un_ordered_list':
-			$layout_meta_html = wpv_render_list_layout( $fields, 'ul' );
+			$loop_output = wpv_render_list_layout( $fields, $args, 'ul' );
 			break;
 		case 'unformatted':
-			$layout_meta_html = wpv_render_unformatted_layout( $fields );
+			$loop_output = wpv_render_unformatted_layout( $fields, $args );
 			break;
 		default:
-			// Invalid layout style
-			echo "Invalid layout style";
+			// Invalid loop output style
+			//echo "invalid LOS";
 			return null;
 	}
 	// If rendering has failed, we fail too.
-	if( null == $layout_meta_html ) {
-		echo "layout_meta_html";
+	if( null == $loop_output ) {
+		//echo "nothing rendered";
 		return null;
 	}
+	
+	$layout_meta_html = $loop_output['loop_template'];
 
-	// Are we rendering the whole layout_meta_html or only the wpv-loop?
-	if( $render_whole_html ) {
+	if( ! $render_only_wpv_loop ) {
+		// Render the whole layout_meta_html
 		$layout_meta_html = sprintf(
 				"[wpv-layout-start]\n"
-				. "	[wpv-items-found]\n"
-				. "	<!-- wpv-loop-start -->\n"
+				. "\t[wpv-items-found]\n"
+				. "\t<!-- wpv-loop-start -->\n"
 				. "%s"
-				. "	<!-- wpv-loop-end -->\n"
-				. "	[/wpv-items-found]\n"
-				. "	[wpv-no-items-found]\n"
-				. "		[wpml-string context=\"wpv-views\"]<strong>No items found</strong>[/wpml-string]\n"
-				. "	[/wpv-no-items-found]\n"
+				. "\t<!-- wpv-loop-end -->\n"
+				. "\t[/wpv-items-found]\n"
+				. "\t[wpv-no-items-found]\n"
+				. "\t[wpml-string context=\"wpv-views\"]<strong>No items found</strong>[/wpml-string]\n"
+				. "\t[/wpv-no-items-found]\n"
 				. "[wpv-layout-end]\n",
 				$layout_meta_html );
 	}
 
-	$layout_settings['layout_meta_html'] = $layout_meta_html;
+	$loop_output_settings['layout_meta_html'] = $layout_meta_html;
 
-	// Pass other layout settings in the same way as in wpv_update_layout_extra_callback().
+	// Pass other layout settings in the same way as it was in wpv_update_layout_extra_callback().
 
 	// Only one value makes sense, but both are always stored...
-	$layout_settings['table_cols'] = $tab_column_count;
-	$layout_settings['bootstrap_grid_cols']  = $bootstrap_column_count;
+	$loop_output_settings['table_cols'] = $tab_column_count;
+	$loop_output_settings['bootstrap_grid_cols']  = $bootstrap_column_count;
 
 	// These are '1' for true or '' for false (not sure if e.g. 0 can be passed instead, better leave it as it was).
-	$layout_settings['bootstrap_grid_container'] = $add_container ? '1' : '';
-	$layout_settings['bootstrap_grid_row_class'] = $add_row_class ? '1' : '';
-	$layout_settings['bootstrap_grid_individual'] = $render_individual_columns ? '1' : '';
-	$layout_settings['include_field_names'] = $include_field_names ? '1' : '';
+	$loop_output_settings['bootstrap_grid_container'] = $add_container ? '1' : '';
+	$loop_output_settings['bootstrap_grid_row_class'] = $add_row_class ? '1' : '';
+	$loop_output_settings['bootstrap_grid_individual'] = $render_individual_columns ? '1' : '';
+	$loop_output_settings['include_field_names'] = $include_field_names ? '1' : '';
 
 	/* The 'fields' element is originally constructed in wpv_layout_wizard_convert_settings() with a comment
-	 * saying just "Compatibility". TODO it would be nice to explain why is this needed (compatibility with what?). */
+	 * saying just "Compatibility". 
+	 * 
+	 * TODO it would be nice to explain why is this needed (compatibility with what?). */
 	$fields_compatible = array();
     $field_index = 0;
     foreach ( $fields as $field ) {
@@ -1610,88 +1184,138 @@ function wpv_generate_views_layout_settings( $layout_style, $fields, $args ) {
 
         ++$field_index;
     }
-	$layout_settings['fields'] = $fields_compatible;
+	$loop_output_settings['fields'] = $fields_compatible;
 
     // 'real_fields' will be an array of field shortcodes
     $field_shortcodes = array();
     foreach( $fields as $field ) {
 		$field_shortcodes[] = stripslashes( $field['shortcode'] );
 	}
-    $layout_settings['real_fields'] = $field_shortcodes;
+    $loop_output_settings['real_fields'] = $field_shortcodes;
 
-	return $layout_settings;
+	// we'll be returning layout settings and content of a CT (optionally)
+	$result = array(
+			'loop_output_settings' => $loop_output_settings,
+			'ct_content' => $loop_output['ct_content'] );
+	
+	return $result;
+}
+
+
+/**
+ * Helper rendering function. Renders shortcodes for fields with all required prefixes and suffixes.
+ *
+ * Each field is rendered on a new line.
+ *
+ * @param array $fields The array of definitions of fields. See wpv_generate_view_loop_output() for details.
+ * @param string $row_prefix Additional prefix for the field shortcode.
+ * @param string $row_suffix Additional suffix for the field shortcode.
+ *
+ * @return string The shortcodes for all given fields.
+ *
+ * @since 1.8
+ */ 
+function wpv_render_field_codes( $fields, $row_prefix = '', $row_suffix = '' ) {
+	$field_codes = array();
+	foreach( $fields as $field ) {
+		$field_codes[] = $row_prefix . $field['prefix'] . $field['shortcode'] . $field['suffix'] . $row_suffix;
+	}
+	return implode( "\n", $field_codes );
 }
 
 
 /**
  * Render unformatted View layout.
  *
- * @see wpv_generate_views_layout_settings()
+ * @see wpv_generate_view_loop_output()
  *
  * @param array $fields Array of fields to be used inside this layout.
+ * @param array $args Additional arguments. 
  *
- * @return string Layout code.
+ * @return array(
+ *     @type string $loop_template Loop Output code.
+ *     @type string $ct_content Content of the Content Template or an empty string if it's not being used.
+ * )
  *
- * @since 1.7
+ * @since 1.8
  */
-function wpv_render_unformatted_layout( $fields ) {
-	$body = '';
-	foreach( $fields as $field ) {
-		$body .= $field['prefix'] . $field['shortcode'] . $field['suffix'];
+function wpv_render_unformatted_layout( $fields, $args ) {
+	
+	$indent = $args['use_loop_template'] ? "" : "\t\t";
+	
+	$field_codes = wpv_render_field_codes( $fields, $indent );
+	
+	if( $args['use_loop_template'] ) {
+		$ct_content = $field_codes;
+		$loop_template_body = "\t\t[wpv-post-body view_template=\"{$args['loop_template_title']}\"]";
+	} else {
+		$ct_content = '';
+		$loop_template_body = $field_codes;
 	}
-	if ( ! empty( $body ) ) {
-		$body .= "\n";
-	}
-
-	$output =
-			"   <wpv-loop>\n" .
-			"      {$body}" .
-            "   </wpv-loop>\n";
-
-	return $output;
+	
+	$loop_template = "\t<wpv-loop>\n" . $loop_template_body . "\n\t</wpv-loop>\n\t";
+	
+	return array(
+			'loop_template' => $loop_template,
+			'ct_content' => $ct_content );
 }
 
 
 /**
  * Render List View layout.
  *
- * @see wpv_generate_views_layout_settings()
+ * @see wpv_generate_view_loop_output()
  *
  * @param array $fields Array of fields to be used inside this layout.
+ * @param array $args Additional arguments.
  * @param string $list_type Type of the list. Can be 'ul' for unordered list or 'ol' for ordered list. Defaults to 'ul'.
  *
- * @return string Layout code.
+ * @return array(
+ *     @type string $loop_template Loop Output code.
+ *     @type string $ct_content Content of the Content Template or an empty string if it's not being used.
+ * )
  *
  * @since 1.7
  */
-function wpv_render_list_layout( $fields, $list_type = 'ul' ) {
-	$body = '';
-	foreach( $fields as $field ) {
-		$body .= $field['prefix'] . $field['shortcode'] . $field['suffix'];
-	}
-
+function wpv_render_list_layout( $fields, $args, $list_type = 'ul' ) {
+	
+	$indent = $args['use_loop_template'] ? "" : "\t\t\t\t";
+	$field_codes = wpv_render_field_codes( $fields, $indent );
 	$list_type = ( 'ol' == $list_type ) ? 'ol' : 'ul';
-
-	$output =
-			"   <{$list_type}>\n" .
-			"      <wpv-loop>\n".
-			"         <li>{$body}</li>\n" .
-			"      </wpv-loop>\n" .
-			"   </{$list_type}>\n";
-
-	return $output;
+	
+	if( $args['use_loop_template'] ) {
+		$ct_content = $field_codes;
+		$loop_template_body = "\t\t\t<li>[wpv-post-body view_template=\"{$args['loop_template_title']}\"]</li>";
+	} else {
+		$ct_content = '';
+		$loop_template_body = "\t\t\t<li>\n$field_codes\n\t\t\t</li>";
+	}
+	
+	$loop_template = 
+			"\t<$list_type>\n"
+			. "\t\t<wpv-loop>\n"
+			. $loop_template_body . "\n"
+			. "\t\t</wpv-loop>\n"
+			. "\t</$list_type>\n\t";
+        
+	return array(
+			'loop_template' => $loop_template,
+			'ct_content' => $ct_content );
 }
 
 
 /**
  * Render Table View layout.
  *
- * @see wpv_generate_views_layout_settings()
+ * @see wpv_generate_view_loop_output()
  *
  * @param array $fields Array of fields to be used inside this layout.
- * @param array $args Additional arguments. This method requires: 'include_field_names'.
+ * @param array $args Additional arguments. 
  *
- * @return string Layout code.
+ * @return array(
+ *     @type string $loop_template Loop Output code.
+ *     @type string $ct_content Content of the Content Template or an empty string if it's not being used.
+ * )
  *
  * @since 1.7
  */
@@ -1700,83 +1324,105 @@ function wpv_render_table_of_fields_layout( $fields, $args = array() ) {
 	// Optionally render table header with field names.
 	$thead = '';
 	if ( $args['include_field_names'] ) {
-		$thead .= "            <thead><tr>\n";
+		$thead = "\t\t<thead>\n\t\t\t<tr>\n";
 		foreach( $fields as $field ) {
-			$thead .= "               <th>[wpv-heading name=\"{$field['header_name']}\"]{$field['row_title']}[/wpv-heading]</th>\n";
+			$thead .= "\t\t\t\t<th>[wpv-heading name=\"{$field['header_name']}\"]{$field['row_title']}[/wpv-heading]</th>\n";
 		}
-		$thead .= "            </tr></thead>\n";
+		$thead .= "\t\t\t</tr>\n\t\t</thead>\n";
 	}
 
 	// Table body
-	$body = '';
-	foreach( $fields as $field ) {
-		$body .= "               <td>{$field['prefix']}{$field['shortcode']}{$field['suffix']}</td>\n";
+	$indent = $args['use_loop_template'] ? "" : "\t\t\t\t";
+	$field_codes = wpv_render_field_codes( $fields, $indent . '<td>', '</td>' );
+
+	if( $args['use_loop_template'] ) {
+		$ct_content = $field_codes;
+		$loop_template_body = "\t\t\t\t[wpv-post-body view_template=\"{$args['loop_template_title']}\"]";
+	} else {
+		$ct_content = '';
+		$loop_template_body = $field_codes;
 	}
 
-	$output =
-			"   <table width=\"100%\">\n" .
-			$thead .
-			"      <tbody>\n" .
-			"      <wpv-loop>\n" .
-			"            <tr>\n" .
-			$body .
-			"            </tr>\n" .
-			"      </wpv-loop>\n" .
-			"      </tbody>\n" .
-			"   </table>\n";
-
-	return $output;
+	// Put it all together.
+	$loop_template = 
+		"\t<table width=\"100%\">\n"
+		. $thead
+		. "\t\t<tbody>\n"
+		. "\t\t<wpv-loop>\n"
+		. "\t\t\t<tr>\n"
+		. $loop_template_body . "\n"
+		. "\t\t\t</tr>\n"
+		. "\t\t</wpv-loop>\n\t\t</tbody>\n\t</table>\n\t";
+        
+	return array(
+			'loop_template' => $loop_template,
+			'ct_content' => $ct_content );
 }
 
 
 /**
  * Render Table-based grid View layout.
  *
- * @see wpv_generate_views_layout_settings()
+ * @see wpv_generate_view_loop_output()
  *
  * @param array $fields Array of fields to be used inside this layout.
+ * @param array $args Additional arguments.
  *
- * @return string Layout code.
+ * @return array(
+ *     @type string $loop_template Loop Output code.
+ *     @type string $ct_content Content of the Content Template or an empty string if it's not being used.
+ * )
  *
  * @since 1.7
  */
 function wpv_render_table_layout( $fields, $args ) {
 
-	$body = '';
-	foreach( $fields as $field ) {
-		$body .= $field['prefix'] . $field['shortcode'] . $field['suffix'];
+	$indent = $args['use_loop_template'] ? "" : "\t\t\t\t";
+	$field_codes = wpv_render_field_codes( $fields, $indent );
+
+	if( $args['use_loop_template'] ) {
+		$ct_content = $field_codes;
+		$loop_template_body = "\t\t\t\t[wpv-post-body view_template=\"{$args['loop_template_title']}\"]";
+	} else {
+		$ct_content = '';
+		$loop_template_body = $field_codes;
 	}
-
-	$output =
-			"   <table width=\"100%\">\n" .
-			"      <wpv-loop wrap=\"{$args['tab_column_count']}\" pad=\"true\">\n" .
-			"         [wpv-item index=1]\n" .
-			"            <tr><td>{$body}</td>\n" .
-			"         [wpv-item index=other]\n" .
-			"            <td>{$body}</td>\n" .
-			"         [wpv-item index={$args['tab_column_count']}]\n" .
-			"            <td>{$body}</td></tr>\n" .
-			"         [wpv-item index=pad]\n" .
-			"            <td></td>\n" .
-			"         [wpv-item index=pad-last]\n" .
-			"            <td></td></tr>\n" .
-			"      </wpv-loop>\n" .
-			"   </table>\n";
-
-	return $output;
+	
+	$cols = $args['tab_column_count'];
+	
+	$loop_template = 
+			"\t<table width=\"100%\">\n\t<wpv-loop wrap=\"$cols\" pad=\"true\">\n"
+			. "\t\t[wpv-item index=1]\n"
+			. "\t\t<tr>\n\t\t\t<td>\n$loop_template_body\n\t\t\t</td>\n"
+			. "\t\t[wpv-item index=other]\n"
+			. "\t\t\t<td>\n$loop_template_body\n\t\t\t</td>\n"
+			. "\t\t[wpv-item index=$cols]\n"
+			. "\t\t\t<td>\n$loop_template_body\n\t\t\t</td>\n\t\t</tr>\n"
+			. "\t\t[wpv-item index=pad]\n"
+			. "\t\t\t<td></td>\n"
+			. "\t\t[wpv-item index=pad-last]\n"
+			. "\t\t\t<td></td>\n\t\t</tr>\n"
+			. "\t</wpv-loop>\n\t</table>\n\t";
+        	 
+	return array(
+			'loop_template' => $loop_template,
+			'ct_content' => $ct_content );
 }
 
 
 /**
  * Render Bootstrap grid View layout.
  *
- * @see wpv_generate_views_layout_settings()
+ * @see wpv_generate_view_loop_output()
  *
  * @param array $fields Array of fields to be used inside this layout.
- * @param array $args Additional arguments. This method requires: bootstrap_column_count, bootstrap_version, add_container,
- *     add_row_class, render_individual_columns.
+ * @param array $args Additional arguments. 
  *
- * @return string|null Layout code or null on error (invalid arguments).
+ * @return null|array Null on error (missing bootstrap version), otherwise the array:
+ *     array (
+ *         @type string $loop_template Loop Output code.
+ *         @type string $ct_content Content of the Content Template or an empty string if it's not being used.
+ *     )
  *
  * @since 1.7
  */
@@ -1791,17 +1437,14 @@ function wpv_render_bootstrap_grid_layout( $fields, $args ) {
 		return null;
 	}
 
-	$body = '';
-	foreach( $fields as $field ) {
-		$body .= $field['prefix'] . $field['shortcode'] . $field['suffix'];
-	}
-
+	$indent = $args['use_loop_template'] ? "" : "\t\t\t\t";
+	$field_codes = wpv_render_field_codes( $fields, $indent );
+	
 	// Prevent division by zero
 	if( $column_count < 1 ) {
 		return null;
 	}
 
-	// TODO somebody please explain what this value means (why 12?)
 	$column_offset = 12 / $column_count;
 
 	$output = '';
@@ -1814,52 +1457,66 @@ function wpv_render_bootstrap_grid_layout( $fields, $args ) {
 	// Add row class (optional for bootstrap 2)
 	$row_class = ( $add_row_class || ( 3 == $bootstrap_version ) ) ? 'row' : '';
 
-	if( $add_container ) {
-		$output .= "   <div class=\"container\">\n";
+	if( $args['use_loop_template'] ) {
+		$ct_content = $field_codes; 
+		$loop_item = "<div class=\"$col_class\">[wpv-post-body view_template=\"{$args['loop_template_title']}\"]</div>";
+	} else {
+		$ct_content = '';
+		$loop_item = "<div class=\"$col_class\">\n$field_codes\n\t\t\t</div>";
 	}
 
-	$output .= "   <wpv-loop wrap=\"{$column_count}\" pad=\"true\">\n";
-
-	// TODO what does this mean?
-	$ifone = ( 1 == $column_count ) ? '</div>' : '';
+	if( $add_container ) {
+		$output .= "\t<div class=\"container\">\n";
+	}
+	
+	$output .= "\t<wpv-loop wrap=\"{$column_count}\" pad=\"true\">\n";
+	
+	// If the first column is also a last column, close the div tag.
+	$ifone = ( 1 == $column_count ) ? "\n\t\t</div>" : '';
 
 	if( $render_individual_columns ) {
 		// Render items for each column.
 		$output .=
-				"         [wpv-item index=1]\n" .
-				"            <div class=\"{$row_class} {$row_style}\"><div class=\"{$col_class}\">{$body}</div>{$ifone}\n";
+				"\t\t[wpv-item index=1]\n" 
+				. "\t\t<div class=\"{$row_class} {$row_style}\">\n"
+				. "\t\t\t$loop_item$ifone\n";
 		for( $i = 2; $i < $column_count; ++$i ) {
 			$output .=
-					"         [wpv-item index={$i}]\n" .
-					"           <div class=\"{$col_class}\">{$body}</div>\n";
+					"\t\t[wpv-item index=$i]\n" .
+					"\t\t\t$loop_item\n";
 		}
 	} else {
 		// Render compact HTML
 		$output .=
-				"         [wpv-item index=1]\n" .
-				"            <div class=\"{$row} {$row_style}\"><div class=\"{$col_class}\">{$body}</div>{$ifone}\n" .
-				"         [wpv-item index=other]\n" .
-				"            <div class=\"{$col_class}\">{$body}</div>\n";
+				"\t\t[wpv-item index=1]\n" 
+				. "\t\t<div class=\"{$row_class} {$row_style}\">\n"
+				. "\t\t\t$loop_item$ifone\n"
+				. "\t\t[wpv-item index=other]\n"
+				. "\t\t\t$loop_item\n";
 	}
 
 	// Render item for last column.
 	if ( $column_count > 1) {
 		$output .=
-				"         [wpv-item index={$column_count}]\n" .
-				"            <div class=\"{$col_class}\">{$body}</div></div>\n";
+				"\t\t[wpv-item index=$column_count]\n" 
+				. "\t\t\t$loop_item\n"
+				. "\t\t</div>\n";
 	}
 
 	// Padding items
 	$output .=
-			"         [wpv-item index=pad]\n" .
-			"            <div class=\"{$col_class}\"></div>\n" .
-			"         [wpv-item index=pad-last]\n" .
-			"            </div>\n" .
-			"    </wpv-loop>\n";
+			"\t\t[wpv-item index=pad]\n"
+			. "\t\t\t<div class=\"{$col_class}\"></div>\n" 
+			. "\t\t[wpv-item index=pad-last]\n" 
+			. "\t\t\t<div class=\"{$col_class}\"></div>\n"
+			. "\t\t</div>\n" 
+			. "\t</wpv-loop>\n\t";
 
 	if ( $add_container ) {
-		$output .= "    </div>\n";
+		$output .= "</div>\n\t";
 	}
 
-	return $output;
+	return array(
+			'loop_template' => $output,
+			'ct_content' => $ct_content );
 }

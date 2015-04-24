@@ -28,9 +28,9 @@
  * @link http://enlimbo.net/forms
  * @author srdjan <srdjan@enlimbo.net>
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/toolset-forms/classes/class.eforms.php $
- * $LastChangedDate: 2015-01-13 15:19:25 +0000 (Tue, 13 Jan 2015) $
- * $LastChangedRevision: 30994 $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.eforms.php $
+ * $LastChangedDate: 2015-03-20 10:02:23 +0000 (Fri, 20 Mar 2015) $
+ * $LastChangedRevision: 32518 $
  * $LastChangedBy: francesco $
  *
  */
@@ -101,7 +101,6 @@ class Enlimbo_Forms {
             $cred_cred_settings = get_option('cred_cred_settings');
             if (is_array($cred_cred_settings)) {
                 $this->form_settings['use_bootstrap'] = array_key_exists('use_bootstrap', $cred_cred_settings) && $cred_cred_settings['use_bootstrap'];
-                ;
             }
         }
     }
@@ -1117,7 +1116,10 @@ class Enlimbo_Forms {
         }
 
         $parts = explode('[', $name);
-        $parts = array_map(create_function('&$a', 'return trim($a, \']\');'), $parts);
+        //https://icanlocalize.basecamphq.com/projects/7393061-toolset/todo_items/196173458/comments
+        //Security Fixing
+        //$parts = array_map(create function('&$a', 'return trim($a, \']\');'), $parts);
+        $parts = array_map("cred_mytrimfunction", $parts);
         if (!isset($_REQUEST[$parts[0]])) {
             return in_array($element['#type'], array('textfield', 'textarea')) ? '' : 0;
         }

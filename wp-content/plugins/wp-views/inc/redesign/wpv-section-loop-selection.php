@@ -7,18 +7,16 @@
 
 // add_filter('wpv_sections_archive_loop_show_hide', 'wpv_show_hide_archive_loop', 1,1);
 
-function wpv_show_hide_archive_loop($sections) {
+function wpv_show_hide_archive_loop( $sections ) {
 	$sections['archive-loop'] = array(
 		'name' => __( 'Loops Selection', 'wpv-views' ),
-		);
+	);
 	return $sections;
 }
 
 add_action( 'view-editor-section-archive-loop', 'add_view_loop_selection', 10, 2 );
 
 function add_view_loop_selection( $view_settings, $view_id ) {
-	global $views_edit_help;
-
 	$hide = '';
 	if ( isset( $view_settings['sections-show-hide'] )
 		&& isset( $view_settings['sections-show-hide']['archive-loop'] )
@@ -26,14 +24,18 @@ function add_view_loop_selection( $view_settings, $view_id ) {
 	{
 		$hide = ' hidden';
 	}
-
 	if ( 'layouts-loop' ==  $view_settings['view-query-mode'] ) {
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'loops_selection_layouts' );
 	?>
 	<div class="wpv-setting-container wpv-settings-archive-loops js-wpv-settings-archive-loop<?php echo $hide; ?>">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e('Loops Selection', 'wpv-views' ) ?>
 			</h3>
+			<i class="icon-question-sign js-display-tooltip" 
+				data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>" 
+				data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+			</i>
 		</div>
 		<div class="wpv-setting js-wpv-setting">
 			<p>
@@ -43,12 +45,16 @@ function add_view_loop_selection( $view_settings, $view_id ) {
 	</div>
 	<?php
 	} else {
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'loops_selection' );
 	?>
 	<div class="wpv-setting-container wpv-settings-archive-loops js-wpv-settings-archive-loop<?php echo $hide; ?>">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e('Loops Selection', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['loops_selection']['title'] ?>" data-content="<?php echo $views_edit_help['loops_selection']['content'] ?>"></i>
+				<i class="icon-question-sign js-display-tooltip" 
+					data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>" 
+					data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting js-wpv-setting">
@@ -58,7 +64,7 @@ function add_view_loop_selection( $view_settings, $view_id ) {
 		</div>
 		<span class="update-action-wrap auto-update js-wpv-update-action-wrap">
 			<span class="js-wpv-message-container"></span>
-			<span type="hidden" data-success="<?php echo htmlentities( __( 'Updated', 'wpv-views'), ENT_QUOTES ); ?>" data-unsaved="<?php echo htmlentities( __('Not saved', 'wpv-views'), ENT_QUOTES ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_loop_selection_nonce' ); ?>" class="js-wpv-loop-selection-update" />
+			<span type="hidden" data-success="<?php echo esc_attr( __( 'Updated', 'wpv-views') ); ?>" data-unsaved="<?php echo esc_attr( __('Not saved', 'wpv-views') ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_loop_selection_nonce' ); ?>" class="js-wpv-loop-selection-update" />
 		</span>
 	</div>
 	<?php
@@ -67,9 +73,8 @@ function add_view_loop_selection( $view_settings, $view_id ) {
 
 
 function render_view_loop_selection_form( $view_id = 0 ) {
-	global $WPV_view_archive_loop, $WP_Views;
-	$options = $WP_Views->get_options();
-	$options = $WPV_view_archive_loop->_view_edit_options( $view_id, $options ); // TODO check if we just need the $options above
+	global $WPV_view_archive_loop, $WPV_settings;
+	$WPV_view_archive_loop->_view_edit_options( $view_id, $WPV_settings ); // TODO check if we just need the $WPV_settings above
 
 	$asterisk = ' <span style="color:red">*</span>';
 	$asterisk_explanation = __( '<span style="color:red">*</span> A different WordPress Archive is already assigned to this item', 'wpv-views' );
@@ -136,18 +141,18 @@ function render_view_loop_selection_form( $view_id = 0 ) {
 			<?php
 				foreach ( $loops as $loop => $loop_definition ) {
 					$show_asterisk = false;
-					$is_checked = ( isset( $options['view_' . $loop] ) && $options['view_' . $loop] == $view_id );
-					if ( isset( $options['view_' . $loop] )
-						&& $options['view_' . $loop] != $view_id
-						&& $options['view_' . $loop] != 0 )
+					$is_checked = ( isset( $WPV_settings['view_' . $loop] ) && $WPV_settings['view_' . $loop] == $view_id );
+					if ( isset( $WPV_settings['view_' . $loop] )
+						&& $WPV_settings['view_' . $loop] != $view_id
+						&& $WPV_settings['view_' . $loop] != 0 )
 					{
 						$show_asterisk = true;
 						$show_asterisk_explanation = true;
 					}
 					?>
 						<li>
-							<input type="checkbox" <?php checked( $is_checked ); ?> id="wpv-view-loop-<?php echo $loop; ?>" name="wpv-view-loop-<?php echo $loop; ?>" autocomplete="off" />
-							<label for="wpv-view-loop-<?php echo $loop; ?>"><?php
+							<input type="checkbox" <?php checked( $is_checked ); ?> id="wpv-view-loop-<?php echo esc_attr( $loop ); ?>" name="wpv-view-loop-<?php echo esc_attr( $loop ); ?>" autocomplete="off" />
+							<label for="wpv-view-loop-<?php echo esc_attr( $loop ); ?>"><?php
 									echo $loop_definition[ "display_name" ];
 									echo $show_asterisk ? $asterisk : '';
 							?></label>
@@ -183,7 +188,7 @@ function render_view_loop_selection_form( $view_id = 0 ) {
 	// Only offer loops for post types that already have an archive
 	$post_types = get_post_types( array( 'public' => true, 'has_archive' => true), 'objects' );
 	foreach ( $post_types as $post_type ) {
-		if ( !in_array( $post_type->name, array( 'post', 'page', 'attachment' ) ) ) {
+		if ( ! in_array( $post_type->name, array( 'post', 'page', 'attachment' ) ) ) {
 			$pt_loops[ $post_type->name ] = array(
 					'loop' => 'cpt_' . $post_type->name,
 					'display_name' => $post_type->labels->name,
@@ -200,15 +205,15 @@ function render_view_loop_selection_form( $view_id = 0 ) {
 					foreach ( $pt_loops as $loop_definition ) {
 						$loop = $loop_definition[ 'loop' ];
 						$show_asterisk = false;
-						$is_checked = ( isset( $options['view_' . $loop] ) && $options['view_' . $loop] == $view_id );
-						if ( isset( $options['view_' . $loop] ) && $options['view_' . $loop] != $view_id && $options['view_' . $loop] != 0 ) {
+						$is_checked = ( isset( $WPV_settings['view_' . $loop] ) && $WPV_settings['view_' . $loop] == $view_id );
+						if ( isset( $WPV_settings['view_' . $loop] ) && $WPV_settings['view_' . $loop] != $view_id && $WPV_settings['view_' . $loop] != 0 ) {
 							$show_asterisk = true;
 							$show_asterisk_explanation = true;
 						}
 						?>
 							<li >
-								<input type="checkbox" <?php checked( $is_checked ); ?> id="wpv-view-loop-<?php echo $loop; ?>" name="wpv-view-loop-<?php echo $loop; ?>" autocomplete="off" />
-								<label for="wpv-view-loop-<?php echo $loop; ?>">
+								<input type="checkbox" <?php checked( $is_checked ); ?> id="wpv-view-loop-<?php echo esc_attr( $loop ); ?>" name="wpv-view-loop-<?php echo esc_attr( $loop ); ?>" autocomplete="off" />
+								<label for="wpv-view-loop-<?php echo esc_attr( $loop ); ?>">
 									<?php
 										echo $loop_definition[ 'display_name' ];
 										echo $show_asterisk ? $asterisk : '';
@@ -263,18 +268,18 @@ function render_view_loop_selection_form( $view_id = 0 ) {
 
 					$name = $category->name;
 					$show_asterisk = false;
-					$is_checked = ( isset( $options['view_taxonomy_loop_' . $name ] ) && $options['view_taxonomy_loop_' . $name ] == $view_id );
-					if ( isset( $options['view_taxonomy_loop_' . $name ] )
-						&& $options['view_taxonomy_loop_' . $name ] != $view_id
-						&& $options['view_taxonomy_loop_' . $name ] != 0 )
+					$is_checked = ( isset( $WPV_settings['view_taxonomy_loop_' . $name ] ) && $WPV_settings['view_taxonomy_loop_' . $name ] == $view_id );
+					if ( isset( $WPV_settings['view_taxonomy_loop_' . $name ] )
+						&& $WPV_settings['view_taxonomy_loop_' . $name ] != $view_id
+						&& $WPV_settings['view_taxonomy_loop_' . $name ] != 0 )
 					{
 						$show_asterisk = true;
 						$show_asterisk_explanation = true;
 					}
 					?>
 						<li>
-							<input type="checkbox" <?php checked( $is_checked ); ?> id="wpv-view-taxonomy-loop-<?php echo $name; ?>" name="wpv-view-taxonomy-loop-<?php echo $name; ?>" autocomplete="off" />
-							<label for="wpv-view-taxonomy-loop-<?php echo $name; ?>">
+							<input type="checkbox" <?php checked( $is_checked ); ?> id="wpv-view-taxonomy-loop-<?php echo esc_attr( $name ); ?>" name="wpv-view-taxonomy-loop-<?php echo esc_attr( $name ); ?>" autocomplete="off" />
+							<label for="wpv-view-taxonomy-loop-<?php echo esc_attr( $name ); ?>">
 								<?php
 									echo $category->labels->name;
 									echo $show_asterisk ? $asterisk : '';
@@ -313,4 +318,60 @@ function render_view_loop_selection_form( $view_id = 0 ) {
 		?>
 	</div>
 	<?php
+}
+
+/**
+* wpv_update_loop_selection_callback
+*
+* Save WPA loop selection section
+*
+* @since unknown
+*/
+
+add_action( 'wp_ajax_wpv_update_loop_selection', 'wpv_update_loop_selection_callback' );
+
+function wpv_update_loop_selection_callback() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$data = array(
+			'type' => 'capability',
+			'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+	if ( 
+		! isset( $_POST["wpnonce"] )
+		|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_loop_selection_nonce' ) 
+	) {
+		$data = array(
+			'type' => 'nonce',
+			'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+	if (
+		! isset( $_POST["id"] )
+		|| ! is_numeric( $_POST["id"] )
+		|| intval( $_POST['id'] ) < 1 
+	) {
+		$data = array(
+			'type' => 'id',
+			'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+	global $WPV_view_archive_loop;
+	parse_str( $_POST['form'], $form_data );
+	$WPV_view_archive_loop->update_view_archive_settings( $_POST["id"], $form_data );
+	$loop_form = '';
+	ob_start();
+	render_view_loop_selection_form( $_POST['id'] );
+	$loop_form = ob_get_contents();
+	ob_end_clean();
+	do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+	$data = array(
+		'id' => $_POST["id"],
+		'updated_archive_loops' => $loop_form,
+		'message' => __( 'Loop Selection saved', 'wpv-views' )
+	);
+	wp_send_json_success( $data );
 }

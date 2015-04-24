@@ -57,13 +57,12 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 	};
 	
 	self.manage_taxonomy_mode = function( select ) {
-		var single_element = $( select ).parents( '.js-wpv-filter-multiple-element' ),
+		var single_element = $( select ).closest( '.js-wpv-filter-multiple-element' ),
 		mode_value = $( select ).val();
 		WPViews.query_filters.clear_validate_messages( self.post_row );
-		$( '.js-taxonomy-param' ).removeClass( 'filter-input-error' );
+		single_element.find( '.js-taxonomy-checklist, .js-taxonomy-parameter, .js-taxonomy-framework' ).hide();
 		if ( mode_value == 'FROM ATTRIBUTE' ) {
 			single_element.find('.js-taxonomy-parameter').fadeIn();
-			single_element.find('.js-taxonomy-checklist').hide();
 			single_element.find('.js-taxonomy-param-label')
 				.html(
 					single_element
@@ -73,7 +72,6 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 			single_element.find('.js-taxonomy-param').data('type', 'shortcode');
 		} else if ( mode_value == 'FROM URL' ) {
 			single_element.find('.js-taxonomy-parameter').fadeIn();
-			single_element.find('.js-taxonomy-checklist').hide();
 			single_element.find('.js-taxonomy-param-label')
 				.html(
 					single_element
@@ -82,10 +80,14 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 				);
 			single_element.find('.js-taxonomy-param').data('type', 'url');
 		} else if ( mode_value == 'FROM PAGE' || mode_value == 'FROM PARENT VIEW' ) {
-			single_element.find( '.js-taxonomy-checklist, .js-taxonomy-parameter' ).hide();
-		} else {
+		} else if ( mode_value == 'framework' ) {
+			single_element.find( '.js-taxonomy-framework' ).fadeIn();
+		} else if (
+			mode_value == 'IN'
+			|| mode_value == 'NOT IN'
+			|| mode_value == 'AND'
+		) {
 			single_element.find('.js-taxonomy-checklist').fadeIn();
-			single_element.find('.js-taxonomy-parameter').hide();
 		}
 	};
 	
@@ -93,7 +95,8 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 		$( self.post_close_save_selector ).removeClass( 'js-wpv-section-unsaved' );
 		var nonce = $( '.js-wpv-filter-remove-taxonomy' ).data( 'nonce' ),
 		taxonomy = [],
-		spinnerContainer = $( self.spinner ).insertBefore( $( '.js-wpv-filter-remove-taxonomy' ) ).show();
+		spinnerContainer = $( self.spinner ).insertBefore( $( '.js-wpv-filter-remove-taxonomy' ) ).show(),
+		error_container = $( self.post_row ).find( '.js-wpv-filter-multiple-toolset-messages' );
 		$('.js-wpv-filter-taxonomy-multiple-element .js-filter-remove').each( function() {
 			taxonomy.push( $( this ).data( 'taxonomy' ) );
 		});
@@ -105,20 +108,24 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 		};
 		$.ajax({
 			type: "POST",
+			dataType: "json",
 			url: ajaxurl,
 			data: data,
 			success: function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) && ( response === data.id ) ) {
+				if ( response.success ) {
 					$( self.post_row )
 						.addClass( 'wpv-filter-deleted' )
-						.fadeOut( 500, function() {
+						.animate({
+						  height: "toggle",
+						  opacity: "toggle"
+						}, 400, function() {
 							$( this ).remove();
 							self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
 							$( document ).trigger( 'js_event_wpv_query_filter_deleted', [ 'taxonomy' ] );
 							self.manage_taxonomy_relationship();
 						});
 				} else {
-					console.log( "Error: AJAX returned ", response );
+					WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 				}
 			},
 			error: function ( ajaxContext ) {
@@ -150,7 +157,6 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 	//--------------------
 	
 	$( document ).on( 'change keyup input cut paste', self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select', function() {
-		$( this ).removeClass( 'filter-input-error' );
 		self.manage_filter_changes();
 	});
 	
@@ -169,6 +175,11 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 				tax_row = thiz_inner.parents('.js-wpv-filter-multiple-element').data('taxonomy');
 				if ( thiz_inner.val() == 'FROM ATTRIBUTE' || thiz_inner.val() == 'FROM URL' ) {
 					this_valid = WPViews.query_filters.validate_filter_options( '.js-wpv-filter-row-taxonomy-' + tax_row );
+				} else {
+					this_valid = WPViews.query_filters.validate_filter_options_value( 'select', thiz_inner );
+					if ( this_valid == false ) {
+						thiz_inner.addClass( 'filter-input-error' );
+					}
 				}
 				if ( this_valid == false ) {
 					valid = false;
@@ -178,6 +189,7 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 				self.post_current_options = $( self.post_options_container_selector + ' input, ' + self.post_options_container_selector + ' select' ).serialize();
 				var nonce = thiz.data( 'nonce' ),
 				spinnerContainer = $( self.spinner ).insertBefore( thiz ),
+				error_container = $( self.post_row ).find( '.js-wpv-filter-multiple-toolset-messages' ),
 				data = {
 					action: 'wpv_filter_taxonomy_update',
 					id: self.view_id,
@@ -185,20 +197,15 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 					wpnonce: nonce
 				};
 				$.post( ajaxurl, data, function( response ) {
-					if ( ( typeof( response ) !== 'undefined' ) ) {
-						if ( response != 0 ) {
-							$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
-							$( document ).trigger( 'js_event_wpv_query_filter_saved', [ 'taxonomy' ] );
-							$( '.js-wpv-filter-taxonomy-summary' ).html( response );
-							WPViews.query_filters.close_and_glow_filter_row( self.post_row, 'wpv-filter-saved' );
-						} else {
-							console.log( "Error: WordPress AJAX returned " + response );
-						}
+					if ( response.success ) {
+						$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
+						$( document ).trigger( 'js_event_wpv_query_filter_saved', [ 'taxonomy' ] );
+						$( '.js-wpv-filter-taxonomy-summary' ).html( response.data.summary );
+						WPViews.query_filters.close_and_glow_filter_row( self.post_row, 'wpv-filter-saved' );
 					} else {
-						console.log( "Error: AJAX returned ", response );
+						WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 					}
-
-				})
+				}, 'json' )
 				.fail( function( jqXHR, textStatus, errorThrown ) {
 					console.log( "Error: ", textStatus, errorThrown );
 				})
@@ -218,6 +225,7 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 		taxonomy = thiz.data('taxonomy'),
 		nonce = thiz.data('nonce'),
 		spinnerContainer = $( self.spinner ).insertBefore( thiz ).hide(),
+		error_container = row.find( '.js-wpv-filter-toolset-messages' ),
 		data = {
 			action: 'wpv_filter_taxonomy_delete',
 			id: self.view_id,
@@ -229,7 +237,7 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 		} else {
 			spinnerContainer.show();
 			$.post( ajaxurl, data, function( response ) {
-				if ( ( typeof( response ) !== 'undefined') && ( response === data.id ) ) {
+				if ( response.success ) {
 					row
 						.addClass( 'wpv-filter-multiple-element-removed' )
 						.fadeOut( 500, function() {
@@ -239,10 +247,9 @@ WPViews.TaxonomyFilterGUI = function( $ ) {
 						});
 					$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
 				} else {
-					console.log( "Error: AJAX returned ", response );
+					WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 				}
-
-			})
+			}, 'json' )
 			.fail( function( jqXHR, textStatus, errorThrown ) {
 				console.log( "Error: ", textStatus, errorThrown );
 			})

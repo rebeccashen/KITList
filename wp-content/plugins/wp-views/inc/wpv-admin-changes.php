@@ -83,9 +83,13 @@ function wpv_get_view_template_defaults($wpv_options, $post_id) { // TODO check 
 	return $result;
 }
 
-function wpv_create_content_summary_for_listing($post_id) { // TODO check if e want to use this or next filter, DEPRECATED for the other NOTE ModuleManager is using one
+function wpv_create_content_summary_for_listing($post_id) {
+    // TODO check if e want to use this or next filter, DEPRECATED for the other NOTE ModuleManager is using one
 
-	$view_settings = get_post_meta($post_id, '_wpv_settings', true);
+    // TODO this is currently being used in Views listing
+
+	global $WP_Views;
+	$view_settings = $WP_Views->get_view_settings( $post_id );
 
 	if (!isset($view_settings['view-query-mode'])) {
 		$view_settings['view-query-mode'] = 'normal';
@@ -107,8 +111,8 @@ function wpv_create_content_summary_for_listing($post_id) { // TODO check if e w
 }
 
 function wpv_create_summary_for_listing($post_id) { // TODO check if e want to use this or previous filter, DEPRECATED for the other NOTE ModuleManager is using one
-
-	$view_settings = get_post_meta($post_id, '_wpv_settings', true);
+	global $WP_Views;
+	$view_settings = $WP_Views->get_view_settings( $post_id );
 
 	$filter_summary = apply_filters('wpv-view-get-summary', '', $post_id, $view_settings);
 	$summary = '';

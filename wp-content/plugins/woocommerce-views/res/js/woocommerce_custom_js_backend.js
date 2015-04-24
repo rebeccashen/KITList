@@ -32,7 +32,7 @@ jQuery( document ).ready( function( $ ) {
 			
 	    var data = {
 	      			action: 'wc_views_ajax_response_admin',
-	   				dataType: 'json',
+	   				dataType: 'json',	   				
 	 	    		wpv_wc_views_ajax_response_admin_nonce: the_ajax_script_wc_views.wc_views_ajax_response_admin_nonce,
 	 		    	wpv_manual_parameter:manual_parameter	 			    					
 	    			};	
@@ -41,7 +41,7 @@ jQuery( document ).ready( function( $ ) {
 
 	 	     $.post(the_ajax_script_wc_views.ajaxurl,data, function(response) {
 	 		 var myObj_wc_views_status = $.parseJSON(response);
-	         console.log(myObj_wc_views_status);
+	         
 	 		 if (myObj_wc_views_status.status=='updated'){
 	 			$('#ajax_result_batchprocessing').show();
 	 			$('#ajax_result_batchprocessing').addClass(myObj_wc_views_status.status);

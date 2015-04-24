@@ -46,7 +46,7 @@ jQuery(document).on('click', '.js-wpv-title-description-update', function(e){
 	var thiz = jQuery( this ),
 	thiz_container = thiz.parents( '.js-wpv-settings-title-and-desc' ),
 	thiz_message_container = thiz_container.find( '.js-wpv-message-container' ),
-	update_message = thiz.data('success'),
+	//update_message = thiz.data('success'),
 	unsaved_message = thiz.data('unsaved'),
 	nonce = thiz.data('nonce'),
 	spinnerContainer = jQuery('<div class="spinner ajax-loader">').insertBefore( thiz ).show(),
@@ -65,48 +65,23 @@ jQuery(document).on('click', '.js-wpv-title-description-update', function(e){
 		wpnonce: nonce
 	};
 	jQuery.ajax({
-		async:false,
-		type:"POST",
-		url:ajaxurl,
-		data:data,
+		async: false,
+		type: "POST",
+		dataType: "json",
+		url: ajaxurl,
+		data: data,
 		success: function( response ) {
-			//Check if name already exists
-			temp_res = jQuery.parseJSON(response);
-			if ( ( typeof( response ) !== 'undefined' ) && temp_res[0] == 'error' ) {
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:temp_res[1],
-						type:'',
-						inline:true,
-						stay:true
-					});
-				return false;
-			}
-			// If all is fine, response is post_ID
-			if ( ( typeof( response ) !== 'undefined' ) && ( response == data.id ) ) {
-				thiz.removeClass('js-wpv-section-unsaved');
-				view_settings['.js-wpv-description'] = jQuery('.js-wpv-description').val();
-				view_settings['.js-wpv-title'] = jQuery('.js-title').val();
-				view_settings['.js-wpv-slug'] = jQuery('.js-wpv-slug').val();
-				if (jQuery('.js-wpv-section-unsaved').length < 1) {
+			if ( response.success ) {
+				thiz.removeClass( 'js-wpv-section-unsaved' );
+				view_settings['.js-wpv-description'] = jQuery( '.js-wpv-description' ).val();
+				view_settings['.js-wpv-title'] = jQuery( '.js-title' ).val();
+				view_settings['.js-wpv-slug'] = jQuery( '.js-wpv-slug' ).val();
+				if ( jQuery( '.js-wpv-section-unsaved' ).length < 1 ) {
 					setConfirmUnload(false);
 				}
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:update_message,
-						type:'success',
-						inline:true,
-						stay:false
-					});
+				WPViews.view_edit_screen.manage_ajax_success( response.data, thiz_message_container );
 			} else {
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:unsaved_message,
-						type:'error',
-						inline:true,
-						stay:true
-					});
-				console.log( "Error: AJAX returned ", response );
+				WPViews.view_edit_screen.manage_ajax_fail( response.data, thiz_message_container );
 			}
 		},
 		error: function( ajaxContext ) {
@@ -184,7 +159,7 @@ jQuery(document).on('click', '.js-wpv-filter-extra-update', function(e) {
 	var thiz = jQuery( this ),
 	thiz_container = thiz.parents( '.js-wpv-filter-extra-section' ),
 	thiz_message_container = thiz_container.find( '.js-wpv-message-container' ),
-	update_message = thiz.data('success'),
+	//update_message = thiz.data('success'),
 	unsaved_message = thiz.data('unsaved'),
 	nonce = thiz.data('nonce'),
 	spinnerContainer = jQuery('<div class="spinner ajax-loader">').insertBefore( thiz ).show(),
@@ -203,37 +178,22 @@ jQuery(document).on('click', '.js-wpv-filter-extra-update', function(e) {
 		wpnonce: nonce
 	};
 	jQuery.ajax({
-		async:false,
-		type:"POST",
-		url:ajaxurl,
-		data:data,
+		async: false,
+		type: "POST",
+		dataType: "json",
+		url: ajaxurl,
+		data: data,
 		success: function( response ) {
-			if ( ( typeof( response ) !== 'undefined' ) ) {
-				decoded_response = jQuery.parseJSON(response);
-				if ( decoded_response.success == data.id ) {
-					jQuery( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
-					thiz.removeClass('js-wpv-section-unsaved');
-					jQuery('.js-screen-options').find('.toolset-alert').remove();
-					if (jQuery('.js-wpv-section-unsaved').length < 1) {
-						setConfirmUnload(false);
-					}
-					thiz_message_container
-						.wpvToolsetMessage({
-							text:update_message,
-							type:'success',
-							inline:true,
-							stay:false
-						});
+			if ( response.success ) {
+				jQuery( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
+				thiz.removeClass('js-wpv-section-unsaved');
+				jQuery('.js-screen-options').find('.toolset-alert').remove();
+				if ( jQuery('.js-wpv-section-unsaved').length < 1 ) {
+					setConfirmUnload(false);
 				}
+				WPViews.view_edit_screen.manage_ajax_success( response.data, thiz_message_container );
 			} else {
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:unsaved_message,
-						type:'error',
-						inline:true,
-						stay:true
-					});
-				console.log( "Error: AJAX returned ", response );
+				WPViews.view_edit_screen.manage_ajax_fail( response.data, thiz_message_container );
 			}
 		},
 		error:function(ajaxContext){
@@ -311,7 +271,7 @@ jQuery(document).on('click', '.js-wpv-layout-extra-update', function(e){
 	var thiz = jQuery( this ),
 	thiz_container = thiz.parents( '.js-wpv-settings-layout-extra' ),
 	thiz_message_container = thiz_container.find( '.js-wpv-message-container' ),
-	update_message = thiz.data('success'),
+	//update_message = thiz.data('success'),
 	unsaved_message = thiz.data('unsaved'),
 	nonce = thiz.data('nonce'),
 	spinnerContainer = jQuery('<div class="spinner ajax-loader">').insertBefore( thiz ).show(),
@@ -346,33 +306,21 @@ jQuery(document).on('click', '.js-wpv-layout-extra-update', function(e){
 	}
 	
 	jQuery.ajax({
-		async:false,
-		type:"POST",
-		url:ajaxurl,
-		data:data,
+		async: false,
+		type: "POST",
+		dataType: "json",
+		url: ajaxurl,
+		data: data,
 		success: function( response ) {
-			if ( ( typeof( response ) !== 'undefined' ) && ( response == data.id ) ) {
+			if ( response.success ) {
 				thiz.removeClass('js-wpv-section-unsaved');
 				jQuery('.js-screen-options').find('.toolset-alert').remove();
-				if (jQuery('.js-wpv-section-unsaved').length < 1) {
+				if ( jQuery('.js-wpv-section-unsaved').length < 1 ) {
 					setConfirmUnload(false);
 				}
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:update_message,
-						type:'success',
-						inline:true,
-						stay:false
-					});
+				WPViews.view_edit_screen.manage_ajax_success( response.data, thiz_message_container );
 			} else {
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:unsaved_message,
-						type:'error',
-						inline:true,
-						stay:true
-					});
-				console.log( "Error: AJAX returned ", response );
+				WPViews.view_edit_screen.manage_ajax_fail( response.data, thiz_message_container );
 			}
 		},
 		error: function (ajaxContext) {
@@ -414,7 +362,7 @@ jQuery(document).on('click', '.js-wpv-layout-settings-extra-js-update', function
 	var thiz = jQuery( this ),
 	thiz_container = thiz.parents( '.js-wpv-settings-layout-settings-extra-js' ),
 	thiz_message_container = thiz_container.find( '.js-wpv-message-container' ),
-	update_message = thiz.data('success'),
+	//update_message = thiz.data('success'),
 	unsaved_message = thiz.data('unsaved'),
 	nonce = thiz.data('nonce'),
 	spinnerContainer = jQuery('<div class="spinner ajax-loader">').insertBefore( thiz ).show(),
@@ -431,33 +379,21 @@ jQuery(document).on('click', '.js-wpv-layout-settings-extra-js-update', function
 		wpnonce: nonce
 	};
 	jQuery.ajax({
-		async:false,
-		type:"POST",
-		url:ajaxurl,
-		data:data,
+		async: false,
+		type: "POST",
+		dataType: "json",
+		url: ajaxurl,
+		data: data,
 		success: function( response ) {
-			if ( ( typeof( response ) !== 'undefined' ) && ( response == data.id ) ) {
-				jQuery('.js-wpv-layout-settings-extra-js-update').removeClass('js-wpv-section-unsaved');
+			if ( response.success ) {
+				thiz.removeClass('js-wpv-section-unsaved');
 				jQuery('.js-screen-options').find('.toolset-alert').remove();
-				if (jQuery('.js-wpv-section-unsaved').length < 1) {
+				if ( jQuery('.js-wpv-section-unsaved').length < 1 ) {
 					setConfirmUnload(false);
 				}
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:update_message,
-						type:'success',
-						inline:true,
-						stay:false
-					});
+				WPViews.view_edit_screen.manage_ajax_success( response.data, thiz_message_container );
 			} else {
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:unsaved_message,
-						type:'error',
-						inline:true,
-						stay:true
-					});
-				console.log( "Error: AJAX returned ", response );
+				WPViews.view_edit_screen.manage_ajax_fail( response.data, thiz_message_container );
 			}
 		},
 		error: function ( ajaxContext ) {
@@ -499,7 +435,7 @@ jQuery(document).on('click', '.js-wpv-content-update', function(e){
 	var thiz = jQuery( this ),
 	thiz_container = thiz.parents( '.js-wpv-settings-content' ),
 	thiz_message_container = thiz_container.find( '.js-wpv-message-container' ),
-	update_message = thiz.data('success'),
+	//update_message = thiz.data('success'),
 	unsaved_message = thiz.data('unsaved'),
 	nonce = thiz.data('nonce'),
 	spinnerContainer = jQuery('<div class="spinner ajax-loader">').insertBefore( thiz ).show(),
@@ -516,33 +452,21 @@ jQuery(document).on('click', '.js-wpv-content-update', function(e){
 		wpnonce: nonce
 	};
 	jQuery.ajax({
-		async:false,
-		type:"POST",
-		url:ajaxurl,
-		data:data,
+		async: false,
+		type: "POST",
+		dataType: "json",
+		url: ajaxurl,
+		data: data,
 		success: function( response ) {
-			if ( ( typeof( response ) !== 'undefined' ) && ( response == data.id ) ) {
+			if ( response.success ) {
 				thiz.removeClass('js-wpv-section-unsaved');
 				jQuery('.js-screen-options').find('.toolset-alert').remove();
-				if (jQuery('.js-wpv-section-unsaved').length < 1) {
+				if ( jQuery('.js-wpv-section-unsaved').length < 1 ) {
 					setConfirmUnload(false);
 				}
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:update_message,
-						type:'success',
-						inline:true,
-						stay:false
-					});
+				WPViews.view_edit_screen.manage_ajax_success( response.data, thiz_message_container );
 			} else {
-				thiz_message_container
-					.wpvToolsetMessage({
-						text:unsaved_message,
-						type:'error',
-						inline:true,
-						stay:true
-					});
-				console.log( "Error: AJAX returned ", response );
+				WPViews.view_edit_screen.manage_ajax_fail( response.data, thiz_message_container );
 			}
 		},
 		error: function( ajaxContext ) {

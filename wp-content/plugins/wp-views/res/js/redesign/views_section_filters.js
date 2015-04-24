@@ -24,6 +24,16 @@ WPViews.QueryFilters = function( $ ) {
 	
 	self.url_pattern = /^[a-z0-9\-\_]+$/;
 	self.shortcode_pattern = /^[a-z0-9]+$/;
+	self.year_pattern = /^([0-9]{4})$/;
+	self.month_pattern = /^([1-9]|1[0-2])$/;
+	self.week_pattern = /^([1-9]|[1234][0-9]|5[0-3])$/;
+	self.day_pattern = /^([1-9]|[12][0-9]|3[0-1])$/;
+	self.hour_pattern = /^([0-9]|[1][0-9]|2[0-3])$/;
+	self.minute_pattern = /^([0-9]|[1234][0-9]|5[0-9])$/;
+	self.second_pattern = /^([0-9]|[1234][0-9]|5[0-9])$/;
+	self.dayofyear_pattern = /^([1-9]|[1-9][0-9]|[12][0-9][0-9]|3[0-6][0-6])$/;
+	self.dayofweek_pattern = /^[1-7]+$/;
+	self.numeric_natural_pattern = /^[0-9]+$/;
 	
 	// ---------------------------------
 	// Functions
@@ -143,8 +153,13 @@ WPViews.QueryFilters = function( $ ) {
 		var input_valid = true,
 		value = selector.val(),
 		message = '',
-		filter_error_container = selector.parents( '.js-filter-row' ).find( '.js-wpv-filter-toolset-messages' );
-		if ( type == 'url' ) {
+		filter_error_container = selector.closest( '.js-wpv-filter-multiple-element, .js-filter-row' ).find( '.js-wpv-filter-toolset-messages' );
+		if ( type == 'select' ) {
+			if ( value == '' ) {
+				message = wpv_filters_strings.select_empty;
+				input_valid = false;
+			}
+		} else if ( type == 'url' ) {
 			if ( value == '' ) {
 				message = wpv_filters_strings.param_missing;
 				input_valid = false;
@@ -164,8 +179,7 @@ WPViews.QueryFilters = function( $ ) {
 				message = wpv_filters_strings.param_forbidden_taxonomy;
 				input_valid = false;
 			}
-		}
-		if ( type == 'shortcode' ) {
+		} else if ( type == 'shortcode' ) {
 			if ( value == '' ) {
 				message = wpv_filters_strings.param_missing;
 				input_valid = false;
@@ -176,9 +190,58 @@ WPViews.QueryFilters = function( $ ) {
 				message = wpv_filters_strings.param_forbidden_toolset_attr;
 				input_valid = false;
 			}
+		} else if ( type == 'year' ) {
+			if ( self.year_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_year_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'month' ) {
+			if ( self.month_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_month_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'week' ) {
+			if ( self.week_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_week_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'day' ) {
+			if ( self.day_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_day_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'hour' ) {
+			if ( self.hour_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_hour_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'minute' ) {
+			if ( self.minute_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_minute_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'second' ) {
+			if ( self.second_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_second_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'dayofyear' ) {
+			if ( self.dayofyear_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_dayofyear_ilegal;
+				input_valid = false;
+			}
+		} else if ( type == 'dayofweek' ) {
+			if ( self.dayofweek_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_dayofweek_ilegal;;
+				input_valid = false;
+			}
+		} else if ( type == 'numeric_natural' ) {
+			if ( self.numeric_natural_pattern.test( value ) == false ) {
+				message = wpv_filters_strings.param_numeric_natural_ilegal;
+				input_valid = false;
+			}
 		}
 		if ( ! input_valid ) {
-			// @todo review the wpvToolsetMessage and attach it to an empty container
 			filter_error_container
 				.wpvToolsetMessage({
 					text: message,
@@ -186,6 +249,10 @@ WPViews.QueryFilters = function( $ ) {
 					inline: false,
 					stay: true
 				});
+			// Hack to allow more than one error message per filter
+			filter_error_container
+				.data( 'message-box', null )
+				.data( 'has_message', false );
 		}
 		return input_valid;
 	};
@@ -195,6 +262,11 @@ WPViews.QueryFilters = function( $ ) {
 			.find('.toolset-alert-error').not( '.js-wpv-permanent-alert-error' )
 			.each( function() {
 				$( this ).remove();
+			});
+		$( row )
+			.find( '.filter-input-error' )
+			.each( function() {
+				$( this ).removeClass( 'filter-input-error' );
 			});
 	};
 	
@@ -289,6 +361,10 @@ WPViews.QueryFilters = function( $ ) {
 						var responseRow = $('.js-filter-list').append( response );
 					}
 					self.first_open_filter_row( '.js-wpv-filter-row-usermeta-field' );
+				} else if ( filter_type == 'post_date' ) {
+					$( '.js-filter-list .js-filter-row-post-date' ).remove();
+					var responseRow = $( '.js-filter-list' ).append( response );
+					self.first_open_filter_row( '.js-filter-list .js-filter-row-post-date' );
 				} else {
 					$( '.js-filter-list .js-filter-row-' + filter_type ).remove();
 					var responseRow = $( '.js-filter-list' ).append( response );
@@ -327,18 +403,19 @@ WPViews.QueryFilters = function( $ ) {
 
 	$( document ).on( 'click', self.selector_delete_simple_filter, function() {
 		var thiz = $( this ),
-		row = thiz.parents( 'li.js-filter-row' ),
+		row = thiz.closest( 'li.js-filter-row' ),
 		filter = row.attr( 'id' ).substring( 7 ),
 		nonce = thiz.data( 'nonce' ),
 		action = 'wpv_filter_' + filter + '_delete',
 		spinnerContainer = $( '<div class="spinner ajax-loader">' ).insertBefore( thiz ).show(),
+		error_container = row.find( '.js-wpv-filter-toolset-messages' );
 		data = {
 			action: action,
 			id: self.view_id,
 			wpnonce: nonce,
 		};
 		$.post( ajaxurl, data, function( response ) {
-			if ( ( typeof( response ) !== 'undefined' ) ) {
+			if ( response.success ) {
 				row.find( '.js-wpv-filter-edit-ok' ).removeClass( 'js-wpv-section-unsaved' );
 				row
 					.addClass( 'wpv-filter-deleted' )
@@ -352,9 +429,9 @@ WPViews.QueryFilters = function( $ ) {
 				$( '.js-filter-add-select' ).val( '-1' );
 				$( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
 			} else {
-				console.log( "Error: AJAX returned ", response );
+				WPViews.view_edit_screen.manage_ajax_fail( response.data, error_container );
 			}
-		})
+		}, 'json' )
 		.fail( function( jqXHR, textStatus, errorThrown ) {
 			console.log( "Error: ", textStatus, errorThrown );
 		})
@@ -540,21 +617,18 @@ jQuery( document ).on( 'click', '.js-wpv-filter-missing-delete', function(e) {
 		tax: missing_tax,
 		rel: missing_rel,
 		search: missing_search,
-		nonce: thiz.data('nonce')
+		wpnonce: thiz.data('nonce')
 	};
-	jQuery.post(ajaxurl, data, function(response) {
-		if ( (typeof(response) !== 'undefined') ) {
-			decoded_response = jQuery.parseJSON(response);
-			if ( decoded_response.success === data.id ) {
-				jQuery('.js-filter-list').html(decoded_response.wpv_filter_update_filters_list);
-				jQuery( document ).trigger( 'js_event_wpv_query_filter_deleted', [ 'all' ] );
-				thiz.parents( '.js-wpv-missing-filter-container' ).html('').hide();
-				jQuery( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
-			}
+	jQuery.post( ajaxurl, data, function( response ) {
+		if ( response.success ) {
+			jQuery( '.js-filter-list' ).html( response.data.updated_filters_list );
+			jQuery( document ).trigger( 'js_event_wpv_query_filter_deleted', [ 'all' ] );
+			thiz.closest( '.js-wpv-missing-filter-container' ).html( '' ).hide();
+			jQuery( '.js-post_ID' ).trigger( 'wpv_trigger_dps_existence_intersection_missing' );
 		} else {
-			//if(  WPV_Parametric.debug ) console.log( WPV_Parametric.ajax_error, response );
+			
 		}
-	})
+	}, 'json' )
 	.fail(function(jqXHR, textStatus, errorThrown) {
 		//if(  WPV_Parametric.debug ) console.log( WPV_Parametric.error_generic, textStatus, errorThrown );
 	})
@@ -612,7 +686,7 @@ function wpv_dps_existence_intersection_missing() {
 					}
 				} else {
 					intersection_container.hide();
-					intersection_container_ok.fadeIn( 'fats' );
+					intersection_container_ok.fadeIn( 'fast' );
 				}
 				if ( decoded_response.missing != '' ) {
 					missing_container.html( decoded_response.missing );

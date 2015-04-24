@@ -72,19 +72,6 @@ function wpv_layout_start_shortcode($atts){
     
     global $WP_Views;
     
-    // TODO Check Additional JS
-    $view_settings = $WP_Views->get_view_layout_settings();
-    if (!empty($view_settings['additional_js'])) {
-        $scripts = explode(',', $view_settings['additional_js']);
-        $count = 1;
-        foreach ($scripts as $script) {
-            if (strpos($script, '[theme]') == 0) {
-                $script = str_replace('[theme]', get_stylesheet_directory_uri(), $script);
-            }
-            add_action('wp_footer', create_function('$a=1, $script=\'' . $script. '\'', 'echo "<script type=\"text/javascript\" src=\"$script?ver=" . rand(1, 1000) . "\"></script>";'), 21); // Set priority higher than 20, when all the footer scripts are loaded
-            $count++;
-        }
-    }
     $view_settings = $WP_Views->get_view_settings();
     $class = array('js-wpv-view-layout');
     $style = array();

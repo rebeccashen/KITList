@@ -6,6 +6,7 @@
 * @package Views
 *
 * @since unknown
+* @todo this is ready to add URL params, shortcode attrs and framework values options
 */
 
 WPV_Parent_Filter::on_load();
@@ -92,7 +93,8 @@ class WPV_Parent_Filter {
 		$filters['post_parent'] = array(
 			'name' => __( 'Post parent', 'wpv-views' ),
 			'present' => 'parent_mode',
-			'callback' => array( 'WPV_Parent_Filter', 'wpv_add_new_filter_post_parent_list_item' )
+			'callback' => array( 'WPV_Parent_Filter', 'wpv_add_new_filter_post_parent_list_item' ),
+			'group' => __( 'Post filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -140,16 +142,15 @@ class WPV_Parent_Filter {
 	*/
 
 	static function wpv_get_list_item_ui_post_parent( $view_settings = array() ) {
-		global $sitepress;
 		if ( isset( $view_settings['parent_mode'] ) && is_array( $view_settings['parent_mode'] ) ) {
 			$view_settings['parent_mode'] = $view_settings['parent_mode'][0];
 		}
-		if ( isset( $sitepress ) && function_exists( 'icl_object_id' ) && isset( $view_settings['parent_id'] ) && !empty( $view_settings['parent_id'] ) ) {
+		if ( 
+			isset( $view_settings['parent_id'] ) 
+			&& ! empty( $view_settings['parent_id'] ) 
+		) {
 			// Adjust for WPML support
-			$target_post_type = get_post_type(  $view_settings['parent_id'] );
-			if ( $target_post_type ) {
-				$view_settings['parent_id'] = icl_object_id( $view_settings['parent_id'], $target_post_type, true );
-			}
+			$view_settings['parent_id'] = apply_filters( 'translate_object_id', $view_settings['parent_id'], 'any', true, null );
 		}
 		ob_start();
 		?>
@@ -188,38 +189,81 @@ class WPV_Parent_Filter {
 	*/
 
 	static function wpv_filter_post_parent_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_parent_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_parent_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$change = false;
+		$view_id = $_POST['id'];
 		parse_str( $_POST['filter_options'], $filter_parent );
-		$view_array = get_post_meta($_POST["id"], '_wpv_settings', true);
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
 		if ( ! isset( $filter_parent['parent_id'] ) ) {
 			$filter_parent['parent_id'] = 0;
 		}
-		if ( ! isset( $view_array['parent_mode'] ) || $filter_parent['parent_mode'] != $view_array['parent_mode'] ) {
-			$change = true;
-			$view_array['parent_mode'] = $filter_parent['parent_mode'];
-		}
-		if ( ! isset( $view_array['parent_id'] ) || $filter_parent['parent_id'] != $view_array['parent_id'] ) {
-			$change = true;
-			$view_array['parent_id'] = $filter_parent['parent_id'];
+		$settings_to_check = array(
+			'parent_mode', 'parent_id',
+			'parent_shortcode_attribute',
+			'parent_url_parameter',
+			'parent_framework'
+		);
+		foreach ( $settings_to_check as $set ) {
+			if ( 
+				isset( $filter_parent[$set] ) 
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_parent[$set] != $view_array[$set] 
+				)
+			) {
+				if ( is_array( $filter_parent[$set] ) ) {
+					$filter_parent[$set] = array_map( 'sanitize_text_field', $filter_parent[$set] );
+				} else {
+					$filter_parent[$set] = sanitize_text_field( $filter_parent[$set] );
+				}
+				$change = true;
+				$view_array[$set] = $filter_parent[$set];
+			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
-		echo wpv_get_filter_post_parent_summary_txt(
-			array(
-				'parent_mode'	=> $filter_parent['parent_mode'],
-				'parent_id'	=> $filter_parent['parent_id']
-			)
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Post parent filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_post_parent_summary_txt( $filter_parent )
 		);
-		die();
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -252,20 +296,53 @@ class WPV_Parent_Filter {
 	*/
 
 	static function wpv_filter_post_parent_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_parent_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
-		$view_array = get_post_meta($_POST["id"], '_wpv_settings', true);
-		if ( isset( $view_array['parent_mode'] ) ) {
-			unset( $view_array['parent_mode'] );
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_parent_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
-		if ( isset( $view_array['parent_id'] ) ) {
-			unset( $view_array['parent_id'] );
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+		$to_delete = array(
+			'parent_mode', 'parent_id',
+			'parent_shortcode_attribute',
+			'parent_url_parameter',
+			'parent_framework'
+		);
+		foreach ( $to_delete as $index ) {
+			if ( isset( $view_array[$index] ) ) {
+				unset( $view_array[$index] );
+			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Post parent filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	//-----------------------
@@ -288,7 +365,8 @@ class WPV_Parent_Filter {
 			'name' => __( 'Taxonomy parent', 'wpv-views' ),
 			'present' => 'taxonomy_parent_mode',
 			'callback' => array( 'WPV_Parent_Filter', 'wpv_add_new_filter_taxonomy_parent_list_item' ),
-			'args' => $taxonomy_type
+			'args' => $taxonomy_type,
+			'group' => __( 'Taxonomy filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -339,7 +417,6 @@ class WPV_Parent_Filter {
 	*/
 
 	static function wpv_get_list_item_ui_taxonomy_parent( $view_settings = array() ) {
-		global $sitepress;
 		if ( isset( $view_settings['taxonomy_type'] ) && is_array( $view_settings['taxonomy_type'] ) && sizeof( $view_settings['taxonomy_type'] ) > 0 ) {
 			$view_settings['taxonomy_type'] = $view_settings['taxonomy_type'][0];
 			if ( ! taxonomy_exists( $view_settings['taxonomy_type'] ) ) {
@@ -350,14 +427,17 @@ class WPV_Parent_Filter {
 			$view_settings['taxonomy_parent_mode'] = $view_settings['taxonomy_parent_mode'][0];
 		}
 		if ( 
-			isset( $sitepress ) 
-			&& function_exists( 'icl_object_id' )
-			&& isset( $view_settings['taxonomy_type'] )
+			isset( $view_settings['taxonomy_type'] )
 			&& isset( $view_settings['taxonomy_parent_id'] )
 			&& ! empty( $view_settings['taxonomy_parent_id'] ) 
 		) {
+			// WordPress 4.2 compatibility - split terms
+			$candidate_term_id_splitted = wpv_compat_get_split_term( $view_settings['taxonomy_parent_id'], $view_settings['taxonomy_type'] );
+			if ( $candidate_term_id_splitted ) {
+				$view_settings['taxonomy_parent_id'] = $candidate_term_id_splitted;
+			}
 			// Adjust for WPML support
-			$view_settings['taxonomy_parent_id'] = icl_object_id( $view_settings['taxonomy_parent_id'], $view_settings['taxonomy_type'], true );
+			$view_settings['taxonomy_parent_id'] = apply_filters( 'translate_object_id', $view_settings['taxonomy_parent_id'], $view_settings['taxonomy_type'], true, null );
 		}
 		ob_start();
 		?>
@@ -410,33 +490,82 @@ class WPV_Parent_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_parent_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_parent_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_parent_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$change = false;
+		$view_id = $_POST['id'];
 		parse_str( $_POST['filter_options'], $filter_tax_parent );
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
 		if ( ! isset( $filter_tax_parent['taxonomy_parent_id'] ) ) {
 			$filter_tax_parent['taxonomy_parent_id'] = 0;
 		}
-		if ( ! isset( $view_array['taxonomy_parent_mode'] ) || $filter_tax_parent['taxonomy_parent_mode'] != $view_array['taxonomy_parent_mode'] ) {
-			$change = true;
-			$view_array['taxonomy_parent_mode'] = $filter_tax_parent['taxonomy_parent_mode'];
-		}
-		if ( ! isset( $view_array['taxonomy_parent_id'] ) || $filter_tax_parent['taxonomy_parent_id'] != $view_array['taxonomy_parent_id'] ) {
-			$change = true;
-			$view_array['taxonomy_parent_id'] = $filter_tax_parent['taxonomy_parent_id'];
+		$settings_to_check = array(
+			'taxonomy_parent_mode',
+			'taxonomy_parent_id',
+			'taxonomy_parent_shortcode_attribute',
+			'taxonomy_parent_url_parameter',
+			'taxonomy_parent_framework'
+		);
+		foreach ( $settings_to_check as $set ) {
+			if ( 
+				isset( $filter_tax_parent[$set] ) 
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_tax_parent[$set] != $view_array[$set] 
+				)
+			) {
+				if ( is_array( $filter_tax_parent[$set] ) ) {
+					$filter_tax_parent[$set] = array_map( 'sanitize_text_field', $filter_tax_parent[$set] );
+				} else {
+					$filter_tax_parent[$set] = sanitize_text_field( $filter_tax_parent[$set] );
+				}
+				$change = true;
+				$view_array[$set] = $filter_tax_parent[$set];
+			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
-		echo wpv_get_filter_taxonomy_parent_summary_txt( $view_array );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Taxonomy parent filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_taxonomy_parent_summary_txt( $view_array )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -470,21 +599,54 @@ class WPV_Parent_Filter {
 	*/
 
 	static function wpv_filter_taxonomy_parent_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_taxonomy_parent_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_taxonomy_parent_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		if ( isset( $view_array['taxonomy_parent_mode'] ) ) {
-			unset( $view_array['taxonomy_parent_mode'] );
-		}
-		if ( isset( $view_array['taxonomy_parent_id'] ) ) {
-			unset( $view_array['taxonomy_parent_id'] );
+		$to_delete = array(
+			'taxonomy_parent_mode',
+			'taxonomy_parent_id',
+			'taxonomy_parent_shortcode_attribute',
+			'taxonomy_parent_url_parameter',
+			'taxonomy_parent_framework'
+		);
+		foreach ( $to_delete as $index ) {
+			if ( isset( $view_array[$index] ) ) {
+				unset( $view_array[$index] );
+			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
-
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Taxonomy parent filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -526,20 +688,23 @@ class WPV_Parent_Filter {
 	static function wpv_render_post_parent_options( $view_settings = array() ) {
 		$defaults = array(
 			'parent_mode' => 'current_page',
-			'parent_id' => 0
+			'parent_id' => 0,
+			'parent_shortcode_attribute' => 'wpvchildof',
+			'parent_url_parameter' => 'wpv-child-of',
+			'parent_framework' => ''
 		);
 		$view_settings = wp_parse_args( $view_settings, $defaults );
 		?>
 		<h4><?php  _e( 'Select post with parent:', 'wpv-views' ); ?></h4>
 		<ul class="wpv-filter-options-set">
 			<li>
-				<input type="radio" class="js-parent-mode" name="parent_mode[]" id="parent-mode-current-page" value="current_page" <?php checked( $view_settings['parent_mode'], 'current_page' ); ?> />
+				<input type="radio" class="js-parent-mode" name="parent_mode[]" id="parent-mode-current-page" value="current_page" <?php checked( $view_settings['parent_mode'], 'current_page' ); ?> autocomplete="off" />
 				<label for="parent-mode-current-page"><?php _e('Parent is the current page', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" class="js-parent-mode" name="parent_mode[]" id="parent-mode-this-page" value="this_page" <?php checked( $view_settings['parent_mode'], 'this_page' ); ?> />
+				<input type="radio" class="js-parent-mode" name="parent_mode[]" id="parent-mode-this-page" value="this_page" <?php checked( $view_settings['parent_mode'], 'this_page' ); ?> autocomplete="off" />
 				<label for="parent-mode-this-page"><?php _e('Parent is:', 'wpv-views'); ?></label>
-				<select id="wpv_parent_post_type" class="js-post-parent-post-type" name="parent_type" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_parent_post_type_nonce' ); ?>">
+				<select id="wpv_parent_post_type" class="js-post-parent-post-type" name="parent_type" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_parent_post_type_nonce' ); ?>" autocomplete="off">
 				<?php
 					$hierarchical_post_types = get_post_types( array( 'hierarchical' => true ), 'objects');
 					if ( $view_settings['parent_id'] == 0 ) {
@@ -551,7 +716,9 @@ class WPV_Parent_Filter {
 						}
 					}
 					foreach ( $hierarchical_post_types as $post_type ) {
-						echo '<option value="' . $post_type->name . '" ' . selected( $selected_type, $post_type->name, false ) . '>' . $post_type->labels->singular_name . '</option>';
+						?>
+						<option value="<?php echo esc_attr( $post_type->name ); ?>" <?php selected( $selected_type, $post_type->name ); ?>><?php echo $post_type->labels->singular_name; ?></option>
+						<?php 
 					}
 				?>
 				</select>
@@ -565,6 +732,44 @@ class WPV_Parent_Filter {
 					)
 				); ?>
 			</li>
+			<li>
+				<input type="radio" class="js-parent-mode" name="parent_mode[]" id="parent-mode-no-parent" value="no_parent" <?php checked( $view_settings['parent_mode'], 'no_parent' ); ?> autocomplete="off" />
+				<label for="parent-mode-no-parent"><?php _e('No parent (return top-level elements)', 'wpv-views'); ?></label>
+			</li>
+			<li>
+				<input type="radio" id="parent-mode-shortcode" class="js-parent-mode" name="parent_mode[]" value="shortcode_attribute" <?php checked( $view_settings['parent_mode'], 'shortcode_attribute' ); ?> autocomplete="off" />
+				<label for="parent-mode-shortcode"><?php _e('Post with ID set by the shortcode attribute', 'wpv-views'); ?></label>
+				<input class="js-parent-shortcode-attribute js-wpv-filter-validate" name="parent_shortcode_attribute" data-type="shortcode" type="text" value="<?php echo esc_attr( $view_settings['parent_shortcode_attribute'] ); ?>" autocomplete="off" />
+			</li>
+			<li>
+				<input type="radio" id="parent-mode-url" class="js-parent-mode" name="parent_mode[]" value="url_parameter" <?php checked( $view_settings['parent_mode'], 'url_parameter' ); ?> autocomplete="off" />
+				<label for="parent-mode-url"><?php _e('Post with ID set by the URL parameter', 'wpv-views'); ?></label>
+				<input class="js-parent-url-parameter js-wpv-filter-validate" name="parent_url_parameter" data-type="url" type="text" value="<?php echo esc_attr( $view_settings['parent_url_parameter'] ); ?>" autocomplete="off" />
+			</li>
+			<?php
+			global $WP_Views_fapi;
+			if ( $WP_Views_fapi->framework_valid ) {
+				$framework_data = $WP_Views_fapi->framework_data
+			?>
+			<li>
+				<input type="radio" id="parent-mode-framework" class="js-parent-mode" name="parent_mode[]" value="framework" <?php checked( $view_settings['parent_mode'], 'framework' ); ?> autocomplete="off" />
+				<label for="parent-mode-framework"><?php echo sprintf( __( 'Post with ID set by the %s key: ', 'wpv-views'), $framework_data['name'] ); ?></label>
+				<select name="parent_framework" autocomplete="off">
+					<option value=""><?php _e( 'Select a key', 'wpv-views' ); ?></option>
+					<?php
+					$fw_key_options = array();
+					$fw_key_options = apply_filters( 'wpv_filter_extend_framework_options_for_parent', $fw_key_options );
+					foreach ( $fw_key_options as $index => $value ) {
+						?>
+						<option value="<?php echo esc_attr( $index ); ?>" <?php selected( $view_settings['parent_framework'], $index ); ?>><?php echo $value; ?></option>
+						<?php
+					}
+					?>
+				</select>
+			</li>
+			<?php
+			}
+			?>
 		</ul>
 		<?php
 	}
@@ -586,7 +791,7 @@ class WPV_Parent_Filter {
 			array(
 				'name' => 'parent_id',
 				'selected' => 0,
-				'post_type'=> $_POST['post_type'],
+				'post_type'=> sanitize_text_field( $_POST['post_type'] ),
 				'show_option_none' => __( 'None', 'wpv-views' ),
 				'id' => 'post_parent_id'
 			)
@@ -632,7 +837,7 @@ class WPV_Parent_Filter {
 					}
 				if ( taxonomy_exists( $taxonomy ) ) {
 				?>
-				<select name="taxonomy_parent_id" class="js-taxonomy-parent-id" data-taxonomy="<?php echo $taxonomy; ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_taxonomy_parent_id_nonce' ); ?>">
+				<select name="taxonomy_parent_id" class="js-taxonomy-parent-id" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_taxonomy_parent_id_nonce' ); ?>">
 					<option value="0"><?php echo __('None', 'wpv-views'); ?></option>
 					<?php 
 						$my_walker = new Walker_Category_id_select( $view_settings['taxonomy_parent_id'] );
@@ -680,10 +885,10 @@ class WPV_Parent_Filter {
 
 	static function update_taxonomy_parent_id_dropdown() {
 		if ( wp_verify_nonce( $_POST['wpnonce'], 'wpv_view_filter_taxonomy_parent_id_nonce' ) ) {
-			$taxonomy = $_POST['taxonomy'];
+			$taxonomy = sanitize_text_field( $_POST['taxonomy'] );
 			if ( taxonomy_exists( $taxonomy ) ) {
 			?>
-			<select name="taxonomy_parent_id" class="js-taxonomy-parent-id" data-taxonomy="<?php echo $taxonomy; ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_taxonomy_parent_id_nonce' ); ?>">
+			<select name="taxonomy_parent_id" class="js-taxonomy-parent-id" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_taxonomy_parent_id_nonce' ); ?>">
 				<option value="0"><?php echo __('None', 'wpv-views'); ?></option>
 				<?php 
 					$my_walker = new Walker_Category_id_select( 0 );

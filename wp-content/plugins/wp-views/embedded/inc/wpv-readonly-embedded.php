@@ -18,9 +18,11 @@
  */
 function views_embedded_html() {
 	global $WP_Views, $post;
-	
-	if ( isset( $_GET['view_id'] ) && is_numeric( $_GET['view_id'] ) ) {
-		$view_id = (int)$_GET['view_id'];
+	if ( 
+		isset( $_GET['view_id'] ) 
+		&& is_numeric( $_GET['view_id'] ) 
+	) {
+		$view_id = (int) $_GET['view_id'];
 		$view = get_post( $view_id );
 		if ( null == $view ) {
 			wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views' ) );
@@ -28,11 +30,14 @@ function views_embedded_html() {
 			wpv_die_toolset_alert_error( __('You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
 		} else {
 			$view_settings = $WP_Views->get_view_settings( $_GET['view_id'] );
-			$view_layout_settings = get_post_meta($_GET['view_id'], '_wpv_layout_settings', true);
-			if ( isset( $view_settings['view-query-mode'] ) && ( 'normal' ==  $view_settings['view-query-mode'] ) ) {
+			$view_layout_settings = $WP_Views->get_view_layout_settings( $_GET['view_id'] );
+			if ( 
+				isset( $view_settings['view-query-mode'] ) 
+				&& ( 'normal' ==  $view_settings['view-query-mode'] ) 
+			) {
 				$post = $view;
 				if ( get_post_status( $view_id ) == 'trash' ) {
-					wpv_die_toolset_alert_error( __('You can�t edit this View because it is in the Trash. Please restore it and try again.', 'wpv-views') );
+					wpv_die_toolset_alert_error( __('You can&#8217;t edit this View because it is in the Trash. Please restore it and try again.', 'wpv-views') );
 				}
 			} else {
 				wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
@@ -42,25 +47,29 @@ function views_embedded_html() {
 		wpv_die_toolset_alert_error( __('You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
 	}
 	?>
-		<div class="wrap toolset-views">
+		<div class="wrap toolset-views toolset-views-embedded">
 			<div id="icon-edit" class="icon32 icon32-posts-post"><br></div>
-			<h2><?php echo __( 'Preview View','wpv-views' ); ?></h2>
-
+			<h2><?php _e( 'Preview View','wpv-views' ); ?></h2>
+			<input id="post_ID" class="js-post_ID" type="hidden" value="<?php echo esc_attr( $view_id ); ?>" />
+			<div id="js-wpv-general-actions-bar" class="wpv-general-actions-bar">
 			<?php
-				if( !isset( $view_settings['view_purpose'] ) ) {
-					$view_settings['view_purpose'] = 'full';
-				}
+			wpv_get_embedded_promotional_box( 'view' );
+			?>
+			</div>
+			<?php
+			if ( ! isset( $view_settings['view_purpose'] ) ) {
+				$view_settings['view_purpose'] = 'full';
+			}
 			?>
 			<input type="hidden" class="js-wpv-view-purpose" value="<?php echo esc_attr( $view_settings['view_purpose'] ); ?>" />
-
 			<?php
-				if ( isset( $_GET['in-iframe-for-layout'] ) ) {
-					$in_iframe = 'yes';
-				} else {
-					$in_iframe = '';
-				}
+			if ( isset( $_GET['in-iframe-for-layout'] ) ) {
+				$in_iframe = 'yes';
+			} else {
+				$in_iframe = '';
+			}
 			?>
-			<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo $in_iframe; ?>" />
+			<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo esc_attr( $in_iframe ); ?>" />
 
 			<div class="wpv-title-section">
 				<div class="wpv-setting-container wpv-settings-title-and-desc">
@@ -71,15 +80,21 @@ function views_embedded_html() {
 				</div>
 				<div class="wpv-setting">
 					<h3 style="margin-top:8px;font-size:18px;line-height:1.5;">
-						<?php echo get_the_title( $view_id ); ?>
+						<?php echo esc_html( get_the_title( $view_id ) ); ?>
 					</h3>
 					<p>
-						<?php _e( 'Slug of this View: ', 'wpv-views' ); echo '<code>' . esc_attr( $view->post_name ) . '</code>'; ?>
+						<?php 
+						_e( 'Slug of this View: ', 'wpv-views' ); 
+						echo '<code>' . esc_attr( $view->post_name ) . '</code>'; 
+						?>
 					</p>
 					<?php
 						$view_description = get_post_meta( $_GET['view_id'], '_wpv_description', true );
-						if ( isset( $view_description ) && !empty( $view_description ) ) {
-							printf( '<p>%s</p>', $view_description );
+						if ( 
+							isset( $view_description ) 
+							&& ! empty( $view_description ) 
+						) {
+							printf( '<p>%s</p>', esc_html( $view_description ) );
 						}
 					?>
 				</div>
@@ -88,7 +103,8 @@ function views_embedded_html() {
 		
 		<div class="wpv-query-section">
 			<?php
-				wpv_get_embedded_view_introduction_data();
+				// Commented out in Views 1.8
+				// wpv_get_embedded_view_introduction_data();
 			?>
 			<h3 class="wpv-section-title">
 				<?php _e('The Query section determines what content the View loads from the database','wpv-views') ?>
@@ -101,7 +117,8 @@ function views_embedded_html() {
 				<?php _e('The Filter section lets you set up pagination and parametric search, which let visitors control the View query','wpv-views') ?>
 			</h3>
 			<?php
-				wpv_get_embedded_view_filter_introduction_data();
+				// Commented out in Views 1.8
+				// wpv_get_embedded_view_filter_introduction_data();
 			?>
 			<?php do_action( 'view-embedded-section-filter', $view_settings, $view_id ); ?>
 		</div>
@@ -109,7 +126,8 @@ function views_embedded_html() {
 		<div class="wpv-layout-section">
 			<h3 class="wpv-section-title"><?php _e('The Loop Output section styles the View output on the page.','wpv-views') ?></h3>
 			<?php
-				wpv_get_embedded_view_layout_introduction_data();
+				// Commented out in Views 1.8
+				// wpv_get_embedded_view_layout_introduction_data();
 			?>
 			<?php do_action( 'view-embedded-section-layout', $view_settings, $view_layout_settings, $view_id ); ?>
 			<?php do_action( 'view-embedded-section-extra', $view_settings, $view_id ); ?>
@@ -118,7 +136,7 @@ function views_embedded_html() {
 		<div class="wpv-help-section">
 			<div class="js-show-toolset-message"
 					data-close="false"
-					data-tutorial-button-text="<?php echo htmlentities( __('Learn how to display Views','wpv-views'), ENT_QUOTES ) ?>" 
+					data-tutorial-button-text="<?php echo esc_attr( __('Learn how to display Views','wpv-views') ) ?>" 
 					data-tutorial-button-url="http://wp-types.com/documentation/user-guides/views/?utm_source=viewsplugin&utm_campaign=views&utm_medium=embedded-view-readonly-info&utm_term=Want to see this in action?#2.5">
 				<h2><?php _e( 'Want to see this in action?','wpv-views' ) ?></h2>
 			</div>
@@ -137,55 +155,76 @@ function views_embedded_html() {
  */
 function content_templates_embedded_html() {
 	global $post;
-	
-	if ( isset( $_GET['view_id'] ) && is_numeric( $_GET['view_id'] ) ) {
-		$view_id = (int)$_GET['view_id'];
+	if ( 
+		isset( $_GET['view_id'] ) 
+		&& is_numeric( $_GET['view_id'] ) 
+	) {
+		$view_id = (int) $_GET['view_id'];
 		$view = get_post( $view_id );
-		if ( ( null == $view ) || ( 'view-template' != $view->post_type ) ) {
-			wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
+		if ( 
+			( null == $view ) 
+			|| ( 'view-template' != $view->post_type ) 
+		) {
+			wpv_die_toolset_alert_error( __( 'You attempted to edit a Content Template that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
 		} else {
 			$post = $view;
 			if ( get_post_status( $view_id ) == 'trash' ) {
-				wpv_die_toolset_alert_error( __( 'You can&#8217;t edit this View because it is in the Trash. Please restore it and try again.', 'wpv-views') );
+				wpv_die_toolset_alert_error( __( 'You can&#8217;t edit this Content Template because it is in the Trash. Please restore it and try again.', 'wpv-views') );
 			}
 		}
 	} else {
-		wpv_die_toolset_alert_error( __('You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
+		wpv_die_toolset_alert_error( __('You attempted to edit a Content Template that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
 	}
 	?>
-	<div class="wrap toolset-views">
+	<div class="wrap toolset-views toolset-views-embedded">
 		<div id="icon-edit" class="icon32 icon32-posts-post"><br></div>
-		<h2><?php echo __( 'Preview Content Template','wpv-views' ); ?></h2>
+		<h2><?php _e( 'Preview Content Template','wpv-views' ); ?></h2>
+		<input id="post_ID" class="js-post_ID" type="hidden" value="<?php echo esc_attr( $view_id ); ?>" />
+		<div id="js-wpv-general-actions-bar" class="wpv-general-actions-bar">
 		<?php
-			if ( isset( $_GET['in-iframe-for-layout'] ) ) {
-				$in_iframe = 'yes';
-			} else {
-				$in_iframe = '';
-			}
+		wpv_get_embedded_promotional_box( 'ct' );
 		?>
-		<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo $in_iframe; ?>" />
-		<div class="wpv-setting-container">
-			<h3 style="margin-top:8px;font-size:18px;line-height:1.5;">
-				<?php echo get_the_title( $view_id ); ?>
-			</h3>
-			<p>
-				<?php _e( 'Slug of this Content Template: ', 'wpv-views' ); echo '<code>' . esc_attr( $view->post_name ) . '</code>'; ?>
-			</p>
-			<?php
-				$view_description = get_post_meta( $view_id, '_wpv-content-template-decription', true );
-				if ( isset( $view_description ) && !empty( $view_description ) ) {
-					printf( '<p>%s</p>', $view_description );
-				}
-			?>
-			<?php
-				wpv_get_embedded_content_template_introduction_data();
-			?>
-			<div class="wpv-ct-editors">
+		</div>
+		<?php
+		if ( isset( $_GET['in-iframe-for-layout'] ) ) {
+			$in_iframe = 'yes';
+		} else {
+			$in_iframe = '';
+		}
+		?>
+		<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo esc_attr( $in_iframe ); ?>" />
+		<div class="wpv-title-section">
+			<div class="wpv-setting-container">
+				<h3 style="margin-top:8px;font-size:18px;line-height:1.5;">
+					<?php echo esc_html( get_the_title( $view_id ) ); ?>
+				</h3>
+				<p>
+					<?php 
+					_e( 'Slug of this Content Template: ', 'wpv-views' ); 
+					echo '<code>' . esc_attr( $view->post_name ) . '</code>'; 
+					?>
+				</p>
 				<?php
-					$full_view = get_post( $view_id );
-					$content = $full_view->post_content;
+					$view_description = get_post_meta( $view_id, '_wpv-content-template-decription', true );
+					if ( 
+						isset( $view_description ) 
+						&& ! empty( $view_description ) 
+					) {
+						printf( '<p>%s</p>', esc_html( $view_description ) );
+					}
 				?>
-				<textarea cols="30" rows="10" id="wpv_content" name="wpv_content"><?php echo $content; ?></textarea>
+			</div>
+				<?php
+					wpv_get_embedded_content_template_introduction_data();
+				?>
+			<div class="wpv-setting-container">
+				<div class="wpv-ct-editors">
+					<?php
+						$full_view = get_post( $view_id );
+						$content = $full_view->post_content;
+					?>
+					<textarea cols="30" rows="10" id="wpv_content" name="wpv_content"><?php echo esc_textarea( $content ); ?></textarea>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -202,20 +241,26 @@ function content_templates_embedded_html() {
  */
 function view_archives_embedded_html() {
 	global $WP_Views, $post;
-	
-	if ( isset( $_GET['view_id'] ) && is_numeric( $_GET['view_id'] ) ) {
-		$view_id = (int)$_GET['view_id'];
+	if ( 
+		isset( $_GET['view_id'] ) 
+		&& is_numeric( $_GET['view_id'] ) 
+	) {
+		$view_id = (int) $_GET['view_id'];
 		$view = get_post( $view_id );
-		if ( ( null == $view ) || ( 'view' != $view->post_type ) ) {
+		if ( 
+			( null == $view ) 
+			|| ( 'view' != $view->post_type ) 
+		) {
 			wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views' ) );
 		} else {
 			$view_settings = $WP_Views->get_view_settings( $_GET['view_id'] );
-			$view_layout_settings = get_post_meta( $_GET['view_id'], '_wpv_layout_settings', true );
+			$view_layout_settings = $WP_Views->get_view_layout_settings( $_GET['view_id'] );
 			if ( isset( $view_settings['view-query-mode'] )
-				&& ( ( 'archive' ==  $view_settings['view-query-mode'] )
-					|| // For elements coming from the Layouts post loop cell
-						( 'layouts-loop' ==  $view_settings['view-query-mode'] ) ) )
-			{
+				&& ( 
+					( 'archive' ==  $view_settings['view-query-mode'] )
+					|| ( 'layouts-loop' ==  $view_settings['view-query-mode'] ) // For elements coming from the Layouts post loop cell
+				) 
+			) {
 				$post = $view;
 				if ( get_post_status( $view_id ) == 'trash' ) {
 					wpv_die_toolset_alert_error( __( 'You can&#8217;t edit this View because it is in the Trash. Please restore it and try again.', 'wpv-views' ) );
@@ -228,33 +273,38 @@ function view_archives_embedded_html() {
 		wpv_die_toolset_alert_error( __( 'You attempted to edit a View that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views' ) );
 	}
 	?>
-	<div class="wrap toolset-views">
+	<div class="wrap toolset-views toolset-views-embedded">
 		<div id="icon-edit" class="icon32 icon32-posts-post"><br></div>
 		<h2>
 			<?php
-				if ( 'archive' ==  $view_settings['view-query-mode'] ) {
-					echo __( 'Preview WordPress Archive', 'wpv-views' );
-				} else if ( 'layouts-loop' ==  $view_settings['view-query-mode'] ) {
-					echo __( 'Preview Layouts Loop View', 'wpv-views' );
-				}
+			if ( 'archive' ==  $view_settings['view-query-mode'] ) {
+				echo __( 'Preview WordPress Archive', 'wpv-views' );
+			} else if ( 'layouts-loop' ==  $view_settings['view-query-mode'] ) {
+				echo __( 'Preview Layouts Loop View', 'wpv-views' );
+			}
 			?>
 		</h2>
-
+		<input id="post_ID" class="js-post_ID" type="hidden" value="<?php echo esc_attr( $view_id ); ?>" />
+		<div id="js-wpv-general-actions-bar" class="wpv-general-actions-bar">
 		<?php
-			if( !isset( $view_settings['view_purpose'] ) ) {
-				$view_settings['view_purpose'] = 'full';
-			}
+		wpv_get_embedded_promotional_box( 'wpa' );
+		?>
+		</div>
+		<?php
+		if ( ! isset( $view_settings['view_purpose'] ) ) {
+			$view_settings['view_purpose'] = 'full';
+		}
 		?>
 		<input type="hidden" class="js-wpv-view-purpose" value="<?php echo esc_attr( $view_settings['view_purpose'] ); ?>" />
 
 		<?php
-			if ( isset( $_GET['in-iframe-for-layout'] ) ) {
-				$in_iframe = 'yes';
-			} else {
-				$in_iframe = '';
-			}
+		if ( isset( $_GET['in-iframe-for-layout'] ) ) {
+			$in_iframe = 'yes';
+		} else {
+			$in_iframe = '';
+		}
 		?>
-		<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo $in_iframe; ?>" />
+		<input type="hidden" class="js-wpv-display-in-iframe" value="<?php echo esc_attr( $in_iframe ); ?>" />
 
 		<div class="wpv-title-section">
 			<div class="wpv-setting-container wpv-settings-title-and-desc">
@@ -265,15 +315,21 @@ function view_archives_embedded_html() {
 				</div>
 				<div class="wpv-setting">
 					<h3 style="margin-top:8px;font-size:18px;line-height:1.5;">
-						<?php echo get_the_title( $view_id ); ?>
+						<?php echo esc_html( get_the_title( $view_id ) ); ?>
 					</h3>
 					<p>
-						<?php _e( 'Slug of this WordPress Archive: ', 'wpv-views' ); echo '<code>' . esc_attr( $view->post_name ) . '</code>'; ?>
+						<?php 
+						_e( 'Slug of this WordPress Archive: ', 'wpv-views' ); 
+						echo '<code>' . esc_attr( $view->post_name ) . '</code>'; 
+						?>
 					</p>
 					<?php
-						$view_description = get_post_meta($_GET['view_id'], '_wpv_description', true);
-						if ( isset( $view_description ) && !empty( $view_description ) ) {
-							printf( '<p>%s</p>', $view_description );
+						$view_description = get_post_meta( $_GET['view_id'], '_wpv_description', true );
+						if ( 
+							isset( $view_description ) 
+							&& !empty( $view_description ) 
+						) {
+							printf( '<p>%s</p>', esc_html( $view_description ) );
 						}
 					?>
 				</div>
@@ -285,7 +341,8 @@ function view_archives_embedded_html() {
 				?>
 				<div class="wpv-query-section">
 					<?php
-						wpv_get_embedded_wordpress_archive_introduction_data();
+						// Commented out in Views 1.8
+						// wpv_get_embedded_wordpress_archive_introduction_data();
 					?>
 					<h3 class="wpv-section-title">
 						<?php _e( 'The Loops Selection section determines which listing page to customize', 'wpv-views' ); ?>
@@ -297,7 +354,8 @@ function view_archives_embedded_html() {
 				?>
 				<div class="wpv-query-section">
 					<?php
-						wpv_get_embedded_layouts_loop_introduction_data();
+						// Commented out in Views 1.8
+						// wpv_get_embedded_layouts_loop_introduction_data();
 					?>
 				</div>
 				<?php
@@ -309,20 +367,14 @@ function view_archives_embedded_html() {
 				<?php _e( 'The Loop Output section styles the View output on the page.','wpv-views' ) ?>
 			</h3>
 			<?php
-				wpv_get_embedded_view_layout_introduction_data();
+				// Commented out in Views 1.8
+				// wpv_get_embedded_view_layout_introduction_data();
 			?>
 			<?php do_action( 'view-embedded-section-layout', $view_settings, $view_layout_settings, $view_id ); ?>
 			<?php do_action( 'view-embedded-section-extra', $view_settings, $view_id ); ?>
 		</div>
 
-		<div class="wpv-help-section">
-			<div class="js-show-toolset-message"
-					data-close="false"
-					data-tutorial-button-text="<?php echo htmlentities( __( 'Learn how to display Views','wpv-views'), ENT_QUOTES ) ?>"
-					data-tutorial-button-url="http://wp-types.com/documentation/user-guides/views/?utm_source=viewsplugin&utm_campaign=views&utm_medium=embedded-archive-view-readonly-link&utm_term=Want to see this in action?#2.5">
-				<h2><?php _e( 'Want to see this in action?','wpv-views' ) ?></h2>
-			</div>
-		</div>
+		<div class="wpv-help-section"></div>
 	</div>
 	<?php
 }
@@ -346,22 +398,21 @@ function view_archives_embedded_html() {
 add_action( 'view-embedded-section-archive-loop', 'wpv_embedded_archive_loop', 10, 2 );
 
 function wpv_embedded_archive_loop( $view_settings, $view_id ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'loops_selection' );
 	?>
 	<div class="wpv-setting-container">
 		<div class="wpv-settings-header">
 			<h3>
-				<?php _e( 'Loop selection', 'wpv-views' ) ?>
+				<?php _e( 'Loop Selection', 'wpv-views' ) ?>
 				<i class="icon-question-sign js-display-tooltip"
-						data-header="<?php echo $views_edit_help['loops_selection']['title'] ?>"
-						data-content="<?php echo $views_edit_help['loops_selection']['content'] ?>">
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
 				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
 			<?php
-			global $WP_Views, $WPV_view_archive_loop;
-			$options = $WP_Views->get_options();
+			global $WPV_settings, $WPV_view_archive_loop;
 			$loops = $WPV_view_archive_loop->_get_post_type_loops();
 			$builtin_loops = array(
 					'home-blog-page' => __( 'Home/Blog', 'wpv-views' ),
@@ -376,12 +427,15 @@ function wpv_embedded_archive_loop( $view_settings, $view_id ) {
 			
 			$selected = array();
 			foreach ( $loops as $loop => $loop_name ) {
-				if ( isset( $options[ 'view_' . $loop ] ) && ( $options[ 'view_' . $loop ] == $view_id ) ) {
+				if ( 
+					isset( $WPV_settings[ 'view_' . $loop ] ) 
+					&& ( $WPV_settings[ 'view_' . $loop ] == $view_id ) 
+				) {
 					$not_built_in = '';
-					if ( !isset( $builtin_loops[ $loop ] ) ) {
+					if ( ! isset( $builtin_loops[ $loop ] ) ) {
 						$not_built_in = __( ' (post type archive)', 'wpv-views' );
 					}
-					$selected[] = '<li>' . $loop_name . $not_built_in . '</li>';
+					$selected[] = '<li>' . esc_html( $loop_name ) . $not_built_in . '</li>';
 				}
 			}
 			
@@ -389,12 +443,15 @@ function wpv_embedded_archive_loop( $view_settings, $view_id ) {
 				if ( in_array( $category_slug, $exclude_tax_slugs ) ) {
 					continue;
 				}
-				if ( !$category->show_ui ) {
+				if ( ! $category->show_ui ) {
 					continue; // Only show taxonomies with show_ui set to TRUE
 				}
 				$name = $category->name;
-				if ( isset( $options[ 'view_taxonomy_loop_' . $name ] ) && ( $options[ 'view_taxonomy_loop_' . $name ] == $view_id ) ) {
-					$selected[] = '<li>' . $category->labels->name . __( ' (taxonomy archive)', 'wpv-views' ) . '</li>';
+				if ( 
+					isset( $WPV_settings[ 'view_taxonomy_loop_' . $name ] ) 
+					&& ( $WPV_settings[ 'view_taxonomy_loop_' . $name ] == $view_id ) 
+				) {
+					$selected[] = '<li>' . esc_html( $category->labels->name ) . __( ' (taxonomy archive)', 'wpv-views' ) . '</li>';
 				}
 			}
 			
@@ -427,13 +484,16 @@ function wpv_embedded_archive_loop( $view_settings, $view_id ) {
 add_action( 'view-embedded-section-query', 'wpv_embedded_content_selection', 10 );
 
 function wpv_embedded_content_selection( $view_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'content_section' );
 	?>
 	<div class="wpv-setting-container">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Content Selection', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['content_section']['title']; ?>" data-content="<?php echo $views_edit_help['content_section']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
@@ -458,13 +518,16 @@ function wpv_embedded_content_selection( $view_settings ) {
 add_action( 'view-embedded-section-query', 'wpv_embedded_ordering', 20 );
 
 function wpv_embedded_ordering( $view_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'ordering' );
 	?>
 	<div class="wpv-setting-container">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Ordering', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['ordering']['title']; ?>" data-content="<?php echo $views_edit_help['ordering']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
@@ -479,13 +542,16 @@ function wpv_embedded_ordering( $view_settings ) {
 add_action( 'view-embedded-section-query', 'wpv_embedded_limit_offset', 30 );
 
 function wpv_embedded_limit_offset( $view_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'limit_and_offset' );
 	?>
 	<div class="wpv-setting-container">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Limit and Offset', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['limit_and_offset']['title']; ?>" data-content="<?php echo $views_edit_help['limit_and_offset']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
@@ -505,18 +571,23 @@ function wpv_embedded_limit_offset( $view_settings ) {
 * @param $view_settings
 *
 * @since 1.6.2
+*
+* @todo misses the date filter!
 */
 
 add_action( 'view-embedded-section-query', 'wpv_embedded_query_filter', 40 );
 
 function wpv_embedded_query_filter( $view_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'filter_the_results' );
 	?>
 	<div class="wpv-setting-container">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Query Filter', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['filter_the_results']['title']; ?>" data-content="<?php echo $views_edit_help['filter_the_results']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting wpv-settings-content-filter">
@@ -543,11 +614,11 @@ function wpv_embedded_query_filter( $view_settings ) {
 				$filters_summary .= '<li>' . $taxonomy_search_filter . '</li>';
 			}
 			$custom_field_filter = wpv_get_filter_custom_field_summary_txt( $view_settings );
-			if ( !empty( $custom_field_filter ) ) {
+			if ( ! empty( $custom_field_filter ) ) {
 				$filters_summary .= '<li class="filter-row-multiple">' . __( 'Select posts with custom field:', 'wpv-views' ) . $custom_field_filter . '</li>';
 			}
 			$taxonomy_filter = wpv_get_filter_taxonomy_summary_txt( $view_settings );
-			if ( !empty( $taxonomy_filter ) ) {
+			if ( ! empty( $taxonomy_filter ) ) {
 				$filters_summary .= '<li class="filter-row-multiple">' . __( 'Select posts with taxonomy:', 'wpv-views' ) . $taxonomy_filter . '</li>';
 			}
 			$post_relationship_filter = wpv_get_filter_post_relationship_summary_txt( $view_settings );
@@ -602,18 +673,21 @@ function wpv_embedded_query_filter( $view_settings ) {
 add_action( 'view-embedded-section-filter', 'wpv_embedded_pagination', 10 );
 
 function wpv_embedded_pagination( $view_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'pagination_and_sliders_settings' );
 	?>
 	<div class="wpv-setting-container">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Pagination and Slider settings', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['pagination_and_sliders_settings']['title']; ?>" data-content="<?php echo $views_edit_help['pagination_and_sliders_settings']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
 			<p>
-			<?php echo __( '', 'wpv-views' ) . wpv_get_pagination_summary( $view_settings, 'embedded-info' ); ?>
+			<?php echo wpv_get_pagination_summary( $view_settings, 'embedded-info' ); ?>
 			</p>
 		</div>
 	</div>
@@ -633,17 +707,20 @@ function wpv_embedded_pagination( $view_settings ) {
 add_action( 'view-embedded-section-filter', 'wpv_embedded_filter_extra', 20 );
 
 function wpv_embedded_filter_extra( $view_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'filters_html_css_js' );
 	?>
 	<div class="wpv-setting-container wpv-setting-container-horizontal">
 		<div class="wpv-settings-header">
 			<h3>
-				<?php _e( 'Filter HTML', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['filters_html_css_js']['title']; ?>" data-content="<?php echo $views_edit_help['filters_html_css_js']['content']; ?>"></i>
+				<?php _e( 'Filter', 'wpv-views' ) ?>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
-			<textarea cols="30" rows="10" id="wpv_filter_meta_html_content" name="wpv_filter_meta_html"><?php echo ( isset( $view_settings['filter_meta_html'] ) ) ? $view_settings['filter_meta_html'] : ''; ?></textarea>
+			<textarea cols="30" rows="10" id="wpv_filter_meta_html_content" name="wpv_filter_meta_html"><?php echo ( isset( $view_settings['filter_meta_html'] ) ) ? esc_textarea( $view_settings['filter_meta_html'] ) : ''; ?></textarea>
 		</div>
 	</div>
 	<?php
@@ -663,17 +740,20 @@ function wpv_embedded_filter_extra( $view_settings ) {
 add_action( 'view-embedded-section-layout', 'wpv_embedded_layout_extra', 10, 2 );
 
 function wpv_embedded_layout_extra(  $view_settings, $view_layout_settings ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'layout_html_css_js' );
 	?>
 	<div class="wpv-setting-container wpv-setting-container-horizontal">
 		<div class="wpv-settings-header">
 			<h3>
-				<?php _e( 'Layout HTML', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['layout_html_css_js']['title']; ?>" data-content="<?php echo $views_edit_help['layout_html_css_js']['content']; ?>"></i>
+				<?php _e( 'Loop Output', 'wpv-views' ) ?>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
-			<textarea cols="30" rows="10" id="wpv_layout_meta_html_content" name="wpv_layout_layout_meta_html"><?php echo ( isset( $view_layout_settings['layout_meta_html'] ) ) ? $view_layout_settings['layout_meta_html'] : ''; ?></textarea>
+			<textarea cols="30" rows="10" id="wpv_layout_meta_html_content" name="wpv_layout_layout_meta_html"><?php echo ( isset( $view_layout_settings['layout_meta_html'] ) ) ? esc_textarea( $view_layout_settings['layout_meta_html'] ) : ''; ?></textarea>
 		</div>
 	</div>
 	<?php
@@ -694,13 +774,16 @@ function wpv_embedded_layout_extra(  $view_settings, $view_layout_settings ) {
 add_action( 'view-embedded-section-layout', 'wpv_embedded_combined_output', 20, 3 );
 
 function wpv_embedded_combined_output(  $view_settings, $view_layout_settings, $view_id ) {
-	global $views_edit_help;
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'complete_output' );
 	?>
 	<div class="wpv-setting-container wpv-setting-container-horizontal">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Filter and Loop Output Integration', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['complete_output']['title']; ?>" data-content="<?php echo $views_edit_help['complete_output']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip"
+						data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>"
+						data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
@@ -708,7 +791,7 @@ function wpv_embedded_combined_output(  $view_settings, $view_layout_settings, $
 				$full_view = get_post( $view_id );
 				$content = $full_view->post_content;
 			?>
-			<textarea cols="30" rows="10" id="wpv_content" name="wpv_content"><?php echo $content; ?></textarea>
+			<textarea cols="30" rows="10" id="wpv_content" name="wpv_content"><?php echo esc_textarea( $content ); ?></textarea>
 		</div>
 	</div>
 	<?php

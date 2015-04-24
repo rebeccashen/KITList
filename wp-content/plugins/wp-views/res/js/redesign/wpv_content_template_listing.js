@@ -4,15 +4,6 @@ jQuery(function($) {
 	var query = '';
 	var data_ct_id = null;
 
-	$(document).on('input keyup','.js-wpv-duplicated-ct-title', function(e){
-		$('.js-wpv-ct-duplicate-error-container .toolset-alert').remove();
-		if ($(this).val() === ""){
-		 $('.js-wpv-duplicate-ct').prop('disabled',true).addClass('button-secondary').removeClass('button-primary');
-		}
-		else{
-			$('.js-wpv-duplicate-ct').prop('disabled',false).removeClass('button-secondary').addClass('button-primary');
-		}
-	});
 
 	// Process: assign selected content template to all posts types
 	$(document).on('click','.js-wpv-content-template-update-posts-process', function() {
@@ -76,47 +67,6 @@ jQuery(function($) {
 		return false;
 	});
 
-
-	/**
-	 * Permanently delete a single Content Template after confirmation.
-	 *
-	 * @since unknown
-	 */ 
-    $(document).on('click','.js-remove-template-permanent', function(e) {
-		e.preventDefault();
-		showSpinnerBefore( $(this) );
-		disablePrimaryButton( $(this) );
-
-		var data = {
-			action: 'wpv_delete_ct',
-			wpnonce : $('#work_view_template').attr('value'),
-			id: data_ct_id // get global data_ct_id
-		};
-
-		data_view_id = null;
-		$.ajax({
-			async:false,
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function(response){
-				if ( (typeof(response) !== 'undefined') && (response == data_ct_id)) {
-					var url_params = decodeURIParams();
-					url_params['paged'] = updatePagedParameter( url_params, 1, '.js-wpv-ct-list-row' );
-					url_params['deleted'] = 1;
-					navigateWithURIParams(url_params);
-				} else {
-					console.log( "Error: AJAX returned ", response );
-				}
-			},
-			error: function (ajaxContext) {
-				console.log( "Error: ", ajaxContext.responseText );
-			},
-			complete: function() {
-
-			}
-		});
-    });
 
     /**
 	 * Bulk action.
@@ -453,6 +403,19 @@ jQuery(function($) {
 			wpnonce : nonce
 		};
 
+
+		// Display singular or plural message.
+		// We're adjusting this here, so that colorbox shows in a size which corresponds to actually visible content.
+		var ctCount = ctIDs.length;
+		if( ctCount == 1 ) {
+			$('.js-singular').show();
+			$('.js-plural').hide();
+		} else {
+			$('.js-plural').show();
+			$('.js-singular').hide();
+		}
+
+
 		$.ajax({
 			async: false,
 			type: "POST",
@@ -465,6 +428,7 @@ jQuery(function($) {
 						href: '.js-bulk-remove-content-templates-dialog',
 						inline: true,
 						onComplete: function() {
+							// Adjust the dialog
 							var postsUsingCTs = response['0'];
 							if( postsUsingCTs > 0 ) {
 								// Insert total count of posts that use any of CTs that are to be deleted.
@@ -477,6 +441,8 @@ jQuery(function($) {
 							// Insert nonce and CT IDs into the colorbox.
 							$('.js-bulk-remove-templates-permanent').attr( 'data-ct-ids', encodeURIComponent( ctIDs.join() ) );
 							$('.js-bulk-remove-templates-permanent').attr( 'data-viewactionnonce', nonce );
+
+							hideSpinner();
 						}
 					});
 				} else {
@@ -535,80 +501,118 @@ jQuery(function($) {
 		});
 	});
 
-	
 
-	/** Delete content template. */
+	/**
+	 * This happens on "Delete" action for a single content template.
+	 *
+	 * We'll show the same confirmation dialog as for bulk action.
+	 *
+	 * @since unknown
+	 */
 	$(document).on('click','.js-list-ct-action-delete', function(e) {
 		e.preventDefault();
-		data_ct_id = $(this).attr('data-ct-id');
-		view_listing_action_nonce = $(this).data('viewactionnonce'); // TODO what is it good for
+		showSpinner();
 
-		var postcount = $(this).data('postcount');
+		var ctID = $(this).attr('data-ct-id');
+		var nonce = $(this).data('viewactionnonce');
+
+		// Show confirmation, act like if it's a bulk action.
+		deleteCTsConfirmation( [ ctID ], nonce );
+	});
+
+
+	/**
+	 * This happens when user clicks on the Duplicate action link.
+	 *
+	 * @since unknown
+	 */
+	$( document ).on( 'click','.js-list-ct-action-duplicate', function( e ) {
+		e.preventDefault();
+		
+		var ctId = $(this).data( 'ct-id' );
+		var originalTitle = $(this).data( 'ct-name' );
+		
+		$('.js-wpv-duplicate-error-container .toolset-alert').remove();
+		disablePrimaryButton( $('.js-wpv-duplicate-ct') );
+		
 		$.colorbox({
-			href: '.js-remove-content-template-dialog',
+			href: '.js-wpv-duplicate-ct-dialog',
 			inline: true,
 			onComplete: function() {
-				$('.js-ct-single-postcount').html(postcount);
+
+				// Show name of the original
+				$('.js-duplicate-origin-title').append( originalTitle );
+
+				// Store Content Template ID in a confirm button attribute
+				$('.js-wpv-duplicate-ct').data( 'ct-id', ctId );
+
+				$('.js-wpv-duplicated-title').focus().val('');
+				
+				$('.js-wpv-duplicated-title').keyup(function() {
+					$('.js-wpv-duplicate-error-container .toolset-alert').remove();
+					if ( $(this).val().length !== 0 ) {
+						enablePrimaryButton( $('.js-wpv-duplicate-ct') );
+					} else {
+						disablePrimaryButton( $('.js-wpv-duplicate-ct') );
+					}
+				});
 			}
 		});
 	});
 
 
-	/** Duplicate content template */
-	$( document ).on( 'click','.js-list-ct-action-duplicate', function( e ) {
+	/**
+	 * Duplicate a Content Template.
+	 *
+	 * @since unknown
+	 */ 
+	$( document ).on( 'click','.js-wpv-duplicate-ct', function ( e ) {
 		e.preventDefault();
-		var thiz = $( this ),
-		ct_id = thiz.attr( 'data-ct-id' );
-		$('.js-wpv-ct-duplicate-error-container .toolset-alert').remove();
-		$('.js-wpv-duplicate-ct').prop('disabled',true);
-		$.colorbox({
-			href: '.js-wpv-duplicate-ct-dialog',
-			inline: true,
-			onComplete: function() {
-				$( '.js-wpv-duplicate-ct' ).off( 'click' );
-				$( '.js-wpv-duplicated-ct-title' ).focus().val('');
-				$( document ).on( 'click','.js-wpv-duplicate-ct', function ( e ) {
-					e.preventDefault();
-					var thiz = $( this ),
-					thiz_container = thiz.parents( '.js-wpv-duplicate-ct-dialog' ),
-					thiz_message_container = thiz_container.find( '.js-wpv-ct-duplicate-error-container' );
-					new_title = thiz_container.find( '.js-wpv-duplicated-ct-title' ).val();
-					showSpinnerBefore( thiz );
-					disablePrimaryButton( thiz );
-					if ( new_title.length !== 0 ) {
-						var data = {
-							action: 'wpv_duplicate_ct',
-							id: ct_id,
-							wpnonce : $('#work_view_template').attr('value'),
-							title: new_title
-						};
-						$.post( ajaxurl, data, function( response ) {
-							if ( ( typeof( response ) !== 'undefined' ) ) {
-								response = $.parseJSON(response);
-							//	console.log(response);
-								if ( response[0] == 'error' ) {
-									thiz_message_container
-										.wpvToolsetMessage({
-											text: response[1],
-											stay: true,
-											close: false,
-											type: ''
-										});
-									hideSpinner();
-								}
-								else if ( response[0] == 'ok' ) {
-									navigateWithURIParams(decodeURIParams());
-								} else {
-									console.log( "Error: AJAX returned ", response );
-								}
-							} else {
-								console.log( "Error: AJAX returned ", response );
-							}
-						});
+
+		showSpinnerBefore( $(this) );
+		disablePrimaryButton( $(this) );
+		
+		var newName = $( '.js-wpv-duplicated-title' ).val();
+		var nonce = $('#work_view_template').attr('value');
+		var ctID = $(this).data('ct-id');
+		
+		if ( newName.length !== 0 ) {
+
+			var data = {
+				action: 'wpv_duplicate_ct',
+				id: ctID,
+				wpnonce : nonce,
+				title: newName
+			};
+			
+			$.ajax({
+				async: false,
+				type: "POST",
+				url: ajaxurl,
+				data: data,
+				success: function( response ) {
+					if ( ( typeof( response ) !== 'undefined' ) ) {
+						response = $.parseJSON( response );
+						if ( response[0] == 'error' ) {
+							$('.js-wpv-duplicate-error-container').wpvToolsetMessage({
+								text: response[1],
+								stay: true,
+								close: false,
+								type: ''
+							});
+							hideSpinner();
+						}
+						else if ( response[0] == 'ok' ) {
+							navigateWithURIParams( decodeURIParams() );
+						} else {
+							console.log( "Error: AJAX returned ", response );
+						}
+					} else {
+						console.log( "Error: AJAX returned ", response );
 					}
-				});
-			}
-		});
+				}
+			});
+		}
 	});
 
 
@@ -984,7 +988,6 @@ jQuery(function($) {
 	});
 
 	// Change pagination items per page
-
 	$(document).on('change', '.js-items-per-page', function() {
 		navigateWithURIParams(decodeURIParams('paged=1&items_per_page=' + $(this).val()));
 	});

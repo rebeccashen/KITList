@@ -11,7 +11,7 @@
 add_filter( 'wpv_view_settings', 'wpv_users_default_settings' );
 
 function wpv_users_default_settings( $view_settings ) {
-	if ( !isset( $view_settings['roles_type'] ) ) {
+	if ( ! isset( $view_settings['roles_type'] ) ) {
 		$view_settings['roles_type'] = array();
 	}
 	return $view_settings;
@@ -31,8 +31,8 @@ function wpv_users_default_settings( $view_settings ) {
 * @since 1.4.0
 */
 
-function get_users_query($view_settings) {
-    global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;
+function get_users_query( $view_settings ) {
+    global $WP_Views, $wplogger, $WPVDebug, $wpdb;
 
 	$view_id = $WP_Views->get_current_view();
     $items = array();
@@ -157,8 +157,13 @@ function wpv_cache_complete_usermeta_for_types( $items ) {
 			}
 		}
 		if ( ! empty( $user_ids ) ) {
-			$id_list = join( ',', $user_ids );
-			$all_usermeta = $wpdb->get_results( "SELECT * FROM {$wpdb->usermeta} WHERE user_id IN ($id_list)", OBJECT );
+			$id_list = implode( ',', $user_ids );
+			// We do not need to prepare this query as $id_list only contains numeric natural IDs
+			$all_usermeta = $wpdb->get_results( 
+				"SELECT * FROM {$wpdb->usermeta} 
+				WHERE user_id IN ({$id_list})", 
+				OBJECT 
+			);
 			if ( !empty( $all_usermeta ) ) {
 				$cache_key_keys = array();
 				foreach ( $all_usermeta as $metarow ) {
@@ -194,7 +199,6 @@ function wpv_cache_complete_usermeta_for_types( $items ) {
 add_filter( 'wpv_filter_user_query', 'wpv_users_query_include_role', 20, 2 );
 
 function wpv_users_query_include_role( $args, $view_settings ) {
-	global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;	
 	$args['role'] = 'administrator';
 	if ( isset( $view_settings['roles_type'][0] ) ){
         $args['role'] = $view_settings['roles_type'][0];
@@ -222,7 +226,7 @@ function wpv_users_query_include_role( $args, $view_settings ) {
 add_filter( 'wpv_filter_user_query', 'wpv_users_query_include_current_user', 30, 2 );
 
 function wpv_users_query_include_current_user( $args, $view_settings ) {
-	global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;
+	global $current_user;
 	if ( isset( $view_settings['users-show-current'] ) && $view_settings['users-show-current'] == 1 ){
 		if ( !isset($args['exclude']) || !is_array($args['exclude']) ){
 			$args['exclude'] = array($current_user->ID);	
@@ -252,26 +256,31 @@ function wpv_users_query_include_current_user( $args, $view_settings ) {
 add_filter( 'wpv_filter_user_query', 'wpv_users_query_add_sort', 40, 2 );
 
 function wpv_users_query_add_sort( $args, $view_settings ) {
-	global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;	
-	if ( isset( $view_settings['users_orderby'] ) ){
+	global $WP_Views;	
+	if ( isset( $view_settings['users_orderby'] ) ) {
         $args['orderby'] = $view_settings['users_orderby'];
     }
-    if ( isset( $view_settings['users_order'] ) ){
+    if ( isset( $view_settings['users_order'] ) ) {
         $args['order'] = $view_settings['users_order'];
     }
-
     // Users orderby and order based on URL params - for table sorting
-    if (isset($_GET['wpv_column_sort_id']) && esc_attr($_GET['wpv_column_sort_id']) != '' && esc_attr($_GET['wpv_view_count']) == $WP_Views->get_view_count()) {
-        $field = esc_attr($_GET['wpv_column_sort_id']);
+    if (
+		isset( $_GET['wpv_column_sort_id'] ) 
+		&& esc_attr( $_GET['wpv_column_sort_id'] ) != '' 
+		&& esc_attr( $_GET['wpv_view_count'] ) == $WP_Views->get_view_count()
+	) {
+        $field = esc_attr( $_GET['wpv_column_sort_id'] );
         if ( in_array( $field, array('user_email', 'user_login', 'display_name', 'user_url', 'user_registered') ) ) {
-		$args['orderby'] = $field;
+			$args['orderby'] = $field;
 
-		if (isset($_GET['wpv_column_sort_dir']) && esc_attr($_GET['wpv_column_sort_dir']) != '') {
-			$args['order'] = strtoupper(esc_attr($_GET['wpv_column_sort_dir']));
-		}
-
+			if (
+				isset( $_GET['wpv_column_sort_dir'] ) 
+				&& esc_attr( $_GET['wpv_column_sort_dir'] ) != '' 
+				&& in_array( strtoupper( esc_attr( $_GET['wpv_column_sort_dir'] ) ), array( 'ASC', 'DESC' ) )
+			) {
+				$args['order'] = strtoupper( esc_attr( $_GET['wpv_column_sort_dir'] ) );
+			}
         }
-
     }
 	return $args;
 }
@@ -293,7 +302,6 @@ function wpv_users_query_add_sort( $args, $view_settings ) {
 add_filter( 'wpv_filter_user_query', 'wpv_users_query_limit_and_offset', 50, 3 );
 
 function wpv_users_query_limit_and_offset( $args, $view_settings, $view_id ) {
-	global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;	
 	if ( $view_settings['users_limit'] !== '-1' && $view_settings['users_limit'] !== -1 ){
         $args['number'] = $view_settings['users_limit'];
     }
@@ -333,167 +341,186 @@ function wpv_users_query_limit_and_offset( $args, $view_settings, $view_id ) {
 add_filter( 'wpv_filter_user_query', 'wpv_users_query_user_filters', 60, 2 );
 
 function wpv_users_query_user_filters( $args, $view_settings ) {
-	global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;
+	global $WP_Views;
 	$exclude = array();
 	// Users filter
-    if ( isset($view_settings['users_mode']) && !empty($view_settings['users_mode'][0])  ){
-
-        //Include/Exclude list of users
-        if ( $view_settings['users_mode'][0] == 'this_user' ){
-            if ( $view_settings['users_query_in'] == 'exclude' ){
-                if ( !empty($view_settings['users_id']) ){
-                    $user_list = array_map('trim', explode(',', $view_settings['users_id']));
-                    $exclude = array_merge( $exclude, $user_list );
-                }
-            }
-            if ( $view_settings['users_query_in'] == 'include' ){
-                if ( !empty($view_settings['users_id']) ){
-                    $user_list = array_map('trim', explode(',', $view_settings['users_id']));
-                    $args['include'] = $user_list;
-                }
-            }
-        }
-
-        //Show user by url
-        if ( $view_settings['users_mode'][0] == 'by_url' ){
-            $user_list = array();
-            $user_url = isset( $view_settings['users_url'] ) ? $view_settings['users_url'] : '';
-            if ( '' != $user_url && isset( $_GET[$user_url] ) ) {
-                if ( is_array( $_GET[$user_url] ) ) {
-                    if ( $view_settings['users_url_type'] == 'id' ) {
-						foreach ( $_GET[$user_url] as $user_candidate ) {
-							if ( is_numeric( $user_candidate ) ) {
-								$user_list[] = $user_candidate;
-							}
-                        }
-                    } else {
-                        foreach ( $_GET[$user_url] as $user_candidate ) {
-							$user_candidate_id = username_exists( $user_candidate );
-							if ( !is_null( $user_candidate_id ) && is_numeric( $user_candidate_id ) ) {
-								$user_list[] = $user_candidate_id;
-							}
-                        }
-                    }
-                } else {
-                    if ( $view_settings['users_url_type'] == 'id' ){
-                        if ( is_numeric( $_GET[$user_url] ) ) {
-							$user_list = array( $_GET[$user_url] );
-                        }
-                    } else {
-                        $user_candidate_id = username_exists( $_GET[$user_url] );
-						if ( !is_null( $user_candidate_id ) && is_numeric( $user_candidate_id ) ) {
-							$user_list[] = $user_candidate_id;
-						}
-                    }
-                }
-
-                if ( $view_settings['users_query_in'] == 'exclude' ){
-                    $exclude = array_merge( $exclude, $user_list );
-                } else {
-					if ( empty( $user_list ) ) $user_list = array('0');
-                    $args['include'] = $user_list;
-                }
-            }
-        }
-
-        //Show user by shortcode
-        if ( $view_settings['users_mode'][0] == 'shortcode' ){
-			$users_shortcode = '';
-			$users_shortcode_type = '';
-			if ( isset( $view_settings['users_shortcode'] ) && '' != $view_settings['users_shortcode'] ) {
-				$users_shortcode = $view_settings['users_shortcode'];
-			}
-			if ( isset( $view_settings['users_shortcode_type'] ) && '' != $view_settings['users_shortcode_type'] ) {
-				$users_shortcode_type = $view_settings['users_shortcode_type'];
-			}
-			if ( '' != $users_shortcode && '' != $users_shortcode_type ) {
-				$view_attrs = $WP_Views->get_view_shortcodes_attributes();
-				$user_list = array();
-				if ( isset( $view_attrs[$users_shortcode] ) ){
-					$users = $view_attrs[$users_shortcode];
-					$users = array_map( 'trim', explode( ',', $users ) );
-					switch ( $users_shortcode_type ) {
-						case 'id':
-							foreach ( $users as $user_candidate ) {
-								if ( is_numeric( $user_candidate ) ) {
-									$user_list[] = $user_candidate;
-								}
-							}
-							break;
-						default:
-							foreach ( $users as $user_candidate ) {
-								$user_id_candidate = username_exists( $user_candidate );
-								if ( !is_null( $user_id_candidate ) && is_numeric( $user_id_candidate ) ) {
-									$user_list[] = $user_id_candidate;
-								}
-							}
-							break;
-					}
-					if ( $view_settings['users_query_in'] == 'exclude' ){
+    if ( 
+		isset( $view_settings['users_mode'] ) 
+		&& ! empty( $view_settings['users_mode'][0] ) 
+	) {
+		switch ( $view_settings['users_mode'][0] ) {
+			case 'this_user':
+				if ( $view_settings['users_query_in'] == 'exclude' ) {
+					if ( ! empty($view_settings['users_id'] ) ){
+						$user_list = array_map( 'trim', explode( ',', $view_settings['users_id'] ) );
 						$exclude = array_merge( $exclude, $user_list );
-					} else {
-						if ( empty( $user_list ) ) $user_list = array('0');
+					}
+				}
+				if ( $view_settings['users_query_in'] == 'include' ) {
+					if ( ! empty( $view_settings['users_id'] ) ) {
+						$user_list = array_map( 'trim', explode( ',', $view_settings['users_id'] ) );
 						$args['include'] = $user_list;
 					}
 				}
-			}
+				break;
+			case 'url':
+				if (
+					isset( $view_settings['users_url'] )
+					&& '' != $view_settings['users_url']
+					&& isset( $view_settings['users_url_type'] )
+					&& '' != $view_settings['users_url_type']
+				) {
+					$user_url = $view_settings['users_url'];
+					$user_url_type = $view_settings['users_url_type'];
+					if ( isset( $_GET[$user_url] ) ) {
+						$user_list = array();
+						if ( is_array( $_GET[$user_url] ) ) {
+							if ( $view_settings['users_url_type'] == 'id' ) {
+								foreach ( $_GET[$user_url] as $user_candidate ) {
+									if ( is_numeric( $user_candidate ) ) {
+										$user_list[] = $user_candidate;
+									}
+								}
+							} else {
+								foreach ( $_GET[$user_url] as $user_candidate ) {
+									$user_candidate_id = username_exists( $user_candidate );
+									if ( 
+										! is_null( $user_candidate_id ) 
+										&& is_numeric( $user_candidate_id ) 
+									) {
+										$user_list[] = $user_candidate_id;
+									}
+								}
+							}
+						} else {
+							if ( $view_settings['users_url_type'] == 'id' ){
+								if ( is_numeric( $_GET[$user_url] ) ) {
+									$user_list = array( $_GET[$user_url] );
+								}
+							} else {
+								$user_candidate_id = username_exists( $_GET[$user_url] );
+								if ( 
+									! is_null( $user_candidate_id ) 
+									&& is_numeric( $user_candidate_id ) 
+								) {
+									$user_list[] = $user_candidate_id;
+								}
+							}
+						}
+						
+						if ( $view_settings['users_query_in'] == 'exclude' ) {
+							$exclude = array_merge( $exclude, $user_list );
+						} else {
+							if ( empty( $user_list ) ) {
+								$user_list = array('0');
+							}
+							$args['include'] = $user_list;
+						}
+					}
+				}
+				break;
+			case 'shortcode':
+				if ( 
+					isset( $view_settings['users_shortcode'] ) 
+					&& '' != $view_settings['users_shortcode'] 
+					&& isset( $view_settings['users_shortcode_type'] ) 
+					&& '' != $view_settings['users_shortcode_type'] 
+				) {
+					$users_shortcode = $view_settings['users_shortcode'];
+					$users_shortcode_type = $view_settings['users_shortcode_type'];
+					$view_attrs = $WP_Views->get_view_shortcodes_attributes();
+					$user_list = array();
+					if ( isset( $view_attrs[$users_shortcode] ) ) {
+						$users = $view_attrs[$users_shortcode];
+						$users = array_map( 'trim', explode( ',', $users ) );
+						switch ( $users_shortcode_type ) {
+							case 'id':
+								foreach ( $users as $user_candidate ) {
+									if ( is_numeric( $user_candidate ) ) {
+										$user_list[] = $user_candidate;
+									}
+								}
+								break;
+							default:
+								foreach ( $users as $user_candidate ) {
+									$user_id_candidate = username_exists( $user_candidate );
+									if ( 
+										! is_null( $user_id_candidate ) 
+										&& is_numeric( $user_id_candidate ) 
+									) {
+										$user_list[] = $user_id_candidate;
+									}
+								}
+								break;
+						}
+						if ( $view_settings['users_query_in'] == 'exclude' ) {
+							$exclude = array_merge( $exclude, $user_list );
+						} else {
+							if ( empty( $user_list ) ) {
+								$user_list = array('0');
+							}
+							$args['include'] = $user_list;
+						}
+					}
+				}
+				break;
+			case 'framework':
+				global $WP_Views_fapi;
+				if ( 
+					$WP_Views_fapi->framework_valid
+					&& isset( $view_settings['users_framework'] ) 
+					&& '' != $view_settings['users_framework'] 
+					&& isset( $view_settings['users_framework_type'] ) 
+					&& '' != $view_settings['users_framework_type'] 
+				) {
+					$users_framework = $view_settings['users_framework'];
+					$users_framework_type = $view_settings['users_framework_type'];
+					$user_list = array();
+					$users_candidates = $WP_Views_fapi->get_framework_value( $users_framework, array() );
+					if ( ! is_array( $users_candidates ) ) {
+						$users_candidates = explode( ',', $users_candidates );
+					}
+					$users_candidates = array_map( 'trim', $users_candidates );
+					switch ( $users_framework_type ) {
+						case 'id':
+							foreach ( $users_candidates as $id_candid ) {
+								if ( is_numeric( $id_candid ) ) {
+									$user_list[] = $id_candid;
+								}
+							}
+							break;
+						case 'username':
+							foreach ( $users_candidates as $username_candid ) {
+								$username_candid = trim( strip_tags( $username_candid ) );
+								// username_exists adds the sanitization
+								$username_candid_id = username_exists( $username_candid );
+								if ( $username_candid_id ) {
+									$user_list[] = $username_candid_id;
+								}
+							}
+							break;			
+					}
+					if ( $view_settings['users_query_in'] == 'exclude' ) {
+						$exclude = array_merge( $exclude, $user_list );
+					} else {
+						if ( empty( $user_list ) ) {
+							$user_list = array('0');
+						}
+						$args['include'] = $user_list;
+					}
+				}
+				break;
 		}
-	} // End users filter
+	}
 	
-	if ( !isset($args['exclude']) || !is_array($args['exclude']) ){
+	if ( 
+		! isset( $args['exclude'] ) 
+		|| ! is_array( $args['exclude'] ) ) {
 		$args['exclude'] = $exclude;	
-	}	
-	elseif ( isset($args['exclude']) ){
+	} elseif ( isset( $args['exclude'] ) ) {
 		$args['exclude'] = 	array_merge( $args['exclude'], $exclude );
 	}
 	
 	return $args;
 }
-
-/**
-* wpv_users_query_usermeta_filters
-*
-* Filter hooked before query and user meta fields
-*
-* @param $args array of arguments to be passed to WP_User_Query
-* 
-* @param $view_settings
-*
-* @return $args
-*
-* @since 1.6.2
-*/
-
-add_filter( 'wpv_filter_user_query', 'wpv_users_query_usermeta_filters', 70, 2 );
-
-function wpv_users_query_usermeta_filters( $args, $view_settings ) {
-	global $WP_Views, $current_user, $wplogger, $no_parameter_found, $WPVDebug, $wpdb;
-    $total_meta = 0;
-	foreach ($view_settings as $index => $value) {
-		if ( preg_match("/usermeta-field-(.*)_type/",$index, $match) ){
-			$field = $match[1];
-			$type = $value;
-			$compare = $view_settings['usermeta-field-'.$field.'_compare'];
-			$value = $view_settings['usermeta-field-'.$field.'_value'];
-			$value = wpv_apply_user_functions($value);
-			if ( $value != $no_parameter_found ) {
-				if ( $field == 'user_email' || $field == 'user_login' || $field == 'user_url' || $field == 'display_name' ){
-					$args['search'] = ''.$value.'';// remove * wildcards
-					$args['search_columns'] = array($field);
-				}else{
-					$total_meta++;
-					$args['meta_query'][] = array( 'key' => $field, 'value' => $value, 'compare' => $compare, 'type' => $type );
-				}
-			}
-		
-		}
-	}
-	//Set usermeta relation
-    if ( $total_meta > 1 ){
-        $args['meta_query']['relation'] = $view_settings['usermeta_fields_relationship'];
-    }
-	
-	return $args;
-}
-
-    
+   

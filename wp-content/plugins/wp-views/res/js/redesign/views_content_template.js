@@ -136,7 +136,7 @@ WPViews.CTEditScreen = function( $ ) {
 	
 	// @todo review this
 	
-	$(document).on('click','.js-wpv-content-template-update-posts-process', function() {
+	$( document ).on( 'click','.js-wpv-content-template-update-posts-process', function() {
 		var type = $(this).data('type');
 		var tid = $(this).data('id');
 		var data = {
@@ -146,9 +146,14 @@ WPViews.CTEditScreen = function( $ ) {
 			type : type,
 			lang : ''
 		};
-		var updateMessage = $.post(ajaxurl, data, function(response) {
-			$('.wpv-dialog').html(response);
-			$('#wpv-content-template-alert-link-'+type).hide();
+		var updateMessage = $.post( ajaxurl, data, function( response ) {
+			$.colorbox({
+                 html: response,
+                 onClose: function() {
+
+                 }
+             });
+			$( '#wpv-content-template-alert-link-' + type ).hide();
 		});
 		updateMessage.always(function(){
 			//console.log('ajax request complete');

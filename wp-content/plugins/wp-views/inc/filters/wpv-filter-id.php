@@ -72,7 +72,8 @@ class WPV_ID_Filter {
 		$filters['post_id'] = array(
 			'name' => __( 'Post id', 'wpv-views' ),
 			'present' => 'id_mode',
-			'callback' => array( 'WPV_ID_Filter', 'wpv_add_new_filter_post_id_list_item' )
+			'callback' => array( 'WPV_ID_Filter', 'wpv_add_new_filter_post_id_list_item' ),
+			'group' => __( 'Post filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -121,20 +122,26 @@ class WPV_ID_Filter {
 	*/
 
 	static function wpv_get_list_item_ui_post_id( $view_settings = array() ) {
-		global $wpdb, $sitepress;
 		if ( isset( $view_settings['id_mode'] ) && is_array( $view_settings['id_mode'] ) ) {
 			$view_settings['id_mode'] = $view_settings['id_mode'][0];
 		}
-		if ( isset( $sitepress ) && function_exists( 'icl_object_id' ) && isset( $view_settings['post_id_ids_list'] ) && ! empty( $view_settings['post_id_ids_list'] ) ) {
+		if ( 
+			isset( $view_settings['post_id_ids_list'] ) 
+			&& ! empty( $view_settings['post_id_ids_list'] ) 
+		) {
 			// Adjust for WPML support
-			$id_ids_list = array_map( 'trim', explode( ',', $view_settings['post_id_ids_list'] ) );
+			$id_ids_list = explode( ',', $view_settings['post_id_ids_list'] );
+			$id_ids_list = array_map( 'esc_attr', $id_ids_list );
+			$id_ids_list = array_map( 'trim', $id_ids_list );
+			// is_numeric does sanitization
+			$id_ids_list = array_filter( $id_ids_list, 'is_numeric' );
+			$id_ids_list = array_map( 'intval', $id_ids_list );
 			$trans_ids = array();
-			foreach ( $id_ids_list as $id_item ) {
-				if ( !empty( $id_item ) ) {
-					$target_post_type = $wpdb->get_var("SELECT post_type FROM {$wpdb->posts} WHERE ID='{$id_item}'");
-					if ( $target_post_type ) {
-						$trans_ids[] = icl_object_id( $id_item, $target_post_type, true );
-					}
+			if ( ! empty ( $id_ids_list ) ) {
+				foreach ( $id_ids_list as $id_ids_item ) {
+					// Adjust for WPML support
+					$id_ids_item = apply_filters( 'translate_object_id', $id_ids_item, 'any', true, null );
+					$trans_ids[] = $id_ids_item;
 				}
 			}
 			if ( count( $trans_ids ) > 0 ) {
@@ -176,33 +183,80 @@ class WPV_ID_Filter {
 	*/
 
 	static function wpv_filter_post_id_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_id_nonce') ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_id_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
+		$view_id = intval( $_POST['id'] );
 		parse_str( $_POST['filter_options'], $filter_id );
 		$change = false;
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		if ( ! isset( $filter_id['post_id_ids_list'] ) || '' == $filter_id['post_id_ids_list'] ) {
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
+		if ( ! isset( $filter_id['post_id_ids_list'] ) ) {
 			$filter_id['post_id_ids_list'] = '';
 		}
-		$settings_to_check = array( 'id_in_or_out', 'id_mode', 'post_id_ids_list', 'post_ids_url', 'post_ids_shortcode' );
+		$settings_to_check = array( 
+			'id_in_or_out', 'id_mode', 'post_id_ids_list', 
+			'post_ids_url', 'post_ids_shortcode', 'post_ids_framework'
+		);
 		foreach ( $settings_to_check as $set ) {
-			if ( ! isset( $view_array[$set] ) || $filter_id[$set] != $view_array[$set] ) {
+			if ( 
+				isset( $filter_id[$set] )
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_id[$set] != $view_array[$set] 
+				)
+			) {
+				if ( is_array( $filter_id[$set] ) ) {
+					$filter_id[$set] = array_map( 'sanitize_text_field', $filter_id[$set] );
+				} else {
+					$filter_id[$set] = sanitize_text_field( $filter_id[$set] );
+				}
 				$change = true;
 				$view_array[$set] = $filter_id[$set];
 			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			$result = update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
 		$filter_id['id_mode'] = $filter_id['id_mode'][0];
-		echo wpv_get_filter_post_id_summary_txt( $filter_id );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Post ID filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_post_id_summary_txt( $filter_id )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -229,20 +283,50 @@ class WPV_ID_Filter {
 	*/
 
 	static function wpv_filter_post_id_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_id_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_id_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		$settings_to_check = array( 'id_in_or_out', 'id_mode', 'post_id_ids_list', 'post_ids_url', 'post_ids_shortcode' );
+		$settings_to_check = array( 
+			'id_in_or_out', 'id_mode', 'post_id_ids_list',
+			'post_ids_url', 'post_ids_shortcode', 'post_ids_framework' );
 		foreach ( $settings_to_check as $set ) {
 			if ( isset( $view_array[$set] ) ) {
 				unset( $view_array[$set] );
 			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Post ID filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
     
 	/**
@@ -281,14 +365,15 @@ class WPV_ID_Filter {
 			'id_mode' => 'by_ids',
 			'post_id_ids_list' =>'',
 			'post_ids_url' => 'post_ids',
-			'post_ids_shortcode' => 'ids'
+			'post_ids_shortcode' => 'ids',
+			'post_ids_framework' => ''
 		);
 		$view_settings = wp_parse_args( $view_settings, $defaults );
 		?>
 		<h4><?php _e( 'Include or exclude', 'wpv-views' ); ?></h4>
 		<div class="wpv-filter-options-set">
 			<label for="id_in_or_out"><?php _e('The View will filter posts to', 'wpv-views'); ?></label>
-			<select id="id_in_or_out" name="id_in_or_out" class="js_id_in_or_out">
+			<select id="id_in_or_out" name="id_in_or_out" class="js_id_in_or_out" autocomplete="off">
 				<option value="in" <?php selected( 'in', $view_settings['id_in_or_out'] ); ?>><?php _e('include', 'wpv-views'); ?></option>
 				<option value="out" <?php selected( 'out', $view_settings['id_in_or_out'] ); ?>><?php _e('exclude', 'wpv-views'); ?></option>
 			</select>
@@ -296,20 +381,44 @@ class WPV_ID_Filter {
 		<h4><?php _e( 'How to filter', 'wpv-views' ); ?></h4>
 		<ul class="wpv-filter-options-set">
 			<li>
-				<input type="radio" id="wpv-filter-id-list" name="id_mode[]" value="by_ids" <?php checked( $view_settings['id_mode'], 'by_ids' ); ?> />
+				<input type="radio" id="wpv-filter-id-list" name="id_mode[]" value="by_ids" <?php checked( $view_settings['id_mode'], 'by_ids' ); ?> autocomplete="off" />
 				<label for="wpv-filter-id-list"><?php _e( 'Posts with those IDs: ', 'wpv-views' ); ?></label>
-				<input type='text' name="post_id_ids_list" value="<?php echo esc_attr( $view_settings['post_id_ids_list'] ); ?>" size="15" />
+				<input type='text' name="post_id_ids_list" value="<?php echo esc_attr( $view_settings['post_id_ids_list'] ); ?>" size="15" autocomplete="off" />
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-id-url" name="id_mode[]" value="by_url" <?php checked( $view_settings['id_mode'], 'by_url' ); ?>>
+				<input type="radio" id="wpv-filter-id-url" name="id_mode[]" value="by_url" <?php checked( $view_settings['id_mode'], 'by_url' ); ?> autocomplete="off" />
 				<label for="wpv-filter-id-url"><?php _e('Posts with IDs set by this URL parameter: ', 'wpv-views'); ?></label>
-				<input type='text' class="js-wpv-filter-id-url js-wpv-filter-validate" data-type="url" data-class="js-wpv-filter-id-url" name="post_ids_url" value="<?php echo $view_settings['post_ids_url']; ?>" size="10" />
+				<input type='text' class="js-wpv-filter-id-url js-wpv-filter-validate" data-type="url" data-class="js-wpv-filter-id-url" name="post_ids_url" value="<?php echo esc_attr( $view_settings['post_ids_url'] ); ?>" size="10" autocomplete="off" />
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-id-shortcode" name="id_mode[]" value="shortcode" <?php checked( $view_settings['id_mode'], 'shortcode' ); ?>>
+				<input type="radio" id="wpv-filter-id-shortcode" name="id_mode[]" value="shortcode" <?php checked( $view_settings['id_mode'], 'shortcode' ); ?> autocomplete="off" />
 				<label for="wpv-filter-id-shortcode"><?php _e('Posts with IDs set by the View shortcode attribute: ', 'wpv-views'); ?></label>
-				<input type='text' class="js-wpv-filter-id-shortcode js-wpv-filter-validate" data-type="shortcode" data-class="js-wpv-filter-id-shortcode" name="post_ids_shortcode" value="<?php echo $view_settings['post_ids_shortcode']; ?>" size="10" />
+				<input type='text' class="js-wpv-filter-id-shortcode js-wpv-filter-validate" data-type="shortcode" data-class="js-wpv-filter-id-shortcode" name="post_ids_shortcode" value="<?php echo esc_attr( $view_settings['post_ids_shortcode'] ); ?>" size="10" autocomplete="off" />
 			</li>
+			<?php
+			global $WP_Views_fapi;
+			if ( $WP_Views_fapi->framework_valid ) {
+				$framework_data = $WP_Views_fapi->framework_data
+			?>
+			<li>
+				<input type="radio" id="wpv-filter-id-framework" name="id_mode[]" value="framework" <?php checked( $view_settings['id_mode'], 'framework' ); ?> autocomplete="off" />
+				<label for="wpv-filter-id-framework"><?php echo sprintf( __( 'Posts with IDs set by the %s key: ', 'wpv-views'), sanitize_text_field( $framework_data['name'] ) ); ?></label>
+				<select name="post_ids_framework" autocomplete="off">
+					<option value=""><?php _e( 'Select a key', 'wpv-views' ); ?></option>
+					<?php
+					$fw_key_options = array();
+					$fw_key_options = apply_filters( 'wpv_filter_extend_framework_options_for_post_id', $fw_key_options );
+					foreach ( $fw_key_options as $index => $value ) {
+						?>
+						<option value="<?php echo esc_attr( $index ); ?>" <?php selected( $view_settings['post_ids_framework'], $index ); ?>><?php echo $value; ?></option>
+						<?php
+					}
+					?>
+				</select>
+			</li>
+			<?php
+			}
+			?>
 		</ul>
 		<div class="wpv_id_helper"></div>
 		<?php

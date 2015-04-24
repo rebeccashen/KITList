@@ -235,188 +235,129 @@ class WPV_Admin_Messages {
 		<?php
 	}
 	
-}
-	
-//----------------------------------------
-// Help hints per edit sections - full plugin mode
-//----------------------------------------
+	//----------------------------------------
+	// Help hints per edit sections - full plugin mode
+	//----------------------------------------
 
-function wpv_views_section_help_hint( $section = '' ) {
-	$return = array(
-		'title' => '', 
-		'content' => ''
-	);
-	switch ( $section ) {
-		case 'title_and_description':
-			$return = array(
-				'title' => htmlentities( __( 'Title and Description', 'wpv-views' ), ENT_QUOTES ), 
-				'content' => htmlentities( __("Each View has a title and an optional description. These are used for you, to identify different Views. The title and the description don't appear anywhere on the site's public pages.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'content_section':
-			$return = array(
-				'title' => htmlentities( __('Content to load', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __('Choose between posts, taxonomy and users and then select the specific content type to load. For posts, you can select multiple content types.', 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'query_options':
-			$return = array(
-				'title' => htmlentities( __('Query Options', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __('This section includes additional options for what content to load. You will see different options for posts, taxonomy and users.', 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'ordering':
-			$return = array(
-				'title' => htmlentities( __('Ordering', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __('Choose how to order the results that the View gets from the database. You can select the sorting key and direction.', 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'limit_and_offset':
-			$return = array(
-				'title' => htmlentities( __('Limit and Offset', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __('You can limit the number of results returned by the query and set an offset. Please note that this option is not intended for pagination and sliders, but for static Limit and Offset settings.', 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'filter_the_results':
-			$return = array(
-				'title' => htmlentities( __('Query Filter', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("You can filter the View query by status, custom fields, taxonomy, users fields and even content search depending on the content that you are going to load. Click on 'Add another filter' and then select the filter type. A View may have as many filters as you like.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'pagination_and_sliders_settings':
-			$return = array(
-				'title' => htmlentities( __('Pagination and sliders settings', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("You can use a View to display paginated results and sliders. Both are built using 'Pagination'. For paginated listings, choose to update the entire page. For sliders, choose to update only the View.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'filters_html_css_js':
-			$return = array(
-				'title' => htmlentities( __('Filter', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("In this section you can add pagination controls, slider controls and parametric searches. If you enabled pagination, you need to insert the pagination controls here. They are used for both paged results and sliders. For parametric searches, insert 'filter' elements. The output of this section is displayed via the [wpv-filter-meta-html] shortcode in the Filter and Loop Output Integration section.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'parametric_search':
-			$return = array(
-				'title' => htmlentities( __('Parametric search', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("In this section you can choose when to refresh the Views results and which options to show in form inputs.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'layout_html_css_js':
-			$return = array(
-				'title' => htmlentities( __('View HTML output', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __('This HTML determines what the View outputs for the query results. Use the Loop Wizard to design the output of this View. Then, edit the design by adding fields, HTML and media, using the toolbar buttons.', 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'templates_for_view':
-			$return = array(
-				'title' => htmlentities( __('Templates for this View', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("A View may include Content Templates. These templates make it easy to output design structures without having to repeat them in the loop.", 'wpv-views'), ENT_QUOTES ),          
-			);
-			break;
-		case 'complete_output':
-			$return = array(
-				'title' => htmlentities( __('Filter and Loop Output Integration', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __( 'This editor lets you control how the Filter and Loop Output sections of this Views are displayed. The [wpv-filter-meta-html] shortcode displays the output of the Filter section. The [wpv-layout-meta-html] shortcode displays the output of the Loop Output section. You can add your HTML and fields to rearrange and style the output.', 'wpv-views' ), ENT_QUOTES )
-			);
-			break;
-		case 'loops_selection':
-			$return = array(
-				'title' => htmlentities( __('Loop selection', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("Choose which listing page to customize. The WordPress archive will display the exact same content as WordPress normally does, but you can design it using the View HTML.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
-		case 'module_manager':
-			$return = array(
-				'title' => htmlentities( __('Module Manager', 'wpv-views'), ENT_QUOTES ), 
-				'content' => htmlentities( __("With Modules, you can easily reuse your designs in different websites and create your own library of building blocks.", 'wpv-views'), ENT_QUOTES )
-			);
-			break;
+	/**
+	* edit_section_help_pointer
+	*
+	* Help pointer contents for custom edit pages sections
+	*
+	* @param $section (string) Section
+	*
+	* @return $return (array) Both title and description for the section help pointer
+	*
+	* @since 1.8.0
+	*/
+
+	static function edit_section_help_pointer( $section = '' ) {
+		$return = array(
+			'title' => '', 
+			'content' => ''
+		);
+		switch ( $section ) {
+			case 'title_and_description':
+				$return = array(
+					'title' => __( 'Title and Description', 'wpv-views' ), 
+					'content' => __("Each View has a title and an optional description. These are used for you, to identify different Views. The title and the description don't appear anywhere on the site's public pages.", 'wpv-views')
+				);
+				break;
+			case 'content_section':
+				$return = array(
+					'title' => __('Content to load', 'wpv-views'), 
+					'content' => __('Choose between posts, taxonomy and users and then select the specific content type to load. For posts, you can select multiple content types.', 'wpv-views')
+				);
+				break;
+			case 'query_options':
+				$return = array(
+					'title' => __('Query Options', 'wpv-views'), 
+					'content' => __('This section includes additional options for what content to load. You will see different options for posts, taxonomy and users.', 'wpv-views')
+				);
+				break;
+			case 'ordering':
+				$return = array(
+					'title' => __('Ordering', 'wpv-views'),
+					'content' => __('Choose how to order the results that the View gets from the database. You can select the sorting key and direction.', 'wpv-views')
+				);
+				break;
+			case 'limit_and_offset':
+				$return = array(
+					'title' => __('Limit and Offset', 'wpv-views'),
+					'content' => __('You can limit the number of results returned by the query and set an offset. Please note that this option is not intended for pagination and sliders, but for static Limit and Offset settings.', 'wpv-views')
+				);
+				break;
+			case 'filter_the_results':
+				$return = array(
+					'title' => __('Query Filter', 'wpv-views'),
+					'content' => __("You can filter the View query by status, custom fields, taxonomy, users fields and even content search depending on the content that you are going to load. Click on 'Add another filter' and then select the filter type. A View may have as many filters as you like.", 'wpv-views')
+				);
+				break;
+			case 'pagination_and_sliders_settings':
+				$return = array(
+					'title' => __('Pagination and sliders settings', 'wpv-views'),
+					'content' => __("You can use a View to display paginated results and sliders. Both are built using 'Pagination'. For paginated listings, choose to update the entire page. For sliders, choose to update only the View.", 'wpv-views')
+				);
+				break;
+			case 'filters_html_css_js':
+				$return = array(
+					'title' => __('Filter', 'wpv-views'),
+					'content' => __("In this section you can add pagination controls, slider controls and parametric searches. If you enabled pagination, you need to insert the pagination controls here. They are used for both paged results and sliders. For parametric searches, insert 'filter' elements. The output of this section is displayed via the [wpv-filter-meta-html] shortcode in the Filter and Loop Output Integration section.", 'wpv-views')
+				);
+				break;
+			case 'parametric_search':
+				$return = array(
+					'title' => __('Parametric search', 'wpv-views'),
+					'content' => __("In this section you can choose when to refresh the Views results and which options to show in form inputs.", 'wpv-views')
+				);
+				break;
+			case 'layout_html_css_js':
+				$return = array(
+					'title' => __('View HTML output', 'wpv-views'),
+					'content' => __('This HTML determines what the View outputs for the query results. Use the Loop Wizard to design the output of this View. Then, edit the design by adding fields, HTML and media, using the toolbar buttons.', 'wpv-views')
+				);
+				break;
+			case 'layout_extra_js':
+				$return = array(
+					'title' => __('Additional Javascript files', 'wpv-views'),
+					'content' => __('Here you can set the URLs of additional scripts that need to be loaded with this View. Use a comma separated list of URLs', 'wpv-views')
+				);
+				break;
+			case 'templates_for_view':
+				$return = array(
+					'title' => __('Templates for this View', 'wpv-views'),
+					'content' => __("A View may include Content Templates. These templates make it easy to output design structures without having to repeat them in the loop.", 'wpv-views')
+				);
+				break;
+			case 'complete_output':
+				$return = array(
+					'title' => __('Filter and Loop Output Integration', 'wpv-views'),
+					'content' => __( 'This editor lets you control how the Filter and Loop Output sections of this View are displayed. The [wpv-filter-meta-html] shortcode displays the output of the Filter section. The [wpv-layout-meta-html] shortcode displays the output of the Loop Output section. You can add your HTML and fields to rearrange and style the output.', 'wpv-views' )
+				);
+				break;
+			case 'loops_selection':
+				$return = array(
+					'title' => __('Loop selection', 'wpv-views'),
+					'content' => __("Choose which listing page to customize. The WordPress archive will display the exact same content as WordPress normally does, but you can design it using the View HTML.", 'wpv-views')
+				);
+				break;
+			case 'loops_selection_layouts':
+				$return = array(
+					'title' => __('Layouts archive loop', 'wpv-views'),
+					'content' => __('This WordPress Archive is used in a Layout, so it will be used in the archive loops that the Layout has been assigned to.', 'wpv-views')
+				);
+				break;
+			case 'module_manager':
+				$return = array(
+					'title' => __('Module Manager', 'wpv-views'),
+					'content' => __("With Modules, you can easily reuse your designs in different websites and create your own library of building blocks.", 'wpv-views')
+				);
+				break;
+		}
+		return $return;
 	}
-	return $return;
+	
 }
-
-/**
-* Help messages
-*
-* $views_edit_help global
-*
-* @todo do not use a global...
-*/
-
-global $views_edit_help;
-$views_edit_help = 
-    array(
-        'title_and_description' => 
-            array(
-                'title' => htmlentities( __( 'Title and Description', 'wpv-views' ), ENT_QUOTES ), 
-                'content' => htmlentities( __("Each View has a title and an optional description. These are used for you, to identify different Views. The title and the description don't appear anywhere on the site's public pages.", 'wpv-views'), ENT_QUOTES )
-            ),
-        'content_section' => 
-            array(
-                'title' => htmlentities( __('Content to load', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __('Choose between posts, taxonomy and users and then select the specific content type to load. For posts, you can select multiple content types.', 'wpv-views'), ENT_QUOTES )
-            ),
-        'query_options' => 
-            array(
-                'title' => htmlentities( __('Query Options', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __('This section includes additional options for what content to load. You will see different options for posts, taxonomy and users.', 'wpv-views'), ENT_QUOTES )
-            ),
-        'ordering' => 
-            array(
-                'title' => htmlentities( __('Ordering', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __('Choose how to order the results that the View gets from the database. You can select the sorting key and direction.', 'wpv-views'), ENT_QUOTES )
-            ),
-        'limit_and_offset' => 
-            array(
-                'title' => htmlentities( __('Limit and Offset', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __('You can limit the number of results returned by the query and set an offset. Please note that this option is not intended for pagination and sliders, but for static Limit and Offset settings.', 'wpv-views'), ENT_QUOTES )
-            ),
-        'filter_the_results' => 
-            array(
-                'title' => htmlentities( __('Query Filter', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("You can filter the View query by status, custom fields, taxonomy, users fields and even content search depending on the content that you are going to load. Click on 'Add another filter' and then select the filter type. A View may have as many filters as you like.", 'wpv-views'), ENT_QUOTES )
-            ),
-        'pagination_and_sliders_settings' => 
-            array(
-                'title' => htmlentities( __('Pagination and sliders settings', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("You can use a View to display paginated results and sliders. Both are built using 'Pagination'. For paginated listings, choose to update the entire page. For sliders, choose to update only the View.", 'wpv-views'), ENT_QUOTES )
-            ),
-        'filters_html_css_js' => 
-            array(
-                'title' => htmlentities( __('Filter', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("In this section you can add pagination controls, slider controls and parametric searches. If you enabled pagination, you need to insert the pagination controls here. They are used for both paged results and sliders. For parametric searches, insert 'filter' elements. The output of this section is displayed via the [wpv-filter-meta-html] shortcode in the Filter and Loop Output Integration section.", 'wpv-views'), ENT_QUOTES )
-            ),
-		'parametric_search' => 
-            array(
-                'title' => htmlentities( __('Parametric search', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("In this section you can choose when to refresh the Views results and which options to show in form inputs.", 'wpv-views'), ENT_QUOTES )
-            ),
-        'layout_html_css_js' => 
-            array(
-                'title' => htmlentities( __('View HTML output', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __('This HTML determines what the View outputs for the query results. Use the Loop Wizard to design the output of this View. Then, edit the design by adding fields, HTML and media, using the toolbar buttons.', 'wpv-views'), ENT_QUOTES )
-            ),
-        'templates_for_view' => 
-            array(
-                'title' => htmlentities( __('Templates for this View', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("A View may include Content Templates. These templates make it easy to output design structures without having to repeat them in the loop.", 'wpv-views'), ENT_QUOTES ),          
-            ),
-        'complete_output' => 
-            array(
-                'title' => htmlentities( __('Filter and Loop Output Integration', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __( 'This editor lets you control how the Filter and Loop Output sections of this Views are displayed. The [wpv-filter-meta-html] shortcode displays the output of the Filter section. The [wpv-layout-meta-html] shortcode displays the output of the Loop Output section. You can add your HTML and fields to rearrange and style the output.', 'wpv-views' ), ENT_QUOTES )
-            ),         
-        'loops_selection' => 
-            array(
-                'title' => htmlentities( __('Loop selection', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("Choose which listing page to customize. The WordPress archive will display the exact same content as WordPress normally does, but you can design it using the View HTML.", 'wpv-views'), ENT_QUOTES )
-            ),
-        'module_manager' => 
-            array(
-                'title' => htmlentities( __('Module Manager', 'wpv-views'), ENT_QUOTES ), 
-                'content' => htmlentities( __("With Modules, you can easily reuse your designs in different websites and create your own library of building blocks.", 'wpv-views'), ENT_QUOTES )
-            ),
-    );
 
 //----------------------------------------
 // Help boxes texts - function
@@ -618,7 +559,7 @@ function wpv_get_view_layout_introduction_data() {
 		'text'			=> '<h3>' . __('How to Design the Output','wpv-views') . '</h3>'
 					. '<p>' . __('The Loop Output HTML editor lets you style the output of the View.', 'wpv-views') . '</p>'
 					. '<p>' . __('The content between the <strong>&lt;wpv-loop&gt;</strong> and <strong>&lt;/wpv-loop&gt;</strong> tags will repeat for every item in the View loop.') . '</p>'
-					. '<p>' . __('To get started easily, click on the <strong>Loop Wizard</strong>. You will select the output style loop and the fields to display. Then, edit by adding you own HTML markup, media and additional fields.', 'wpv-views') . WPV_MESSAGE_SPACE_CHAR
+					. '<p>' . __('To get started easily, click on the <strong>Loop Wizard</strong>. You will select the loop output style and the fields to display. Then, edit by adding you own HTML markup, media and additional fields.', 'wpv-views') . WPV_MESSAGE_SPACE_CHAR
 						. sprintf( __('Learn more by reading the %sViews Loop documentation%s.', 'wpv-views'), '<a href="' . WPV_LINK_LOOP_DOCUMENTATION . '" target="_blank">', '</a>' ) . '</p>'
 						. '<p>' . __('The <strong>Filter and Loop Output Integration</strong> section lets you control the order of the <strong>Filter</strong> and <strong>Loop Output</strong> sections and to add your HTML between these two sections.', 'wpv-views') . '</p>'
 						. ' <input id="wpv-layout-hint-dismiss" type="hidden" class="js-wpv-layout-hint-dismiss" data-nonce="' . wp_create_nonce( 'wpv_view_layout_hint_dismiss_nonce')  . '" /> ',
@@ -666,7 +607,7 @@ function wpv_display_view_howto_help_box() {
 	$general = array(
 		'text'			=> '<h3>' . __( 'How to display this View', 'wpfv-views' ) . '</h3>' 
 						. '<p>' . __('You can display this View inside content or as a widget.', 'wpv-views') . '</p><p>'
-						. __('To display inside content (post, post, custom type), edit that content.', 'wpv-views') . WPV_MESSAGE_SPACE_CHAR
+						. __('To display inside content (post, page, custom type), edit that content.', 'wpv-views') . WPV_MESSAGE_SPACE_CHAR
 						. __( 'You will find the <strong>Views</strong> button.', 'wpv-views' ) . WPV_MESSAGE_SPACE_CHAR
 						. __( 'Click on it and locate this View to insert it anywhere you want inside the content.', 'wpv-views' ) . '</p><p>'
 						. sprintf( __('To display as a widget, go to <a href="%s">Appearance -> Widgets</a> and select the <strong>WP Views</strong> widget.', 'wpv-views'), admin_url( 'widgets.php' ) ) . '</p><p>'
@@ -694,6 +635,34 @@ function wpv_display_view_howto_help_box() {
 //----------------------------------------
 // Help boxes texts - embedded plugin mode
 //----------------------------------------
+
+function wpv_get_embedded_promotional_box( $type = 'view' ) {
+	$target = __( 'View', 'wpv-views' );
+	switch ( $type ) {
+		case 'view':
+			$target = __( 'View', 'wpv-views' );
+			break;
+		case 'ct':
+			$target = __( 'Content Template', 'wpv-views' );
+			break;
+		case 'wpa':
+			$target = __( 'WordPress Archive', 'wpv-views' );
+			break;
+	}
+	$data = array(
+		'text'			=> '<p>' . sprintf( __('You are viewing the read-only version of this %s.', 'wpv-views'), $target )
+						. WPV_MESSAGE_SPACE_CHAR
+						. __('To edit it, you need to get the Views plugin.', 'wpv-views')
+						. '</p>'
+						. '<p><a href="http://wp-types.com/home/views-create-elegant-displays-for-your-content/?utm_source=viewsplugin&utm_campaign=views&utm_medium=embedded-view-promotional-link&utm_term=Get Views" title="" class="button button-primary-toolset" target="_blank">'
+						. __( 'Get Views', 'wpv-views' )
+						. '</a></p>',
+		'close'			=> 'false',
+		'hidden'		=> 'false',
+		'classname'		=> ''
+	);
+	wpv_toolset_help_box( $data );
+}
 
 function wpv_get_embedded_view_introduction_data() {
 	$promotional = '<p class="toolset-promotional">' . __( 'You are viewing the read-only version of this View. To edit it, you need to get Views plugin.', 'wpv-views' )
@@ -767,11 +736,8 @@ function wpv_get_embedded_view_introduction_data() {
 }
 
 function wpv_get_embedded_content_template_introduction_data() {
-	$promotional = '<p class="toolset-promotional">' . __( 'You are viewing the read-only version of this Content Template. To edit it, you need to get Views plugin.', 'wpv-views' )
-				. '&nbsp;&nbsp;&nbsp;<a href="http://wp-types.com/home/views-create-elegant-displays-for-your-content/?utm_source=viewsplugin&utm_campaign=views&utm_medium=embedded-content-template-promitional-link&utm_term=Get Views" title="" class="button-primary button-primary-toolset">' . __( 'Get Views', 'wpv-views' ) . '</a>'
-				. '</p>';
 	$all = array(
-		'text'			=> $promotional . '<p>' . __('This Content Template replaces the content area of the posts that you assign it to.', 'wpv-views')
+		'text'			=> '<p>' . __('This Content Template replaces the content area of the posts that you assign it to.', 'wpv-views')
 						. WPV_MESSAGE_SPACE_CHAR .  __('It can be used to tweak the content of a post when it is displayed alone or in an archive page.', 'wpv-views') . '</p>'
 						. '<p>' . __( 'You can also call this Template using a shortcode [wpv-post-body view_template="XX"] to render specific information about the current post.', 'wpv-views' ) . '</p>'
 						. '<p>' . __('You can add shortcodes to post fields, and also your own HTML and CSS to style the fields and design the page template.', 'wpv-views') . '</p>',
@@ -927,7 +893,14 @@ function wpv_insert_form_workflow_help_boxes( $post ) {
 			
 			global $wpdb;
 			$view_id = $_GET['completeview'];
-			$title = $wpdb->get_var( $wpdb->prepare( "SELECT post_title FROM {$wpdb->posts} WHERE ID = %d", $view_id ) );
+			$title = $wpdb->get_var( 
+				$wpdb->prepare( 
+					"SELECT post_title FROM {$wpdb->posts} 
+					WHERE ID = %d 
+					LIMIT 1", 
+					$view_id 
+				) 
+			);
 			if ( $title !== NULL ) {
 				$has_view = true;
 				$view_name = '<strong class="js-wpv-insert-view-form-results-helper-name">' . $title . '</strong>';
@@ -943,7 +916,14 @@ function wpv_insert_form_workflow_help_boxes( $post ) {
 						$has_orig = true;
 						$has_orig_type = $orig_id;
 					} else {
-						$orig_data_array = $wpdb->get_results( $wpdb->prepare( "SELECT post_title, post_content FROM {$wpdb->posts} WHERE ID = %d", $orig_id ) );
+						$orig_data_array = $wpdb->get_results( 
+							$wpdb->prepare( 
+								"SELECT post_title, post_content FROM {$wpdb->posts} 
+								WHERE ID = %d 
+								LIMIT 1", 
+								$orig_id 
+							) 
+						);
 						if ( !empty( $orig_data_array ) ) {
 							$has_orig = true;
 							$has_orig_type = 'post';
@@ -1061,7 +1041,7 @@ function wpv_insert_form_workflow_help_boxes( $post ) {
 						if ( $has_completed ) {
 							$data = array(
 								'text'			=> '<h2>' . __( 'Parametric search setup completed!', 'wpv-views' ) . '</h2>'
-													. '<p>' . sprintf( __('This page wil display the results of the parametric search provided by the View <strong>%s</strong> used in a %s.', 'wpv-views'), $view_name, $orig_label ) . '</p>'
+													. '<p>' . sprintf( __('This page will display the results of the parametric search provided by the View <strong>%s</strong> used in a %s.', 'wpv-views'), $view_name, $orig_label ) . '</p>'
 													. '<p>' . sprintf( __( 'Remember to get back to the other tab in your browser and save the %s settings.', 'wpv-views' ), $orig_label ) . '</p>'
 													. '<p><a href="#" class="button button-small button-primary-toolset js-wpv-insert-form-workflow-help-box-close">' . __( 'Close', 'wpv-views' ) . '</a></p>',
 								'close'			=> 'true',
@@ -1081,7 +1061,7 @@ function wpv_insert_form_workflow_help_boxes( $post ) {
 							);
 							$data_after = array(
 								'text'			=> '<h2>' . __( 'Parametric search setup completed!', 'wpv-views' ) . '</h2>'
-													. '<p>' . sprintf( __('This page wil display the results of the parametric search provided by the View <strong>%s</strong> used in a %s.', 'wpv-views'), $view_name, $orig_label ) . '</p>'
+													. '<p>' . sprintf( __('This page will display the results of the parametric search provided by the View <strong>%s</strong> used in a %s.', 'wpv-views'), $view_name, $orig_label ) . '</p>'
 													. '<p>' . sprintf( __( 'Remember to get back to the other tab in your browser and save the %s settings.', 'wpv-views' ), $orig_label ) . '</p>'
 													. '<p><a href="#" class="button button-small button-primary-toolset js-wpv-insert-form-workflow-help-box-close">' . __( 'Close', 'wpv-views' ) . '</a></p>',
 								'close'			=> 'true',

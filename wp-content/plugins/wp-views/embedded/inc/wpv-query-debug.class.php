@@ -19,17 +19,19 @@ class WPV_Debug{
 		$this->status = false;
 		$this->total_memory = memory_get_usage ( false );
 		$this->show_type = 'compact';
-		$options = get_option('wpv_options');
-
+		
+        // FIXME: Use $WPV_settings, if possible.
+        // WPV_Debug class is initialized before WPV_Settings, can we change that?
+        $options = get_option('wpv_options');
 		if ( !isset($options['wpv_debug_mode']) ) {
 			$options['wpv_debug_mode'] = '';
 		}
-		if ( !isset($options['wpv-debug-mode-type']) ) {
-			$options['wpv-debug-mode-type'] = 'compact';
+		if ( !isset($options['wpv_debug_mode_type']) ) {
+			$options['wpv_debug_mode_type'] = 'compact';
 		}
 		if ( isset($options['wpv_debug_mode']) && !empty($options['wpv_debug_mode'])   ){
 			$this->status = true;
-			$this->show_type = $options['wpv-debug-mode-type'];
+			$this->show_type = $options['wpv_debug_mode_type'];
 			if ( !defined('SAVEQUERIES') ){
 					define('SAVEQUERIES', true);
 			}

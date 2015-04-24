@@ -72,11 +72,36 @@ function wpv_admin_menu_import_export() {
     <?php
 }
 
+add_action( 'wp_loaded', 'wpv_admin_export_on_form_submit' );
+
+/**
+* wpv_admin_menu_import_export_hook
+*
+* Performs the actual export and inport based on $_POST data. Executed on wp_loaded
+*
+* @since unknown
+*/
+
+function wpv_admin_export_on_form_submit() {
+    if ( 
+		isset( $_POST['export'] ) 
+		&& (
+			$_POST['export'] == __( 'Export', 'wpv-views' ) 
+			|| $_POST['export'] == 'wpv-export'
+		)
+		&& isset( $_POST['wpv-export-nonce'] ) 
+		&& wp_verify_nonce( $_POST['wpv-export-nonce'], 'wpv-export-nonce' ) 
+	) {
+        wpv_admin_export_data();
+        die();
+    }
+}
+
 /**
  * Exports data to XML.
  * Note: whatever chage done here must be done too in wpv_admin_export_selected_data()
  */
-function wpv_admin_export_data($download = true) {
+function wpv_admin_export_data( $download = true ) {
     global $WP_Views, $_wp_additional_image_sizes;
 
     require_once WPV_PATH_EMBEDDED . '/common/array2xml.php';
@@ -481,43 +506,59 @@ function wpv_admin_export_data($download = true) {
     }
 
     // Get settings
-    $options = get_option( 'wpv_options' );
-    if ( ! empty( $options ) ) {
-        foreach ( $options as $option_name => $option_value ) {
+    global $WPV_settings;
+    if ( ! $WPV_settings->is_empty() ) {
+		global $wpdb;
+		$wpv_settings_to_export = array();
+        foreach ( $WPV_settings as $option_name => $option_value ) {
             if ( 
 				strpos( $option_name, 'view_' ) === 0 
 				|| strpos( $option_name, 'views_template_' ) === 0 
 			) {
-                $post = get_post( $option_value );
-                if ( ! empty( $post ) ) {
-                    $options[$option_name] = $post->post_name;
-                }
-            }
-            // Custom inner shortcodes are stored in an indexed array, we need to make it associative
-            if ( 
-				$option_name == 'wpv_custom_inner_shortcodes' 
-				&& is_array( $option_value ) 
-			) {
-				$cis_option_value = array();
-				foreach ( $option_value as $inner_shortcode ) {
-					$cis_option_value[$inner_shortcode] = $inner_shortcode;
+                $item_name = $wpdb->get_var( 
+					$wpdb->prepare( 
+						"SELECT post_name FROM {$wpdb->posts} 
+						WHERE ID = %s 
+						LIMIT 1", 
+						$option_value 
+					) 
+				);
+				if ( $item_name ) {
+					$wpv_settings_to_export[$option_name] = $item_name;
 				}
-				$options[$option_name] = $cis_option_value;
-            }
-			// Custom conditional functions are stored in an indexed array, we need to make it associative
-            if ( 
-				$option_name == 'wpv_custom_conditional_functions' 
-				&& is_array( $option_value ) 
-			) {
-				$ccf_option_value = array();
-				foreach ( $option_value as $cond_func ) {
-					$sanitized_key = str_replace( '::', '-_paamayim_-', $cond_func );
-					$ccf_option_value[$sanitized_key] = $cond_func;
-				}
-				$options[$option_name] = $ccf_option_value;
             }
         }
-        $data['settings'] = $options;
+		// Translate options as indexed arrays so they can be converted to XML
+		$arrayed_options = array( 'wpv_custom_inner_shortcodes', 'wpv_custom_conditional_functions' );
+		foreach ( $arrayed_options as $arrayed_opt ) {
+			if ( isset( $WPV_settings[$arrayed_opt] ) ) {
+				if ( is_array( $WPV_settings[$arrayed_opt] ) ) {
+                    $sanitized_option_value = array();
+					foreach ( $WPV_settings[$arrayed_opt] as $candidate_value ) {
+						$sanitized_key = str_replace( '::', '-_paamayim_-', $candidate_value );
+						$sanitized_option_value[$sanitized_key] = $candidate_value;
+					}
+					$wpv_settings_to_export[$arrayed_opt] = $sanitized_option_value;
+				}
+			}
+		}
+		if ( isset( $WPV_settings['wpv_framework_keys'] ) ) {
+			if ( is_array( $WPV_settings['wpv_framework_keys'] ) ) {
+				foreach ( $WPV_settings['wpv_framework_keys'] as $framework_id => $framework_keys ) {
+					if ( 
+						is_array( $framework_keys ) 
+						&& ! empty( $framework_keys )
+					) {
+						$sanitized_framework_keys = array();
+						foreach ( $framework_keys as $candidate_key ) {
+							$sanitized_framework_keys[$candidate_key] = $candidate_key;
+						}
+						$wpv_settings_to_export['wpv_framework_keys'][$framework_id] = $sanitized_framework_keys;
+					}
+				}
+			}
+		}
+        $data['settings'] = $wpv_settings_to_export;
     }
 
     // Offer for download

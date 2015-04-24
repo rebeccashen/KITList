@@ -195,12 +195,25 @@ add_filter( 'wpv-extra-condition-filters', 'wpv_add_wpv_if_functions_support', 1
 function wpv_add_wpv_if_functions_support($evaluate) {
 	$occurences = preg_match_all('/(\\w+:?:?\\w+?)\(([\\w",. \'-]*)\)/', $evaluate, $matches);
 	if ( $occurences > 0 ) {
-		global $WP_Views;
-		$options = $WP_Views->get_options();
+		global $WPV_settings;
 		$allowed_functions = array();
-		if ( isset( $options['wpv_custom_conditional_functions'] ) && is_array( $options['wpv_custom_conditional_functions'] ) ) {
-			$allowed_functions = $options['wpv_custom_conditional_functions'];
+		if ( 
+			isset( $WPV_settings->wpv_custom_conditional_functions ) 
+			&& is_array( $WPV_settings->wpv_custom_conditional_functions ) 
+		) {
+			$allowed_functions = $WPV_settings->wpv_custom_conditional_functions;
 		}
+		
+		/**
+		* wpv_filter_wpv_custom_conditional_functions
+		*
+		* Extend or modify the list of allowed functions to be usd inside wpv-if shortcodes.
+		* Used to automatically register Views API functions.
+		*
+		* @since 1.8.0
+		*/
+		
+		$allowed_functions = apply_filters( 'wpv_filter_wpv_custom_conditional_functions', $allowed_functions );
 		for ( $i = 0; $i < $occurences; $i++ ) {
 			$real_func = $matches[1][$i];
 			$real_function_trimmed = trim( $real_func );
@@ -259,6 +272,32 @@ function wpv_add_wpv_if_functions_support($evaluate) {
 		}
 	}
 	return $evaluate;
+}
+
+/**
+* wpv_if_register_api_functions
+*
+* Extend the functions registered by the user to include the Views API conditional tags
+*
+* @since 1.8.0
+*/
+
+add_filter( 'wpv_filter_wpv_custom_conditional_functions', 'wpv_if_register_api_functions', 10, 1 );
+
+function wpv_if_register_api_functions( $allowed_functions ) {
+	if ( ! in_array( 'has_wpv_wp_archive', $allowed_functions ) ) {
+		$allowed_functions[] = 'has_wpv_wp_archive';
+	}
+	if ( ! in_array( 'is_wpv_wp_archive_assigned', $allowed_functions ) ) {
+		$allowed_functions[] = 'is_wpv_wp_archive_assigned';
+	}
+	if ( ! in_array( 'has_wpv_content_template', $allowed_functions ) ) {
+		$allowed_functions[] = 'has_wpv_content_template';
+	}
+	if ( ! in_array( 'is_wpv_content_template_assigned', $allowed_functions ) ) {
+		$allowed_functions[] = 'is_wpv_content_template_assigned';
+	}
+	return $allowed_functions;
 }
 
 /**

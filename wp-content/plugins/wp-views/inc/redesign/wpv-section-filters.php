@@ -4,52 +4,60 @@
 * We can enable this to hide the Filters section
 */
 
-add_filter('wpv_sections_query_show_hide', 'wpv_show_hide_content_filter', 1,1);
+add_filter( 'wpv_sections_query_show_hide', 'wpv_show_hide_content_filter', 1, 1 );
 
-function wpv_show_hide_content_filter($sections) {
+function wpv_show_hide_content_filter( $sections ) {
 	$sections['content-filter'] = array(
-		'name'		=> __('Query Filter', 'wpv-views'),
-		);
+		'name' => __( 'Query Filter', 'wpv-views' ),
+	);
 	return $sections;
 }
 
-add_action('view-editor-section-query', 'add_view_filters', 50, 2);
+add_action( 'view-editor-section-query', 'add_view_filters', 50, 2 );
 
-function add_view_filters($view_settings, $view_id) {//echo '<pre>';print_r($view_settings);echo '</pre>';
-    global $views_edit_help;
+function add_view_filters( $view_settings, $view_id ) {
 	$hide = '';
-	if (isset($view_settings['sections-show-hide']) && isset($view_settings['sections-show-hide']['content-filter']) && 'off' == $view_settings['sections-show-hide']['content-filter']) {
+	if (
+		isset( $view_settings['sections-show-hide'] ) 
+		&& isset( $view_settings['sections-show-hide']['content-filter'] ) 
+		&& 'off' == $view_settings['sections-show-hide']['content-filter']
+	) {
 		$hide = ' hidden';
-	}?>
+	}
+	$section_help_pointer = WPV_Admin_Messages::edit_section_help_pointer( 'filter_the_results' );
+	?>
 	<div class="wpv-setting-container wpv-settings-content-filter js-wpv-settings-content-filter<?php echo $hide; ?>">
 		<div class="wpv-settings-header">
 			<h3>
 				<?php _e( 'Query Filter', 'wpv-views' ) ?>
-				<i class="icon-question-sign js-display-tooltip" data-header="<?php echo $views_edit_help['filter_the_results']['title']; ?>" data-content="<?php echo $views_edit_help['filter_the_results']['content']; ?>"></i>
+				<i class="icon-question-sign js-display-tooltip" 
+					data-header="<?php echo esc_attr( $section_help_pointer['title'] ); ?>" 
+					data-content="<?php echo esc_attr( $section_help_pointer['content'] ); ?>">
+				</i>
 			</h3>
 		</div>
 		<div class="wpv-setting">
 			<p class="js-no-filters hidden"><?php _e( 'No filters set', 'wpv-views' ) ?></p>
 			<ul class="filter-list js-filter-list hidden">
 				<?php
-				if (isset($view_settings['query_type']) && isset($view_settings['query_type'][0])) {
+				if (
+					isset( $view_settings['query_type'] ) 
+					&& isset( $view_settings['query_type'][0] )
+				) {
 					wpv_display_filters_list( $view_settings['query_type'][0], $view_settings );
 				}
 				?>
 			</ul>
 			<input type="hidden" class="js-wpv-filter-update-filters-list-nonce" value="<?php echo wp_create_nonce( 'wpv_view_filter_update_filters_list_nonce' ); ?>" />
 			<p>
-				<button class="button-secondary js-wpv-filter-add-filter" type="button" data-empty="<?php echo htmlentities( __('Add a filter', 'wpv-views'), ENT_QUOTES ); ?>" data-nonempty="<?php echo htmlentities( __('Add another filter', 'wpv-views'), ENT_QUOTES ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_add_filter' ); ?>">
-					<i class="icon-plus"></i> <?php echo htmlentities( __('Add a filter', 'wpv-views'), ENT_QUOTES ); ?>
+				<button class="button-secondary js-wpv-filter-add-filter" type="button" data-empty="<?php echo esc_attr( __('Add a filter', 'wpv-views') ); ?>" data-nonempty="<?php echo esc_attr( __('Add another filter', 'wpv-views') ); ?>" data-nonce="<?php echo wp_create_nonce( 'wpv_view_filter_add_filter' ); ?>">
+					<i class="icon-plus"></i> <?php echo esc_attr( __('Add a filter', 'wpv-views') ); ?>
 				</button>
-				<?php
-			// TODO all the following alerts should be added using javascript
-				?>
 			</p>
 		</div>
 	</div>
 
-	<div class="popup-window-container"> <!-- Use this element as a container for all popup windows. This element is hidden. -->
+	<div class="popup-window-container"> <!-- Use this element as a container for all popup windows. This element is hidden. @todo we do now have a container for that in somewhere -->
 
 		<div class="wpv-dialog js-filter-add-filter-form-dialog">
 			<div class="wpv-dialog-header">
@@ -60,7 +68,7 @@ function add_view_filters($view_settings, $view_id) {//echo '<pre>';print_r($vie
 
 				<strong><?php _e('Select what to filter by:', 'wpv-views'); ?></strong>
 
-				<?php wpv_filters_add_filter_select($view_settings); ?>
+				<?php wpv_filters_add_filter_select( $view_settings ); ?>
 
 			</div>
 			<div class="wpv-dialog-footer">
@@ -142,7 +150,7 @@ function wpv_filter_url_check_js() {
 	);
 
 	$toolset_reserved_words = array(
-		'wpv_column_sort_id', 'wpv_column_sort_dir', 'wpv_paged_preload_reach', 'wpv_view_count', 'wpv_filter_submit', 'wpv_post_search'
+		'wpv_column_sort_id', 'wpv_column_sort_dir', 'wpv_paged', 'wpv_paged_preload_reach', 'wpv_view_count', 'wpv_filter_submit', 'wpv_post_search'
 	);
 	$toolset_reserved_words = apply_filters('wpv_toolset_reserved_words', $toolset_reserved_words);
 	
@@ -179,31 +187,54 @@ function wpv_filter_url_check_js() {
 	<?php
 }
 
-add_action('wp_ajax_wpv_filters_add_filter_row', 'wpv_filters_add_filter_row_callback');
+// @todo add proper wp_send_json_error/wp_send_json_success management here
+
+add_action( 'wp_ajax_wpv_filters_add_filter_row', 'wpv_filters_add_filter_row_callback' );
 
 function wpv_filters_add_filter_row_callback() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		die( "Security check" );
+	}
 	$nonce = $_POST["wpnonce"];
-	if (! wp_verify_nonce($nonce, 'wpv_view_filters_add_filter_nonce') ) die("Security check");
+	if ( ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filters_add_filter_nonce' ) ) {
+		die( "Security check" );
+	}
+	if (
+		! isset( $_POST["id"] )
+		|| ! is_numeric( $_POST["id"] )
+		|| intval( $_POST['id'] ) < 1 
+	) {
+		die( "Security check" );
+	}
 	if ( empty( $_POST['filter_type'] ) ) {
-		echo $_POST['id'];
-		die();
+		die( "Unexpected filter type" );
 	}
-	$view_array = get_post_meta($_POST["id"], '_wpv_settings', true);
-	if (!isset($view_array['taxonomy_type']) || empty($view_array['taxonomy_type'])) {
-		$view_array['taxonomy_type'] = array('category');
+	$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+	if (
+		! isset( $view_array['taxonomy_type'] ) 
+		|| empty( $view_array['taxonomy_type'] )
+	) {
+		$view_array['taxonomy_type'] = array( 'category' );
 	}
-	if (!isset($view_array['roles_type']) || empty($view_array['roles_type'])) {
-		$view_array['roles_type'] = array('administrator');
+	if (
+		! isset( $view_array['roles_type'] ) 
+		|| empty( $view_array['roles_type'] )
+	) {
+		$view_array['roles_type'] = array( 'administrator' );
 	}
-	if (!isset($view_array['post_type']) || empty($view_array['post_type'])) {
+	if (
+		! isset( $view_array['post_type'] ) 
+		|| empty( $view_array['post_type'] )
+	) {
 		$view_array['post_type'] = array();
 	}
+	$_POST['filter_type'] = sanitize_text_field( $_POST['filter_type'] );
 	$filters = array();
-	$filters = apply_filters('wpv_filters_add_filter', $filters, $view_array['post_type']);
-	$filters = apply_filters('wpv_taxonomy_filters_add_filter', $filters, $view_array['taxonomy_type'][0]);
-	$filters = apply_filters('wpv_users_filters_add_filter', $filters, $view_array['roles_type'][0]);
-	if (isset($filters[$_POST['filter_type']])) {
-		if (isset($filters[$_POST['filter_type']]['args'])) {
+	$filters = apply_filters( 'wpv_filters_add_filter', $filters, $view_array['post_type'] );
+	$filters = apply_filters( 'wpv_taxonomy_filters_add_filter', $filters, $view_array['taxonomy_type'][0] );
+	$filters = apply_filters( 'wpv_users_filters_add_filter', $filters, $view_array['roles_type'][0] );
+	if ( isset( $filters[$_POST['filter_type']] ) ) {
+		if ( isset( $filters[$_POST['filter_type']]['args'] ) ) {
 			call_user_func($filters[$_POST['filter_type']]['callback'], $filters[$_POST['filter_type']]['args']);
 		} else {
 			call_user_func($filters[$_POST['filter_type']]['callback']);
@@ -213,25 +244,19 @@ function wpv_filters_add_filter_row_callback() {
 }
 
 
-function give_group_to_field( $filters )
-{
-	$generics = array( 'post_author', 'post_status', 'post_search', 'post_parent', 'post_relationship', 'post_id' );
-	$users_filters = array( 'users_filter', 'usermeta_filter');
+function wpv_filter_give_group_to_field( $filters ) {
+	
+	$post_meta_label = __( 'Custom fields', 'wpv-views' );
+	$post_woocommerce_views_meta_label = __( 'WooCommerce Views filter fields', 'wpv-views' );	
+	$user_meta_label = __( 'User fields', 'wpv-views' );
+	
 	$groups = array();
 
-	foreach( $filters as $type => $filter )
-	{
-		if( in_array( $type,  $generics) )
-		{
-			$groups["Post filters"][$type] = $filter;
-		}
-		else if( $type == 'post_category' || strpos($type, 'tax_input') !== false )
-		{
-
-			$groups['Taxonomy'][$type] = $filter;
-		}
-		else if( strpos($type, 'custom-field-wpcf-') !== false )
-		{
+	foreach ( $filters as $type => $filter ) {
+		if ( isset( $filter['group'] ) ) {
+			$group = $filter['group'];
+			$groups[$group][$type] = $filter;
+		} else if ( strpos( $type, 'custom-field-wpcf-' ) !== false ) {
 				$g = '';
 				$nice_name = explode('custom-field-wpcf-', $type);
 				$id = ( isset($nice_name[1] ) ) ? $nice_name[1] : $type;
@@ -242,12 +267,10 @@ function give_group_to_field( $filters )
 						$g = $gs['name'];
 					}
 				}
-				$gr = $g ? $g : "Custom fields";
+				$gr = $g ? $g : $post_meta_label;
 
 				$groups[$gr][$type] = $filter;
-		}
-		else if( strpos($type, 'custom-field-views_woo_') !== false )
-		{
+		} else if ( strpos( $type, 'custom-field-views_woo_' ) !== false ) {
 			$g = '';
 			$nice_name = explode('custom-field-', $type);
 	    		$id = ( isset($nice_name[1] ) ) ? $nice_name[1] : $type;
@@ -258,18 +281,9 @@ function give_group_to_field( $filters )
 					$g = $gs['name'];
 				}
 			}
-			$gr = $g ? $g : "WooCommerce Views filter fields";
-
+			$gr = $g ? $g : $post_woocommerce_views_meta_label;
 			$groups[$gr][$type] = $filter;
-		}
-        
-        else if( strpos($type, 'usermeta-field-basic-') !== false )
-        {
-            $gr = "Basic fields";
-            $groups[$gr][$type] = $filter;
-        }
-        else if( strpos($type, 'usermeta-field-wpcf-') !== false )
-        {
+        } else if ( strpos( $type, 'usermeta-field-wpcf-' ) !== false ) {
                 $g = '';
                 $nice_name = explode('usermeta-field-wpcf-', $type);
                 $id = ( isset($nice_name[1] ) ) ? $nice_name[1] : $type;
@@ -280,22 +294,17 @@ function give_group_to_field( $filters )
                         $g = $gs['name'];
                     }
                 }
-                $gr = $g ? $g : "Users fields";
-
+                $gr = $g ? $g : $user_meta_label;
                 $groups[$gr][$type] = $filter;
-        }
-        else if( strpos($type, 'usermeta-field-') !== false &&  strpos($type, 'usermeta-field-basic-') === false &&  strpos($type, 'usermeta-field-wpcf-') === false )
-        {
-                $gr = "User fields";
+        } else if ( 
+			strpos( $type, 'usermeta-field-' ) !== false
+			&& strpos( $type, 'usermeta-field-basic-') === false 
+			&& strpos( $type, 'usermeta-field-wpcf-' ) === false 
+		) {
+                $gr = $user_meta_label;
                 $groups[$gr][$type] = $filter;
-        }
-		else if( in_array( $type,  $users_filters) ){
-			$groups["Users filters"][$type] = $filter;
-		}
-		else
-		{
-
-			$groups['Custom fields'][$type] = $filter;
+		} else {
+			$groups[$post_meta_label][$type] = $filter;
 		}
 	}
 	return $groups;
@@ -304,67 +313,102 @@ function give_group_to_field( $filters )
 
 function wpv_filters_add_filter_select($view_settings) {
 	$filters = array();
-	if (!isset($view_settings['post_type'])) $view_settings['post_type'] = array();
-	if (!isset($view_settings['taxonomy_type'])) $view_settings['taxonomy_type'] = array('category');
-	if (!isset($view_settings['roles_type'])) $view_settings['roles_type'] = array('users');
-	if (isset($view_settings['query_type']) && isset($view_settings['query_type'][0])) {
-		switch ($view_settings['query_type'][0]) {
+	if ( ! isset( $view_settings['post_type'] ) ) {
+		$view_settings['post_type'] = array();
+	}
+	if ( ! isset( $view_settings['taxonomy_type'] ) ) {
+		$view_settings['taxonomy_type'] = array( 'category' );
+	}
+	if ( ! isset( $view_settings['roles_type'] ) ) {
+		$view_settings['roles_type'] = array( 'users' );
+	}
+	if (
+		isset( $view_settings['query_type'] ) 
+		&& isset( $view_settings['query_type'][0] )
+	) {
+		switch ( $view_settings['query_type'][0] ) {
 			case 'posts':
-				$filters = apply_filters('wpv_filters_add_filter', $filters, $view_settings['post_type']);
+				$filters = apply_filters( 'wpv_filters_add_filter', $filters, $view_settings['post_type'] );
 				break;
 			case 'taxonomy':
-				$filters = apply_filters('wpv_taxonomy_filters_add_filter', $filters, $view_settings['taxonomy_type'][0]);
+				$filters = apply_filters( 'wpv_taxonomy_filters_add_filter', $filters, $view_settings['taxonomy_type'][0] );
 				break;
 			case 'users':
-				$filters = apply_filters('wpv_users_filters_add_filter', $filters, $view_settings['roles_type'][0]);
+				$filters = apply_filters( 'wpv_users_filters_add_filter', $filters, $view_settings['roles_type'][0] );
 				break;	
 		}
 	}
 	?>
-	
 	<select id="filter-add-select" class="js-filter-add-select">
 	<option value="-1"><?php echo __('--- Please select ---', 'wpv-views'); ?></option>
 	<?php
-
-	foreach( give_group_to_field( $filters ) as $group => $f )
-	{
-		if( $f && !empty( $f ) ):
+	foreach ( wpv_filter_give_group_to_field( $filters ) as $group => $f ) {
+		if ( 
+			$f 
+			&& ! empty( $f ) 
+		) {
 		?>
-		<optgroup label="<?php echo $group?>">
+		<optgroup label="<?php echo esc_attr( $group ); ?>">
 		<?php
-		foreach($f as $type => $filter) {
-			if (!isset($view_settings[$filter['present']])) {
+		foreach ( $f as $type => $filter ) {
+			if ( ! isset( $view_settings[$filter['present']] ) ) {
 				?>
-				<option value="<?php echo $type; ?>"><?php echo $filter['name']; ?></option>
-
+				<option value="<?php echo esc_attr( $type ); ?>"><?php echo $filter['name']; ?></option>
 				<?php
 			}
 		}
 		?>
 		</optgroup>
 		<?php
-		endif;
+		}
 	}
 	?>
 	</select>
-<?php }
+<?php 
+}
 
-add_action('wp_ajax_wpv_filters_upate_filters_select', 'wpv_filters_upate_filters_select_callback');
+// @todo add proper wp_send_json_error/wp_send_json_success management here
+
+add_action( 'wp_ajax_wpv_filters_upate_filters_select', 'wpv_filters_upate_filters_select_callback' );
 
 function wpv_filters_upate_filters_select_callback() {
-	$nonce = $_POST["wpnonce"];
-	if (! wp_verify_nonce($nonce, 'wpv_view_filter_add_filter') ) die("Security check");
-	$view_array = get_post_meta($_POST["id"], '_wpv_settings', true);
-	wpv_filters_add_filter_select($view_array);
+	if ( ! current_user_can( 'manage_options' ) ) {
+		die( "Security check" );
+	}
+	if ( ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_add_filter' ) ) {
+		die( "Security check" );
+	}
+	if (
+		! isset( $_POST["id"] )
+		|| ! is_numeric( $_POST["id"] )
+		|| intval( $_POST['id'] ) < 1 
+	) {
+		die( "Security check" );
+	}
+	$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
+	wpv_filters_add_filter_select( $view_array );
 	die();
 }
 
-add_action('wp_ajax_wpv_filter_update_filters_list', 'wpv_filter_update_filters_list_callback');
+// @todo add proper wp_send_json_error/wp_send_json_success management here
+
+add_action( 'wp_ajax_wpv_filter_update_filters_list', 'wpv_filter_update_filters_list_callback' );
 
 function wpv_filter_update_filters_list_callback() {
-	$nonce = $_POST["nonce"];
-	if (! wp_verify_nonce($nonce, 'wpv_view_filter_update_filters_list_nonce') ) die("Security check");
-	$view_array = get_post_meta($_POST["id"], '_wpv_settings', true);
+	if ( ! current_user_can( 'manage_options' ) ) {
+		die( "Security check" );
+	}
+	if ( ! wp_verify_nonce( $_POST["nonce"], 'wpv_view_filter_update_filters_list_nonce') ) {
+		die( "Security check" );
+	}
+	if (
+		! isset( $_POST["id"] )
+		|| ! is_numeric( $_POST["id"] )
+		|| intval( $_POST['id'] ) < 1 
+	) {
+		die( "Security check" );
+	}
+	$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 	$return_result = array();
 	// Filters list
 	$filters_list = '';
@@ -378,16 +422,30 @@ function wpv_filter_update_filters_list_callback() {
 	die();
 }
 
-add_action('wp_ajax_wpv_filter_make_intersection_filters', 'wpv_filter_make_intersection_filters');
+// @todo add proper wp_send_json_error/wp_send_json_success management here
 
-function wpv_filter_make_intersection_filters() { // TODO this is undone still
-	$nonce = $_POST["nonce"];
-	if (! wp_verify_nonce( $nonce, 'wpv_view_make_intersection_filters' ) ) die( "Security check" );
+add_action( 'wp_ajax_wpv_filter_make_intersection_filters', 'wpv_filter_make_intersection_filters' );
+
+function wpv_filter_make_intersection_filters() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		die( "Security check" );
+	}
+	if (! wp_verify_nonce( $_POST["nonce"], 'wpv_view_make_intersection_filters' ) ) {
+		die( "Security check" );
+	}
+	if (
+		! isset( $_POST["id"] )
+		|| ! is_numeric( $_POST["id"] )
+		|| intval( $_POST['id'] ) < 1 
+	) {
+		die( "Security check" );
+	}
 	$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 	$view_array['taxonomy_relationship'] = 'AND';
 	$view_array['custom_fields_relationship'] = 'AND';
 	$view_array['usermeta_fields_relationship'] = 'AND';
 	update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+	do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
 	$return_result = array();
 	// Filters list
 	$filters_list = '';
@@ -404,13 +462,13 @@ function wpv_filter_make_intersection_filters() { // TODO this is undone still
 function wpv_display_filters_list( $query_type, $view_settings ) {
 	switch ( $query_type ) {
 		case 'posts':
-			do_action('wpv_add_filter_list_item', $view_settings);
+			do_action( 'wpv_add_filter_list_item', $view_settings );
 			break;
 		case 'taxonomy':
-			do_action('wpv_add_taxonomy_filter_list_item', $view_settings);
+			do_action( 'wpv_add_taxonomy_filter_list_item', $view_settings );
 			break;
 		case 'users':
-			do_action('wpv_add_users_filter_list_item', $view_settings);
+			do_action( 'wpv_add_users_filter_list_item', $view_settings );
 			break;
 	}
 }
@@ -427,8 +485,7 @@ class WPV_Filter_Item {
 	
 	public static function simple_filter_list_item( $filter_slug = 'slug', $filter_target = 'posts', $li_slug = 'slug', $title = 'Filter', $content = '' ) {
 		?>
-		<li id="js-row-<?php echo $filter_slug; ?>" data-filterslug="<?php echo $filter_slug; ?>" class="js-filter-row js-filter-row-simple js-wpv-filter-row-<?php echo $li_slug; ?> js-filter-for-<?php echo $filter_target; ?> js-filter-<?php echo $li_slug; ?> js-filter-row-<?php echo $filter_slug; ?>">
-
+		<li id="js-row-<?php echo esc_attr( $filter_slug ); ?>" data-filterslug="<?php echo esc_attr( $filter_slug ); ?>" class="js-filter-row js-filter-row-simple js-wpv-filter-row-<?php echo esc_attr( $li_slug ); ?> js-filter-for-<?php echo esc_attr( $filter_target ); ?> js-filter-<?php echo esc_attr( $li_slug ); ?> js-filter-row-<?php echo esc_attr( $filter_slug ); ?>">
 			<span class="wpv-filter-title">
 				<i class="icon-filter"></i>&nbsp;&nbsp;<?php echo $title; ?>
 			</span>
@@ -442,15 +499,15 @@ class WPV_Filter_Item {
 	public static function simple_filter_list_item_buttons( $li_slug = 'slug', $save_action = '', $save_nonce = '', $delete_action = '', $delete_nonce = '' ) {
 		?>
 		<span class='edit-filter wpv-edit-filter js-wpv-filter-edit-controls'>
-			<button class="button button-secondary button-small js-wpv-filter-edit-ok js-wpv-filter-<?php echo $li_slug; ?>-edit-ok hidden" data-save="<?php echo esc_attr( __('Save', 'wpv-views') ); ?>" data-close="<?php echo esc_attr( __('Close', 'wpv-views') ); ?>" data-success="<?php echo esc_attr( __('Updated', 'wpv-views') ); ?>" data-unsaved="<?php echo esc_attr( __('Not saved', 'wpv-views') ); ?>" data-saveaction="<?php echo $save_action; ?>" data-nonce="<?php echo $save_nonce; ?>">
+			<button class="button button-secondary button-small js-wpv-filter-edit-ok js-wpv-filter-<?php echo esc_attr( $li_slug ); ?>-edit-ok hidden" data-save="<?php echo esc_attr( __('Save', 'wpv-views') ); ?>" data-close="<?php echo esc_attr( __('Close', 'wpv-views') ); ?>" data-success="<?php echo esc_attr( __('Updated', 'wpv-views') ); ?>" data-unsaved="<?php echo esc_attr( __('Not saved', 'wpv-views') ); ?>" data-saveaction="<?php echo esc_attr( $save_action ); ?>" data-nonce="<?php echo esc_attr( $save_nonce ); ?>">
 				<i class='icon-chevron-up'></i>
 				<?php  _e('Close', 'wpv-views'); ?>
 			</button>
-			<button class='button button-secondary button-small js-wpv-filter-edit-open js-wpv-filter-<?php echo $li_slug; ?>-edit-open' title='<?php echo esc_attr( __('Edit this filter','wpv-views') ); ?>'>
+			<button class='button button-secondary button-small js-wpv-filter-edit-open js-wpv-filter-<?php echo esc_attr( $li_slug ); ?>-edit-open' title='<?php echo esc_attr( __('Edit this filter','wpv-views') ); ?>'>
 				<i class='icon-edit'></i>
 				<?php _e( 'Edit', 'wpv-views' ); ?>
 			</button>
-			<button class='button button-secondary button-small js-wpv-filter-remove js-filter-remove' title='<?php echo esc_attr( __('Delete this filter', 'wpv-views') ); ?>' data-deleteaction="<?php echo $delete_action; ?>" data-nonce='<?php echo $delete_nonce; ?>'>
+			<button class='button button-secondary button-small js-wpv-filter-remove js-filter-remove' title='<?php echo esc_attr( __('Delete this filter', 'wpv-views') ); ?>' data-deleteaction="<?php echo esc_attr( $delete_action ); ?>" data-nonce='<?php echo esc_attr( $delete_nonce ); ?>'>
 				<i class='icon-trash'></i>
 				<?php _e( 'Delete', 'wpv-views' ); ?>
 			</button>
@@ -460,7 +517,7 @@ class WPV_Filter_Item {
 	
 	public static function multiple_filter_list_item( $filter_slug = 'slug', $filter_target = 'posts', $title = 'Filter', $content = '' ) {
 		?>
-		<li id="js-row-<?php echo $filter_slug; ?>" data-filterslug="<?php echo $filter_slug; ?>" class="filter-row-multiple js-filter-row js-filter-row-multiple js-wpv-filter-row-<?php echo $filter_slug; ?> js-filter-for-<?php echo $filter_target; ?> js-filter-<?php echo $filter_slug; ?> js-filter-row-<?php echo $filter_slug; ?>">
+		<li id="js-row-<?php echo esc_attr( $filter_slug ); ?>" data-filterslug="<?php echo esc_attr( $filter_slug ); ?>" class="filter-row-multiple js-filter-row js-filter-row-multiple js-wpv-filter-row-<?php echo esc_attr( $filter_slug ); ?> js-filter-for-<?php echo esc_attr( $filter_target ); ?> js-filter-<?php echo esc_attr( $filter_slug ); ?> js-filter-row-<?php echo esc_attr( $filter_slug ); ?>">
 
 			<span class="wpv-filter-title">
 				<i class="icon-filter"></i>&nbsp;&nbsp;<?php echo $title; ?>
@@ -475,15 +532,15 @@ class WPV_Filter_Item {
 	public static function filter_list_item_buttons( $li_slug = 'slug', $save_action = '', $save_nonce = '', $delete_action = '', $delete_nonce = '' ) {
 		?>
 		<span class='edit-filter wpv-edit-filter js-wpv-filter-edit-controls'>
-			<button class="button button-secondary button-small js-wpv-filter-edit-ok js-wpv-filter-<?php echo $li_slug; ?>-edit-ok hidden" data-save="<?php echo esc_attr( __('Save', 'wpv-views') ); ?>" data-close="<?php echo esc_attr( __('Close', 'wpv-views') ); ?>" data-success="<?php echo esc_attr( __('Updated', 'wpv-views') ); ?>" data-unsaved="<?php echo esc_attr( __('Not saved', 'wpv-views') ); ?>" data-saveaction="<?php echo $save_action; ?>" data-nonce="<?php echo $save_nonce; ?>">
+			<button class="button button-secondary button-small js-wpv-filter-edit-ok js-wpv-filter-<?php echo esc_attr( $li_slug ); ?>-edit-ok hidden" data-save="<?php echo esc_attr( __('Save', 'wpv-views') ); ?>" data-close="<?php echo esc_attr( __('Close', 'wpv-views') ); ?>" data-success="<?php echo esc_attr( __('Updated', 'wpv-views') ); ?>" data-unsaved="<?php echo esc_attr( __('Not saved', 'wpv-views') ); ?>" data-saveaction="<?php echo esc_attr( $save_action ); ?>" data-nonce="<?php echo esc_attr( $save_nonce ); ?>">
 				<i class='icon-chevron-up'></i>
 				<?php  _e('Close', 'wpv-views'); ?>
 			</button>
-			<button class='button button-secondary button-small js-wpv-filter-edit-open js-wpv-filter-<?php echo $li_slug; ?>-edit-open' title='<?php echo esc_attr( __('Edit this filter','wpv-views') ); ?>'>
+			<button class='button button-secondary button-small js-wpv-filter-edit-open js-wpv-filter-<?php echo esc_attr( $li_slug ); ?>-edit-open' title='<?php echo esc_attr( __('Edit this filter','wpv-views') ); ?>'>
 				<i class='icon-edit'></i>
 				<?php _e( 'Edit', 'wpv-views' ); ?>
 			</button>
-			<button class='button button-secondary button-small js-wpv-filter-remove js-filter-remove js-wpv-filter-remove-<?php echo $li_slug; ?>' title='<?php echo esc_attr( __('Delete this filter', 'wpv-views') ); ?>' data-deleteaction="<?php echo $delete_action; ?>" data-nonce='<?php echo $delete_nonce; ?>'>
+			<button class='button button-secondary button-small js-wpv-filter-remove js-filter-remove js-wpv-filter-remove-<?php echo esc_attr( $li_slug ); ?>' title='<?php echo esc_attr( __('Delete this filter', 'wpv-views') ); ?>' data-deleteaction="<?php echo esc_attr( $delete_action ); ?>" data-nonce='<?php echo esc_attr( $delete_nonce ); ?>'>
 				<i class='icon-trash'></i>
 				<?php _e( 'Delete', 'wpv-views' ); ?>
 			</button>
@@ -499,12 +556,15 @@ class WPV_Filter_Item {
 		$singles = array(
 			'url' => '/^URL_PARAM\((.*?)\)/',
 			'attribute' => '/^VIEW_PARAM\((.*?)\)/',
+			'framework' => '/^FRAME_KEY\((.*?)\)/',
 			'future_day' => '/^FUTURE_DAY\((.*?)\)/',
 			'past_day' => '/^PAST_DAY\((.*?)\)/',
 			'future_month' => '/^FUTURE_MONTH\((.*?)\)/',
 			'past_month' => '/^PAST_MONTH\((.*?)\)/',
 			'future_year' => '/^FUTURE_YEAR\((.*?)\)/',
 			'past_year' => '/^PAST_YEAR\((.*?)\)/',
+			'future_one' => '/^FUTURE_ONE\((.*?)\)/',
+			'past_one' => '/^PAST_ONE\((.*?)\)/',
 			'seconds_from_now' => '/^SECONDS_FROM_NOW\((.*?)\)/',
 			'months_from_now' => '/^MONTHS_FROM_NOW\((.*?)\)/',
 			'years_from_now' => '/^YEARS_FROM_NOW\((.*?)\)/',
@@ -521,7 +581,8 @@ class WPV_Filter_Item {
 			'now' => '/^NOW\((.*?)\)/',
 			'today' => '/^TODAY\((.*?)\)/',
 			'this_month' => '/^THIS_MONTH\((.*?)\)/',
-			'this_year' => '/^THIS_YEAR\((.*?)\)/'
+			'this_year' => '/^THIS_YEAR\((.*?)\)/',
+			'current_one' => '/^CURRENT_ONE\((.*?)\)/'
 		);
 		foreach ( $zeros as $code => $pattern ) {
 			if ( preg_match( $pattern, $trim, $matches ) == 1 ) {
@@ -568,13 +629,13 @@ class WPV_Filter_Item {
 			for ( $i = 1; $i < 13; $i = $i +1 ) {
 				$monthnum = zeroise( $i, 2 );
 				?>
-				<option value="<?php echo $monthnum; ?>" <?php selected( $i, $mm ); ?>><?php echo $monthnum . ' - ';echo $wp_locale->get_month_abbrev( $wp_locale->get_month( $i ) ); ?></option>
+				<option value="<?php echo esc_attr( $monthnum ); ?>" <?php selected( $i, $mm ); ?>><?php echo $monthnum . ' - ';echo $wp_locale->get_month_abbrev( $wp_locale->get_month( $i ) ); ?></option>
 				<?php
 			}
 			?>
 			</select>
-			<input type="text" value="<?php echo $jj; ?>" size="2" maxlength="2" autocomplete="off" />
-			<input type="text" value="<?php echo $aa; ?>" size="4" maxlength="4" autocomplete="off" />
+			<input type="text" value="<?php echo esc_attr( $jj ); ?>" size="2" maxlength="2" autocomplete="off" />
+			<input type="text" value="<?php echo esc_attr( $aa ); ?>" size="4" maxlength="4" autocomplete="off" />
 		</span>
 		<?php
 	}

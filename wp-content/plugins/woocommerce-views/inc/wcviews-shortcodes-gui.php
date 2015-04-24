@@ -80,6 +80,8 @@ function wcviewsgui_wpv_woo_buy_or_select_func() {
 						<p id="defaulttext_wcviews_gui"><?php _e('Optional. Defaults to "Select options"','woocommerce_views');?></p>
 						<p id="show_quantity_field_wcviews_gui"><?php _e('Show quantities next to add to cart buttons?','woocommerce_views')?>&nbsp;&nbsp;(<em><?php _e('Only applicable for WooCommerce "simple" products','woocommerce_views')?></em>)</p>
 						<input id="show_quantityfield_product_listing_button_id" type="checkbox" name="show_quantityfield_product_listing_button" value=""> <?php _e('Yes','woocommerce_views');?>&nbsp;&nbsp;(<?php _e('Optional, defaults to "No"','woocommerce_views');?>)<br>
+						<p id="show_variation_options_field_wcviews_gui"><?php _e('Display product variation options in product listing page?','woocommerce_views')?>&nbsp;&nbsp;(<em><?php _e('Only applicable for WooCommerce "variation" products','woocommerce_views')?></em>)</p>
+						<input id="show_variation_options_product_listing_button_id" type="checkbox" name="show_variation_options_product_listing_button" value=""> <?php _e('Yes','woocommerce_views');?>&nbsp;&nbsp;(<?php _e('Optional, defaults to "No"','woocommerce_views');?>)<br>
 				</div>
 					<div class="wpv-dialog-footer">
 						<button class="button-secondary js-dialog-close"><?php _e('Cancel','woocommerce_views') ?></button>					
@@ -96,8 +98,12 @@ function wcviewsgui_wpv_woo_buy_or_select_func() {
 						} else {
 							showquantity_field= 'no';
 						}
-						
-						window.icl_editor.insert('[wpv-woo-buy-or-select add_to_cart_text="' + addtocarttext + '" link_to_product_text="' + jQuery('#linktoproduct_text_wc_views_shortcodegui').val() + '" show_quantity_in_button="' + showquantity_field+ '"]');
+						if(jQuery('#show_variation_options_product_listing_button_id').is(':checked')){
+							show_variation_options= 'yes';
+						} else {
+							show_variation_options= 'no';
+						}						
+						window.icl_editor.insert('[wpv-woo-buy-or-select add_to_cart_text="' + addtocarttext + '" link_to_product_text="' + jQuery('#linktoproduct_text_wc_views_shortcodegui').val() + '" show_quantity_in_button="' + showquantity_field + '" show_variation_options="' + show_variation_options + '"]');
 						jQuery.colorbox.close();
 					}
 					

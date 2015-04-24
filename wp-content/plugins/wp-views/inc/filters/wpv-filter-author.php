@@ -74,7 +74,8 @@ class WPV_Author_Filter {
 		$filters['post_author'] = array(
 			'name' => __( 'Post author', 'wpv-views' ),
 			'present' => 'author_mode',
-			'callback' => array( 'WPV_Author_Filter', 'wpv_add_new_filter_post_author_list_item' )
+			'callback' => array( 'WPV_Author_Filter', 'wpv_add_new_filter_post_author_list_item' ),
+			'group' => __( 'Post filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -159,34 +160,84 @@ class WPV_Author_Filter {
 	*/
 
 	static function wpv_filter_post_author_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_author_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_author_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		if ( empty( $_POST['filter_options'] ) ) {
-			echo $_POST['id'];
-			die();
+			$data = array(
+				'type' => 'data_missing',
+				'message' => __( 'Wrong or missing data.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
+		$view_id = intval( $_POST['id'] );
 		parse_str( $_POST['filter_options'], $filter_author );
 		$change = false;
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		if ( ! isset( $filter_author['author_name'] ) || '' == $filter_author['author_name'] ) {
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
+		if ( 
+			! isset( $filter_author['author_name'] ) 
+			|| '' == $filter_author['author_name'] 
+		) {
 			$filter_author['author_name'] = '';
 			$filter_author['author_id'] = 0;
 		}
-		$settings_to_check = array( 'author_mode', 'author_name', 'author_id', 'author_url_type', 'author_url', 'author_shortcode_type', 'author_shortcode' );
+		$settings_to_check = array( 
+			'author_mode', 'author_name', 'author_id', 
+			'author_url_type', 'author_url', 'author_shortcode_type', 'author_shortcode', 'author_framework_type', 'author_framework'
+		);
 		foreach ( $settings_to_check as $set ) {
-			if ( ! isset( $view_array[$set] ) || $filter_author[$set] != $view_array[$set] ) {
+			if ( 
+				isset( $filter_author[$set] )
+				&& (
+					! isset( $view_array[$set] ) 
+					|| $filter_author[$set] != $view_array[$set] 
+				)
+			) {
+				if ( is_array( $filter_author[$set] ) ) {
+					$filter_author[$set] = array_map( 'sanitize_text_field', $filter_author[$set] );
+				} else {
+					$filter_author[$set] = sanitize_text_field( $filter_author[$set] );
+				}
 				$change = true;
 				$view_array[$set] = $filter_author[$set];
 			}
 		}
 		if ( $change ) {
-			$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
+			$result = update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
 		$filter_author['author_mode'] = $filter_author['author_mode'][0];
-		echo wpv_get_filter_post_author_summary_txt( $filter_author );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Post author filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_post_author_summary_txt( $filter_author )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -213,20 +264,51 @@ class WPV_Author_Filter {
 	*/
 
 	static function wpv_filter_post_author_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_author_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_author_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		$settings_to_check = array( 'author_mode', 'author_name', 'author_id', 'author_url_type', 'author_url', 'author_shortcode_type', 'author_shortcode' );
+		$settings_to_check = array( 
+			'author_mode', 'author_name', 'author_id', 
+			'author_url_type', 'author_url', 'author_shortcode_type', 'author_shortcode', 'author_framework_type', 'author_framework'
+		);
 		foreach ( $settings_to_check as $set ) {
 			if ( isset( $view_array[$set] ) ) {
 				unset( $view_array[$set] );
 			}
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Post author filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 
 	/**
@@ -260,8 +342,16 @@ class WPV_Author_Filter {
 	static function wpv_suggest_author() {
 		global $wpdb;
 		$user = '%' . wpv_esc_like( $_REQUEST['q'] ) . '%';
-		$sql = "SELECT DISTINCT ID, display_name FROM {$wpdb->users} INNER JOIN {$wpdb->usermeta} WHERE display_name LIKE '%s' ORDER BY display_name LIMIT 0, 20";
-		$results = $wpdb->get_results( $wpdb->prepare( $sql, $user ) );
+		$results = $wpdb->get_results( 
+			$wpdb->prepare( 
+				"SELECT DISTINCT ID, display_name FROM {$wpdb->users} 
+				INNER JOIN {$wpdb->usermeta} 
+				WHERE display_name LIKE %s 
+				ORDER BY display_name 
+				LIMIT 0, 20", 
+				$user 
+			) 
+		);
 		foreach ( $results as $row ) {
 			echo $row->display_name . ' # userID: ' . $row->ID . "\n";
 		}
@@ -286,57 +376,100 @@ class WPV_Author_Filter {
 			'author_url' => 'author-filter',
 			'author_url_type' => '',
 			'author_shortcode' => 'author',
-			'author_shortcode_type' => ''
+			'author_shortcode_type' => '',
+			'author_framework' => '',
+			'author_framework_type' => ''
 		);
 		$view_settings = wp_parse_args( $view_settings, $defaults );
 		?>
 		<h4><?php _e( 'How to filter', 'wpv-views' ); ?></h4>
 		<ul class="wpv-filter-options-set">
 			<li>
-				<input type="radio" id="wpv-filter-author-current-user" name="author_mode[]" value="current_user" <?php checked( $view_settings['author_mode'], 'current_user' ); ?> />
+				<input type="radio" id="wpv-filter-author-current-user" name="author_mode[]" value="current_user" <?php checked( $view_settings['author_mode'], 'current_user' ); ?> autocomplete="off" />
 				<label for="wpv-filter-author-current-user"><?php _e('Post author is the same as the logged in user', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-author-current-page" name="author_mode[]" value="current_page" <?php checked( $view_settings['author_mode'], 'current_page' ); ?> />
+				<input type="radio" id="wpv-filter-author-current-page" name="author_mode[]" value="current_page" <?php checked( $view_settings['author_mode'], 'current_page' ); ?> autocomplete="off" />
 				<label for="wpv-filter-author-current-page"><?php _e('Post author is the author of the current page', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-author-parent-view" name="author_mode[]" value="parent_view" <?php checked( $view_settings['author_mode'], 'parent_view' ); ?> />
+				<input type="radio" id="wpv-filter-author-parent-view" name="author_mode[]" value="parent_view" <?php checked( $view_settings['author_mode'], 'parent_view' ); ?> autocomplete="off" />
 				<label for="wpv-filter-author-parent-view"><?php _e('Post author is set by the parent View', 'wpv-views'); ?></label>
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-author-this-user" name="author_mode[]" value="this_user" <?php checked( $view_settings['author_mode'], 'this_user' ); ?> />
+				<input type="radio" id="wpv-filter-author-this-user" name="author_mode[]" value="this_user" <?php checked( $view_settings['author_mode'], 'this_user' ); ?> autocomplete="off" />
 				<label for="wpv-filter-author-this-user"><?php _e('Post author is ', 'wpv-views'); ?></label>
 				<?php 
 				$author_display_name = $view_settings['author_name'];
-				if ( 0 != $view_settings['author_id'] && '' == $author_display_name) {
-					$user_info = get_userdata( $view_settings['author_id'] );
-					$author_display_name = $user_info->display_name;
-				} 
+				if ( 
+					0 != $view_settings['author_id'] 
+					&& '' == $author_display_name
+					&& is_numeric( $view_settings['author_id'] )
+				) {
+					$user_info = get_userdata( intval( $view_settings['author_id'] ) );
+					if ( $user_info ) {
+						$author_display_name = $user_info->display_name;
+					} else {
+						$view_settings['author_id'] = 0;
+						$author_display_name= '';
+					}
+				} else {
+					$view_settings['author_id'] = 0;
+					$author_display_name= '';
+				}
 				?>
-				<input id="wpv_author_name" class="author_suggest js-author-suggest" type='text' name="author_name" value="<?php echo esc_attr( $author_display_name, ENT_QUOTES ); ?>" size="15" placeholder="<?php echo esc_attr( __( 'Start typing', 'wpv-views' ) ); ?>" />
-				<input id="wpv_author" class="author_suggest_id js-author-suggest-id" type='hidden' name="author_id" value="<?php echo $view_settings['author_id']; ?>" />
+				<input id="wpv_author_name" class="author_suggest js-author-suggest" type='text' name="author_name" value="<?php echo esc_attr( $author_display_name ); ?>" size="15" placeholder="<?php echo esc_attr( __( 'Start typing', 'wpv-views' ) ); ?>" />
+				<input id="wpv_author" class="author_suggest_id js-author-suggest-id" type='hidden' name="author_id" value="<?php echo esc_attr( $view_settings['author_id'] ); ?>" />
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-author-by-url" name="author_mode[]" value="by_url" <?php checked( $view_settings['author_mode'], 'by_url' ); ?> />
+				<input type="radio" id="wpv-filter-author-by-url" name="author_mode[]" value="by_url" <?php checked( $view_settings['author_mode'], 'by_url' ); ?> autocomplete="off" />
 				<label for="wpv-filter-author-by-url"><?php _e('Author\'s ', 'wpv-views'); ?></label>
-				<select id="wpv_author_url_type" name="author_url_type">
+				<select id="wpv_author_url_type" name="author_url_type" autocomplete="off">
 					<option value="id" <?php selected( $view_settings['author_url_type'], 'id' ); ?>><?php _e( 'ID', 'wpv-views' ); ?></option>
 					<option value="username" <?php selected( $view_settings['author_url_type'], 'username' ); ?>><?php _e( 'username', 'wpv-views' ); ?></option>
 				</select>
 				<label for="wpv-author-url"><?php _e(' is set by the URL parameter: ', 'wpv-views'); ?></label>
-				<input id="wpv-author-url" type='text' class="js-wpv-filter-author-url js-wpv-filter-validate" data-type="url" data-class="js-wpv-filter-author-url" name="author_url" value="<?php echo $view_settings['author_url']; ?>" size="10" />
+				<input id="wpv-author-url" type='text' class="js-wpv-filter-author-url js-wpv-filter-validate" data-type="url" data-class="js-wpv-filter-author-url" name="author_url" value="<?php echo esc_attr( $view_settings['author_url'] ); ?>" size="10" autocomplete="off" />
 			</li>
 			<li>
-				<input type="radio" id="wpv-filter-author-shortcode" name="author_mode[]" value="shortcode" <?php checked( $view_settings['author_mode'], 'shortcode' ); ?> />
+				<input type="radio" id="wpv-filter-author-shortcode" name="author_mode[]" value="shortcode" <?php checked( $view_settings['author_mode'], 'shortcode' ); ?> autocomplete="off" />
 				<label for="wpv-filter-author-shortcode"><?php _e('Author\'s ', 'wpv-views'); ?></label>
-				<select id="wpv_author_shortcode_type" name="author_shortcode_type">
+				<select id="wpv_author_shortcode_type" name="author_shortcode_type" autocomplete="off">
 					<option value="id" <?php selected( $view_settings['author_shortcode_type'], 'id' ); ?>><?php _e( 'ID', 'wpv-views' ); ?></option>
 					<option value="username" <?php selected( $view_settings['author_shortcode_type'], 'username' ); ?>><?php _e( 'username', 'wpv-views' ); ?></option>
 				</select>
 				<label for="wpv-author-shortcode"><?php _e(' is set by the View shortcode attribute: ', 'wpv-views'); ?></label>
-				<input id="wpv-author-shortcode" type='text' class="js-wpv-filter-author-shortcode js-wpv-filter-validate" data-type="shortcode" data-class="js-wpv-filter-author-shortcode" name="author_shortcode" value="<?php echo $view_settings['author_shortcode']; ?>" size="10" />
+				<input id="wpv-author-shortcode" type='text' class="js-wpv-filter-author-shortcode js-wpv-filter-validate" data-type="shortcode" data-class="js-wpv-filter-author-shortcode" name="author_shortcode" value="<?php echo esc_attr( $view_settings['author_shortcode'] ); ?>" size="10" autocomplete="off" />
 			</li>
+			<?php
+			global $WP_Views_fapi;
+			if ( $WP_Views_fapi->framework_valid ) {
+				$framework_data = $WP_Views_fapi->framework_data
+			?>
+			<li>
+				<input type="radio" id="wpv-filter-author-framework" name="author_mode[]" value="framework" <?php checked( $view_settings['author_mode'], 'framework' ); ?> autocomplete="off" />
+				<label for="wpv-filter-author-framework"><?php _e('Author\'s ', 'wpv-views'); ?></label>
+				<select id="wpv_author_framework_type" name="author_framework_type" autocomplete="off">
+					<option value="id" <?php selected( $view_settings['author_framework_type'], 'id' ); ?>><?php _e( 'ID', 'wpv-views' ); ?></option>
+					<option value="username" <?php selected( $view_settings['author_framework_type'], 'username' ); ?>><?php _e( 'username', 'wpv-views' ); ?></option>
+				</select>
+				<label for="wpv-author-framework"><?php echo sprintf( __( ' is set by the %s key: ', 'wpv-views' ), sanitize_text_field( $framework_data['name'] ) ); ?></label>
+				<select name="author_framework" autocomplete="off">
+					<option value=""><?php _e( 'Select a key', 'wpv-views' ); ?></option>
+					<?php
+					$fw_key_options = array();
+					$fw_key_options = apply_filters( 'wpv_filter_extend_framework_options_for_post_author', $fw_key_options );
+					foreach ( $fw_key_options as $index => $value ) {
+						?>
+						<option value="<?php echo esc_attr( $index ); ?>" <?php selected( $view_settings['author_framework'], $index ); ?>><?php echo $value; ?></option>
+						<?php
+					}
+					?>
+				</select>
+			</li>
+			<?php
+			}
+			?>
 		</ul>
 		<div class="filter-helper js-wpv-author-helper"></div>
 		<?php

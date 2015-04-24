@@ -1,9 +1,9 @@
 <?php
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.4/toolset-forms/classes/class.colorpicker.php $
- * $LastChangedDate: 2015-01-07 15:22:44 +0000 (Wed, 07 Jan 2015) $
- * $LastChangedRevision: 30859 $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.colorpicker.php $
+ * $LastChangedDate: 2015-03-20 10:02:23 +0000 (Fri, 20 Mar 2015) $
+ * $LastChangedRevision: 32518 $
  * $LastChangedBy: francesco $
  *
  */
@@ -18,8 +18,7 @@ class WPToolset_Field_Colorpicker extends FieldFactory
 {
     public function init()
     {
-		
-		if ( !is_admin() ) {
+        if ( !is_admin() ) {
             wp_enqueue_style( 'wp-color-picker' );
             wp_enqueue_script(
                 'iris',
@@ -38,31 +37,30 @@ class WPToolset_Field_Colorpicker extends FieldFactory
             $colorpicker_l10n = array(
                 'clear' => __( 'Clear' ),
                 'defaultString' => __( 'Default', 'wpv-views' ),
-                'pick' => __( 'Select Color', 'wpv-views' )
+                'pick' => __( 'Select', 'wpv-views' )." Color"
             );
             wp_localize_script( 'wp-color-picker', 'wpColorPickerL10n', $colorpicker_l10n );
         }
-		wp_register_script(
+        wp_register_script(
             'wptoolset-field-colorpicker',
             WPTOOLSET_FORMS_RELPATH . '/js/colorpicker.js',
             array('iris'),
             WPTOOLSET_FORMS_VERSION,
             true
         );
-		wp_enqueue_script( 'wptoolset-field-colorpicker' );
-        
-	}
+        wp_enqueue_script( 'wptoolset-field-colorpicker' );
+        $this->set_placeholder_as_attribute();
+    }
 
     static public function registerScripts()
     {
-        
     }
 
     public function enqueueScripts()
     {
-        
+
     }
-    
+
     public function addTypeValidation($validation) {
         $validation['hexadecimal'] = array(
             'args' => array(
@@ -78,17 +76,23 @@ class WPToolset_Field_Colorpicker extends FieldFactory
         $validation = $this->getValidationData();
         $validation = $this->addTypeValidation($validation);
         $this->setValidationData($validation);
-        
-        $classes = array();
-        $classes[] = 'js-wpt-colorpicker';
+
+        $attributes = $this->getAttr();
+        if ( isset($attributes['class'] ) ) {
+            $attributes['class'] .= ' ';
+        } else {
+            $attributes['class'] = '';
+        }
+        $attributes['class'] = 'js-wpt-colorpicker';
+
         $form = array();
         $form['name'] = array(
             '#type' => 'textfield',
             '#title' => $this->getTitle(),
-			'#description' => $this->getDescription(),
+            '#description' => $this->getDescription(),
             '#value' => $this->getValue(),
             '#name' => $this->getName(),
-            '#attributes' => array('class' => implode(' ', $classes )),
+            '#attributes' => $attributes,
             '#validate' => $validation,
             '#after' => '',
             '#repetitive' => $this->isRepetitive(),

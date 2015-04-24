@@ -270,16 +270,17 @@ class WPV_Widget_filter extends WP_Widget {
   
 
 function widget_view_link( $view_id ) {
-	$options = get_option( 'wpv_options' );
-	$link = '';	
-	if ( ! isset( $options['wpv_show_edit_view_link'] ) ) {
-		$options['wpv_show_edit_view_link'] = 1;	
-	}
-	if ( $options['wpv_show_edit_view_link'] == 1 ) {
+
+    $link = '';	
+    
+    global $WPV_settings;
+	if ( $WPV_settings->wpv_show_edit_view_link == 1 ) {
 		$link = '<a href="'. admin_url() .'admin.php?page=views-editor&view_id=' . $view_id . '" title="' . __( 'Edit view', 'wpv-views' ) . '">' . __( 'Edit view', 'wpv-views' ) . ' "' . get_the_title( $view_id ) . '"</a>';
 		$link = apply_filters( 'wpv_edit_view_link', $link );
 	}
+    
 	return $link;
+    
 }
 
 /**

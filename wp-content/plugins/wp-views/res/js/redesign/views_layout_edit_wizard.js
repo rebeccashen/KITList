@@ -33,6 +33,8 @@ WPViews.LayoutWizard = function( $ ) {
 	self.wizard_dialog_style = null;
 	self.wizard_dialog_fields = null;
 	
+	self.edit_screen = ( typeof WPViews.view_edit_screen != 'undefined' ) ? WPViews.view_edit_screen : WPViews.wpa_edit_screen;
+	
 	// ---------------------------------
 	// Functions
 	// ---------------------------------
@@ -306,9 +308,21 @@ WPViews.LayoutWizard = function( $ ) {
 			}
 		});
 	};
+
 	
-	// Replace layout content
-	
+	/**
+	 * Replace the content of wpv-loop in loop output with new one.
+	 *
+	 * Tries to replace string within "<!-- wpv-loop-start -->" and "<!-- wpv-loop-end -->" (included) by new one. If
+	 * those tags aren't found, it appends the new string at the end.
+	 *
+	 * @param string content The loop output.
+	 * @param string data New string which should replace wpv-loop.
+	 *
+	 * @return string The result.
+	 *
+	 * @since unknown
+	 */ 
     self.replace_layout_loop_content = function( content, data ) {
         if ( content.search(/<!-- wpv-loop-start -->[\s\S]*\<!-- wpv-loop-end -->/g) == -1 ) {
             content += data;
@@ -317,6 +331,7 @@ WPViews.LayoutWizard = function( $ ) {
         }
         return content;
     };
+    
 	
 	//Check if fields is just one content template
 	
@@ -332,101 +347,140 @@ WPViews.LayoutWizard = function( $ ) {
 		}
 	   return out;
 	};
+
 	
-	// Process dialog data
-	
+	/**
+	 * Process dialog data.
+	 *
+	 * - Reads user input from the dialog.
+	 * - Makes the wpv_generate_view_loop_output AJAX call and obtains loop output settings as well as rendered.
+	 *   loop output and content template (if used).
+	 * - Updates the content of editor(s).
+	 * - Highlights the modified text in Loop Output editor.
+	 * - Shows an appropriate pointer.
+	 * - Calls the callback, if it is a function.
+	 *
+	 * @todo comment properly
+	 *
+	 * @since unknown
+	 */ 
 	self.process_layout_wizard_data = function( fields, callback ) {
-        var layout_style = $( '[name=layout-wizard-style]:checked' ).val(),
-		number_of_columns = $('[name="table_cols"]').val(),
-		bootstrap_grid_cols = $('[name="bootstrap_grid_cols"]').val(),
-		bootstrap_grid_container = $('[name="bootstrap_grid_container"]').prop('checked'),
-		bootstrap_grid_row_class = $('[name="bootstrap_grid_row_class"]').prop('checked'),
-		bootstrap_grid_individual = $('[name="bootstrap_grid_individual"]:checked').val(),
-		include_headers = ($('[name="include_field_names"]').attr('checked')) ? true : false,
-		data = '',
-		c = codemirror_views_layout.getValue(),
-		current_editor_content = codemirror_views_layout.getValue(),
-		codemirror_highlight_options = {
-			className: 'wpv-codemirror-highlight'
-		};
-		// First, save the layout settings to a variable
-		// These will be then be saved to the DB when we update the
-		// Layout section or they'll be used when we open the wizard again
-		var layout_data_to_store = {
-			action: 'wpv_convert_layout_settings',
-			view_id: self.view_id,
-			layout_style: layout_style,
-			fields: fields,
-			numcol: number_of_columns,
-			bootstrap_grid_cols: bootstrap_grid_cols,
-			bootstrap_grid_container: bootstrap_grid_container,
-			bootstrap_grid_row_class: bootstrap_grid_row_class,
-			bootstrap_grid_individual: bootstrap_grid_individual,
-			inc_headers: include_headers
-		};
+		
+		// Parse dialog input
+		var layout_style = $( '[name=layout-wizard-style]:checked' ).val();
+
+		var layout_args = {
+			include_field_names: ($('[name="include_field_names"]').attr('checked')) ? true : false,
+			tab_column_count: $('[name="table_cols"]').val(),
+			bootstrap_column_count: $('[name="bootstrap_grid_cols"]').val(),
+			// @todo Request for comment: Where does this 'data' come from?
+			bootstrap_version: data.wpv_bootstrap_version,
+			add_container: $('[name="bootstrap_grid_container"]').prop('checked'),
+			add_row_class: $('[name="bootstrap_grid_row_class"]').prop('checked'),
+			render_individual_columns: $('[name="bootstrap_grid_individual"]:checked').val(),
+			use_loop_template: self.use_loop_template,
+			loop_template_title: self.use_loop_template_title,
+			render_only_wpv_loop: true
+		}
+
+		//console.log( layout_args );
+		
+		// Content of the Loop Output.
+		// Content of a Content Template to be created (if self.use_loop_template is true).
+		var loop_output = '',
+		ct_content = '',
+		current_dialog = $( '.js-wpv-dialog-layout-wizard' ),
+		messages_container = current_dialog.find( '.js-wpv-message-container' ),
+		halt_execution = false;
+		
 		$.ajax({
 			async: false,
 			type: "POST",
 			url: ajaxurl,
-			data: layout_data_to_store,
+			dataType: 'json',
+			data: {
+				action: 'wpv_generate_view_loop_output',
+				wpnonce: $('#layout_wizard_nonce').attr('value'),
+				view_id: self.view_id,
+				style: layout_style,
+				fields: JSON.stringify( fields ),
+				args: JSON.stringify( layout_args )
+			},
 			success: function( response ) {
-				self.settings_from_wizard = $.parseJSON( response );
+				if ( response.success ) {
+					self.settings_from_wizard = response.data.loop_output_settings;
+					loop_output = response.data.loop_output_settings.layout_meta_html;
+					ct_content = response.data.ct_content;
+				} else {
+					self.edit_screen.manage_ajax_fail( response.data, messages_container );
+					current_dialog.find('.spinner.ajax-loader' ).remove();
+					halt_execution = true;
+				}
 			},
 			error: function( ajaxContext ) {
 				console.log( "Error: ", ajaxContext.responseText );
-			},
-			complete: function() {
-				
 			}
 		});
-		// Now, get the layout (and loop template if needed) content for each Loop output style
-		switch ( layout_style ) {
-			case "table":
-				data = self.render_table_layout( fields, number_of_columns );
-				break;
-			case "bootstrap-grid":
-				data = self.render_bootstrap_grid_layout( fields, bootstrap_grid_cols, bootstrap_grid_container, bootstrap_grid_individual, bootstrap_grid_row_class );
-				break;
-			case "table_of_fields":
-				data = self.render_table_of_fields_layout( fields );
-				break;
-			case "ordered_list":
-				data = self.render_ordered_list_layout( fields );
-				break;
-			case "un_ordered_list":
-				data = self.render_unordered_list_layout( fields );
-				break;
-			default:
-				data = self.render_unformatted_layout( fields );
-				break;
+		
+		if ( halt_execution ) {
+			return;
 		}
+
+		// Current Loop Output content
+		var c = codemirror_views_layout.getValue();
+		
+		codemirror_highlight_options = {
+			className: 'wpv-codemirror-highlight'
+		};
+		
 		if ( self.use_loop_template ) {
+			// User chose to use Loop Template. 
+			
 			var show_layout_template_loop_pointer_content = $( '.js-wpv-inserted-layout-loop-content-template-pointer' );
+			
 			// Make sure that the Loop Template is opened
 			if ( $('.js-wpv-ct-listing-' + self.use_loop_template_id + ' .js-wpv-open-close-arrow').hasClass('icon-caret-down') ) {
 				$('.js-wpv-ct-listing-' + self.use_loop_template_id + ' .js-wpv-content-template-open').click();
 			}
-			// Update the Layout content
-			c = self.replace_layout_loop_content( c, data.layout_output );
+			
+			// Update the Loop Output content
+			c = self.replace_layout_loop_content( c, loop_output );
 			codemirror_views_layout.setValue( c );
+			
 			// Update the Loop Template content
-			window.iclCodemirror["wpv-ct-inline-editor-" + self.use_loop_template_id].setValue( data.ct_output );
+			var ct_inline_editor_index = "wpv-ct-inline-editor-" + self.use_loop_template_id;
+			window.iclCodemirror[ ct_inline_editor_index ].setValue( ct_content );
+			
 			// Highlight the Loop Template content
-			var loop_template_ends = {'line':window.iclCodemirror["wpv-ct-inline-editor-" + self.use_loop_template_id].lineCount(),'ch':0},
-			content_template_marker = window.iclCodemirror["wpv-ct-inline-editor-" + self.use_loop_template_id].markText( {'line':0,'ch':0}, loop_template_ends, codemirror_highlight_options );
-			setTimeout( function() {
-					content_template_marker.clear();
-			}, 2000);
+			var loop_template_ends = {
+				'line': window.iclCodemirror[ ct_inline_editor_index ].lineCount(),
+				'ch': 0 };
+			var content_template_marker = window.iclCodemirror[ ct_inline_editor_index ].markText( 
+					{ 'line': 0, 'ch': 0 }, 
+					loop_template_ends, 
+					codemirror_highlight_options );
+			setTimeout( function() { content_template_marker.clear(); }, 2000);
+			
 			// Highlight replace existing loop and add pointer
 			var layout_loop_starts = codemirror_views_layout.getSearchCursor( '<!-- wpv-loop-start -->', false );
-			layout_loop_ends = codemirror_views_layout.getSearchCursor( '<!-- wpv-loop-end -->', false );
+			var layout_loop_ends = codemirror_views_layout.getSearchCursor( '<!-- wpv-loop-end -->', false );
+			
 			if ( layout_loop_starts.findNext() && layout_loop_ends.findNext() ) {
-				var layout_loop_marker = codemirror_views_layout.markText( layout_loop_starts.from(), layout_loop_ends.to(), codemirror_highlight_options );
+				// We found the wpv-loop tag, now highlight it.
+				var layout_loop_marker = codemirror_views_layout.markText( 
+						layout_loop_starts.from(), 
+						layout_loop_ends.to(), 
+						codemirror_highlight_options );
+						
 				if ( show_layout_template_loop_pointer_content.hasClass( 'js-wpv-pointer-dismissed' ) ) {
-					setTimeout( function() {
-						  layout_loop_marker.clear();
-					}, 2000);
-				} else {// Show the pointer
+					// The pointer is dismissed, we will not be showing it.
+					
+					// Clear the marker in two seconds.
+					setTimeout( function() { layout_loop_marker.clear(); }, 2000 );
+					
+				} else {
+					
+					// Show the pointer
 					var layout_template_loop_pointer = $('.layout-html-editor .wpv-codemirror-highlight').first().pointer({
 						pointerClass: 'wp-toolset-pointer wp-toolset-views-pointer',
 						pointerWidth: 400,
@@ -438,8 +492,11 @@ WPViews.LayoutWizard = function( $ ) {
 						show: function( event, t ) {
 							t.pointer.show();
 							t.opened();
+							
+							// Create a button to scroll down to the Loop Template
 							var button_scroll = $('<button class="button button-primary-toolset alignright js-wpv-scroll-this">Scroll to the Content Template</button>');
-							button_scroll.bind( 'click.pointer', function(e) {//We need to scroll there down
+							button_scroll.bind( 'click.pointer', function(e) {
+								// We need to scroll there down
 								e.preventDefault();
 								layout_loop_marker.clear();
 								if ( t.pointer.find( '.js-wpv-dismiss-pointer:checked' ).length > 0 ) {
@@ -456,6 +513,8 @@ WPViews.LayoutWizard = function( $ ) {
 							button_scroll.insertAfter(  t.pointer.find('.wp-pointer-buttons .js-wpv-close-this') );
 						},
 						buttons: function( event, t ) {
+							
+							// Add Close button
 							var button_close = $('<button class="button button-secondary alignleft js-wpv-close-this">Close</button>');
 							button_close.bind( 'click.pointer', function( e ) {
 								e.preventDefault();
@@ -473,10 +532,15 @@ WPViews.LayoutWizard = function( $ ) {
 					layout_template_loop_pointer.pointer('open');
 				}
 			}
+			
 		} else {
-			// Update the Layout content
-			c = self.replace_layout_loop_content( c, data.layout_output );
+			// User chose not to use Loop Template. We will only update Loop Output and ct_content (which should be
+			// empty) will be ignored.
+			
+			// Update Loop Output
+			c = self.replace_layout_loop_content( c, loop_output );
 			codemirror_views_layout.setValue( c );
+			
 			// Highlight and add pointer to the loop
 			var show_layout_loop_pointer_content = $( '.js-wpv-inserted-layout-loop-pointer' ),
 			layout_loop_starts = codemirror_views_layout.getSearchCursor( '<!-- wpv-loop-start -->', false );
@@ -487,7 +551,8 @@ WPViews.LayoutWizard = function( $ ) {
 					setTimeout( function() {
 						  layout_loop_marker.clear();
 					}, 2000);
-				} else {// Show the pointer
+				} else {
+					// Show the pointer
 					var layout_loop_pointer = $('.layout-html-editor .wpv-codemirror-highlight').first().pointer({
 						pointerClass: 'wp-toolset-pointer wp-toolset-views-pointer',
 						pointerWidth: 400,
@@ -515,292 +580,12 @@ WPViews.LayoutWizard = function( $ ) {
 				}
 			}
 		}
+		
 		if ( callback && typeof callback === 'function' ) {
 			callback();
 		}
     };
-	
-	// ---------------------------------
-	// Render functions
-	// ---------------------------------
-	
-	//render functions
-    //fields array
-    //0 - prefix, text before [shortcode]
-    //1 - [shortcode]
-    //2 - suffix, text after [shortcode]
-    //3 - field name
-    //4 - header name
-    //5 - row title <TH>
-    //0,2 maybe not used in v1.3
 
-    self.render_unformatted_layout = function( fields ) {
-		var fields_length = fields.length,
-		ct_output = '',
-        layout_output = '',
-		row_indent = "\t\t",
-		row_ending = "\n";
-		if ( self.use_loop_template ) {
-			row_indent = "";
-		}
-        for ( var i = 0; i < fields_length; i++ ) {
-            if ( 
-				self.use_loop_template 
-				&& i == ( fields_length - 1 )
-			) {
-				row_ending = "";
-			}
-			ct_output += row_indent + fields[i][0];// prefix
-            ct_output += fields[i][1];// shortcode
-            ct_output += fields[i][2] + row_ending;// suffix
-        }
-		layout_output = "\t<wpv-loop>\n";
-        if ( self.use_loop_template ) {
-			layout_output += "\t\t[wpv-post-body view_template=\"" + self.use_loop_template_title + "\"]\n";
-        } else {
-			layout_output += ct_output;
-			ct_output = '';
-		}
-		layout_output += "\t</wpv-loop>\n\t";
-        var out = {'layout_output':layout_output, 'ct_output':ct_output};
-        return out;
-    };
-
-    self.render_unordered_list_layout = function( fields ) {
-		var fields_length = fields.length,
-		ct_output = '',
-        layout_output = '',
-		row_indent = "\t\t\t",
-		row_ending = "\n";
-		if ( self.use_loop_template ) {
-			row_indent = "";
-		}
-        for ( var i = 0; i < fields_length; i++ ) {
-            if ( 
-				self.use_loop_template 
-				&& i == ( fields_length - 1 )
-			) {
-				row_ending = "";
-			}
-			ct_output += row_indent + fields[i][0];// prefix
-            ct_output += fields[i][1];// shortcode
-            ct_output += fields[i][2] + row_ending;// suffix
-        }
-		layout_output = "\t<ul>\n";
-		layout_output += "\t<wpv-loop>\n";
-        if ( self.use_loop_template ) {
-			layout_output += "\t\t<li>[wpv-post-body view_template=\"" + self.use_loop_template_title + "\"]</li>\n";
-        } else {
-			layout_output += "\t\t<li>\n" + ct_output + "\t\t</li>\n";
-			ct_output = '';
-		}
-		layout_output += "\t</wpv-loop>\n";
-		layout_output += "\t</ul>\n\t";
-        var out = {'layout_output':layout_output, 'ct_output':ct_output};
-        return out;
-    };
-
-    self.render_ordered_list_layout = function( fields ) {
-        var fields_length = fields.length,
-		ct_output = '',
-        layout_output = '',
-		row_indent = "\t\t\t",
-		row_ending = "\n";
-		if ( self.use_loop_template ) {
-			row_indent = "";
-		}
-        for ( var i = 0; i < fields_length; i++ ) {
-            if ( 
-				self.use_loop_template 
-				&& i == ( fields_length - 1 )
-			) {
-				row_ending = "";
-			}
-			ct_output += row_indent + fields[i][0];// prefix
-            ct_output += fields[i][1];// shortcode
-            ct_output += fields[i][2] + row_ending;// suffix
-        }
-		layout_output = "\t<ol>\n";
-		layout_output += "\t<wpv-loop>\n";
-        if ( self.use_loop_template ) {
-			layout_output += "\t\t<li>[wpv-post-body view_template=\"" + self.use_loop_template_title + "\"]</li>\n";
-        } else {
-			layout_output += "\t\t<li>\n" + ct_output + "\t\t</li>\n";
-			ct_output = '';
-		}
-		layout_output += "\t</wpv-loop>\n";
-		layout_output += "\t</ol>\n\t";
-        var out = {'layout_output':layout_output, 'ct_output':ct_output};
-        return out;
-    };
-
-    self.render_table_of_fields_layout = function( fields ) {
-        var fields_length = fields.length,
-		ct_output = '',
-        layout_output = '',
-		loop_item_indent = "\t\t\t\t",
-		loop_item_ending = "\n";
-		if ( self.use_loop_template ) {
-			loop_item_indent = "";
-		}
-		for ( var i = 0; i < fields_length; i++ ) {
-            var body = fields[i][0];// prefix
-            body += fields[i][1];// shortcode
-            body += fields[i][2];// suffix
-			if ( 
-				self.use_loop_template 
-				&& i == ( fields_length - 1 )
-			) {
-				loop_item_ending = "";
-			}
-			ct_output += loop_item_indent + "<td>" + body + "</td>" + loop_item_ending;
-        }
-		layout_output = "\t<table width=\"100%\">\n";
-		if ( $('#include_field_names').attr('checked') ) {
-            layout_output += "\t\t<thead>\n\t\t\t<tr>\n";
-            for ( var i = 0; i < fields_length; i++ ) {
-                layout_output += "\t\t\t\t<th>[wpv-heading name=\"" + fields[i][4] + "\"]" + fields[i][5] + "[/wpv-heading]</th>\n";
-            }
-            layout_output += "\t\t\t</tr>\n\t\t</thead>\n";
-        }
-		layout_output += "\t\t<tbody>\n";
-        layout_output += "\t\t<wpv-loop>\n";
-		layout_output += "\t\t\t<tr>\n";
-		if ( self.use_loop_template ) {
-			layout_output += "\t\t\t\t[wpv-post-body view_template=\""+ self.use_loop_template_title + "\"]\n"; 
-		} else {
-			layout_output += ct_output;
-			ct_output = '';
-		}
-		layout_output += "\t\t\t</tr>\n";
-        layout_output += "\t\t</wpv-loop>\n\t\t</tbody>\n\t</table>\n\t";
-        var out = {'layout_output':layout_output,'ct_output':ct_output};
-        return out;
-    };
-	
-    self.render_table_layout = function( fields, cols ) {
-        var fields_length = fields.length,
-		ct_output = '',
-        layout_output = '',
-		row_indent = "\t\t\t\t",
-		row_ending = "\n";
-		if ( self.use_loop_template ) {
-			row_indent = "";
-		}
-		for ( var i = 0; i < fields_length; i++ ) {
-            if ( 
-				self.use_loop_template 
-				&& i == ( fields_length - 1 )
-			) {
-				row_ending = "";
-			}
-			ct_output += row_indent + fields[i][0];// prefix
-            ct_output += fields[i][1];// shortcode
-            ct_output += fields[i][2] + row_ending;// suffix
-        }
-		layout_output = "\t<table width=\"100%\">\n\t<wpv-loop wrap=\"" + cols + "\" pad=\"true\">\n";
-		layout_output += "\t\t[wpv-item index=1]\n";
-		if ( self.use_loop_template ) {
-			layout_output += "\t\t<tr>\n\t\t\t<td>[wpv-post-body view_template=\""+ self.use_loop_template_title + "\"]</td>\n";
-			layout_output += "\t\t[wpv-item index=other]\n";
-			layout_output += "\t\t\t<td>[wpv-post-body view_template=\""+ self.use_loop_template_title + "\"]</td>\n";
-			layout_output += "\t\t[wpv-item index=" + cols + "]\n";
-			layout_output += "\t\t\t<td>[wpv-post-body view_template=\""+ self.use_loop_template_title + "\"]</td>\n\t\t</tr>\n";
-		} else {
-			layout_output += "\t\t<tr>\n\t\t\t<td>\n" + ct_output + "\t\t\t</td>\n";
-			layout_output += "\t\t[wpv-item index=other]\n";
-			layout_output += "\t\t\t<td>\n" + ct_output + "\t\t\t</td>\n";
-			layout_output += "\t\t[wpv-item index=" + cols + "]\n";
-			layout_output += "\t\t\t<td>\n" + ct_output + "\t\t\t</td>\n\t\t</tr>\n";
-			ct_output = '';
-		}
-		layout_output += "\t\t[wpv-item index=pad]\n";
-        layout_output += "\t\t\t<td></td>\n";
-        layout_output += "\t\t[wpv-item index=pad-last]\n";
-        layout_output += "\t\t\t<td></td>\n\t\t</tr>\n";
-        layout_output += "\t</wpv-loop>\n\t</table>\n\t";
-        var out = {'layout_output':layout_output,'ct_output':ct_output};
-        return out;
-    };
-    
-    self.render_bootstrap_grid_layout = function( fields, cols, container, individual, row_class ) {
-        var fields_length = fields.length,
-		ct_output = '',
-        layout_output = '',
-		col_num = 12/cols,
-		row_style = '',
-		col_style = 'col-sm-',
-		row = '',
-		close_columns_of_one = '',
-		loop_item = '',
-		loop_item_pad = '',
-		row_indent = "\t\t\t\t",
-		row_ending = "\n";
-		if ( self.use_loop_template ) {
-			row_indent = "";
-		}
-		for ( var i = 0; i < fields_length; i++ ) {
-            if ( i == ( fields_length - 1 )	) {
-				row_ending = "";
-			}
-			ct_output += row_indent + fields[i][0];// prefix
-            ct_output += fields[i][1];// shortcode
-            ct_output += fields[i][2] + row_ending;// suffix
-        }
-		if ( data.wpv_bootstrap_version == 2 ) {
-			row_style = ' row-fluid';
-			col_style = 'span';
-		}
-		if ( 
-			row_class === true 
-			|| data.wpv_bootstrap_version == 3
-		) {
-			row = "row";	
-		}
-		if ( cols == 1 ) {
-        	close_columns_of_one = '\n\t\t</div>';	
-        }
-        if ( self.use_loop_template ) {
-            loop_item = "<div class=\"" + col_style + col_num + "\">[wpv-post-body view_template=\"" + self.use_loop_template_title + "\"]</div>";
-        } else {
-			loop_item = "<div class=\"" + col_style + col_num + "\">\n" + ct_output + "\n\t\t\t</div>";
-			ct_output = '';
-		}
-		loop_item_pad = "<div class=\"" + col_style + col_num + "\"></div>";
-		if ( container === true ) {
-			layout_output += "\t<div class=\"container\">\n";
-		}
-		layout_output += "\t<wpv-loop wrap=\"" + cols + "\" pad=\"true\">\n";
-		layout_output += "\t\t[wpv-item index=1]\n";
-		if ( individual == 1 ) {
-        	layout_output += "\t\t<div class=\"" + row + row_style + "\">\n\t\t\t" + loop_item + close_columns_of_one + "\n";
-        	for ( i = 2; i < cols; i++ ) {
-        		layout_output += "\t\t[wpv-item index=" + i + "]\n";
-        		layout_output += "\t\t\t" + loop_item + "\n";	
-        	}
-        } else {
-        	layout_output += "\t\t<div class=\"" + row + row_style + "\">\n\t\t\t" + loop_item + close_columns_of_one + "\n";
-	        layout_output += "\t\t[wpv-item index=other]\n";
-	        layout_output += "\t\t\t" + loop_item + "\n";
-	    }
-	    if ( cols > 1 ) {
-	        layout_output += "\t\t[wpv-item index=" + cols + "]\n";
-	        layout_output += "\t\t\t" + loop_item + "\n\t\t</div>\n";
-        }
-        layout_output += "\t\t[wpv-item index=pad]\n";
-        layout_output += "\t\t\t" + loop_item_pad + "\n";
-		layout_output += "\t\t[wpv-item index=pad-last]\n";
-		layout_output += "\t\t\t" + loop_item_pad + "\n";
-        layout_output += "\t\t</div>\n";
-        layout_output += "\t</wpv-loop>\n\t";
-		if ( container === true ) {
-			layout_output += "</div>\n\t";
-		}
-        var out = {'layout_output':layout_output, 'ct_output':ct_output};
-        return out;
-
-    };
-	
 	// ---------------------------------
 	// Events
 	// ---------------------------------
@@ -1004,49 +789,51 @@ WPViews.LayoutWizard = function( $ ) {
                     action: 'wpv_create_layout_content_template',
                     view_id: self.view_id,
                     view_name: $('.js-title').val()
-                };                
+                },
+				messages_container = thiz.closest( '.js-wpv-dialog-layout-wizard' ).find( '.js-wpv-message-container' );
                 $.ajax({
-                    async:false,
-                    type:"POST",
-                    url:ajaxurl,
-                    data:data,
+                    async: false,
+                    type: "POST",
+                    url: ajaxurl,
+                    data: data,
                     dataType: 'json',
                     success: function( response ) {
-						var template_id = response.success;
-						if ( template_id == 'error' ) {
-							self.use_loop_template_id = '';
-							self.use_loop_template_title = '';
-						} else {
-							var template_name = response.title;
-							self.use_loop_template_id = template_id;
-							self.use_loop_template_title = template_name;
+						if ( response.success ) {
+							self.use_loop_template_id = response.data.template_id;
+							self.use_loop_template_title = response.data.template_title;
 							$( '.js-wpv-settings-inline-templates' ).show();
 							if ( 
-								template_id 
-								&& $( '#wpv-ct-listing-' + template_id ).html() 
+								response.data.template_id 
+								&& $( '#wpv-ct-listing-' + response.data.template_id ).html() 
 							) {
-								$( '#wpv-ct-listing-' + template_id ).removeClass( 'hidden' );
+								$( '#wpv-ct-listing-' + response.data.template_id ).removeClass( 'hidden' );
 							} else {
 								$( '.js-wpv-content-template-view-list > ul' )
 									.first()
-										.prepend( response.html );
+										.prepend( response.data.template_html );
 							}
-                            $('.js-wpv-ct-listing-' + template_id + ' .js-wpv-ct-remove-from-view').prop( 'disabled', true );  
+							$('.js-wpv-ct-listing-' + response.data.template_id + ' .js-wpv-ct-remove-from-view').prop( 'disabled', true );
+							self.process_layout_wizard_data( fields, function() {
+								spinnerContainer.remove();
+								$.colorbox.close();
+								codemirror_views_layout.refresh();
+								codemirror_views_layout.focus();
+								if ( $( '.js-wpv-section-unsaved' ).length <= 0 ) {
+									setConfirmUnload(false);
+								}
+							});
+						} else {
+							self.use_loop_template_id = '';
+							self.use_loop_template_title = '';
+							spinnerContainer.remove();
+							self.edit_screen.manage_ajax_fail( response.data, messages_container );
 						}
                     },
                     error: function( ajaxContext ) {
                         console.log( "Error: ", ajaxContext.responseText );
                     },
                     complete: function() {
-                        self.process_layout_wizard_data( fields, function() {
-							spinnerContainer.remove();
-							$.colorbox.close();
-							codemirror_views_layout.refresh();
-							codemirror_views_layout.focus();
-							if ( $( '.js-wpv-section-unsaved' ).length <= 0 ) {
-								setConfirmUnload(false);
-							}
-						});
+                        
                     }
                 });
             } else {

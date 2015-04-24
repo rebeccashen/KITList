@@ -516,6 +516,17 @@ testCM("deleteSpanCollapsedInclusiveLeft", function(cm) {
   cm.replaceRange("", from, to);
 }, {value: "abc\nX\ndef"});
 
+testCM("markTextCSS", function(cm) {
+  function present() {
+    var spans = cm.display.lineDiv.getElementsByTagName("span");
+    for (var i = 0; i < spans.length; i++)
+      if (spans[i].style.color == "cyan" && span[i].textContent == "cdefg") return true;
+  }
+  var m = cm.markText(Pos(0, 2), Pos(0, 6), {css: "color: cyan"});
+  m.clear();
+  is(!present());
+}, {value: "abcdefgh"});
+
 testCM("bookmark", function(cm) {
   function p(v) { return v && Pos(v[0], v[1]); }
   forEach([{a: [1, 0], b: [1, 1], c: "", d: [1, 4]},
@@ -600,6 +611,14 @@ testCM("getAllMarks", function(cm) {
   eq(cm.getAllMarks().length, 2);
 });
 
+testCM("setValueClears", function(cm) {
+  cm.addLineClass(0, "wrap", "foo");
+  var mark = cm.markText(Pos(0, 0), Pos(1, 1), {inclusiveLeft: true, inclusiveRight: true});
+  cm.setValue("foo");
+  is(!cm.lineInfo(0).wrapClass);
+  is(!mark.find());
+}, {value: "a\nb"});
+
 testCM("bug577", function(cm) {
   cm.setValue("a\nb");
   cm.clearHistory();
@@ -662,7 +681,7 @@ testCM("selectAllNoScroll", function(cm) {
 });
 
 testCM("selectionPos", function(cm) {
-  if (phantom) return;
+  if (phantom || cm.getOption("inputStyle") != "textarea") return;
   cm.setSize(100, 100);
   addDoc(cm, 200, 100);
   cm.setSelection(Pos(1, 100), Pos(98, 100));
@@ -792,6 +811,7 @@ testCM("collapsedRangeCoordsChar", function(cm) {
 }, {value: "123456\nabcdef\nghijkl\nmnopqr\n"});
 
 testCM("collapsedRangeBetweenLinesSelected", function(cm) {
+  if (cm.getOption("inputStyle") != "textarea") return;
   var widget = document.createElement("span");
   widget.textContent = "\u2194";
   cm.markText(Pos(0, 3), Pos(1, 0), {replacedWith: widget});
@@ -1072,6 +1092,7 @@ testCM("measureEndOfLine", function(cm) {
 }, {mode: "text/html", value: "<!-- foo barrr -->", lineWrapping: true}, ie_lt8 || opera_lt10);
 
 testCM("scrollVerticallyAndHorizontally", function(cm) {
+  if (cm.getOption("inputStyle") != "textarea") return;
   cm.setSize(100, 100);
   addDoc(cm, 40, 40);
   cm.setCursor(39);
@@ -1300,6 +1321,7 @@ testCM("verticalMovementCommandsWrapping", function(cm) {
     lineWrapping: true});
 
 testCM("rtlMovement", function(cm) {
+  if (cm.getOption("inputStyle") != "textarea") return;
   forEach(["خحج", "خحabcخحج", "abخحخحجcd", "abخde", "abخح2342خ1حج", "خ1ح2خح3حxج",
            "خحcd", "1خحcd", "abcdeح1ج", "خمرحبها مها!", "foobarر", "خ ة ق",
            "<img src=\"/בדיקה3.jpg\">"], function(line) {
@@ -1369,7 +1391,7 @@ testCM("lineChangeEvents", function(cm) {
 });
 
 testCM("scrollEntirelyToRight", function(cm) {
-  if (phantom) return;
+  if (phantom || cm.getOption("inputStyle") != "textarea") return;
   addDoc(cm, 500, 2);
   cm.setCursor(Pos(0, 500));
   var wrap = cm.getWrapperElement(), cur = byClassName(wrap, "CodeMirror-cursor")[0];
@@ -1533,33 +1555,48 @@ testCM("jumpTheGap", function(cm) {
 }, {lineWrapping: true, value: "abc\ndef\nghi\njkl\n"});
 
 testCM("addLineClass", function(cm) {
-  function cls(line, text, bg, wrap) {
+  function cls(line, text, bg, wrap, gutter) {
     var i = cm.lineInfo(line);
     eq(i.textClass, text);
     eq(i.bgClass, bg);
     eq(i.wrapClass, wrap);
+    if (typeof i.handle.gutterClass !== 'undefined') {
+        eq(i.handle.gutterClass, gutter);
+    }
   }
   cm.addLineClass(0, "text", "foo");
   cm.addLineClass(0, "text", "bar");
   cm.addLineClass(1, "background", "baz");
   cm.addLineClass(1, "wrap", "foo");
-  cls(0, "foo bar", null, null);
-  cls(1, null, "baz", "foo");
+  cm.addLineClass(1, "gutter", "gutter-class");
+  cls(0, "foo bar", null, null, null);
+  cls(1, null, "baz", "foo", "gutter-class");
   var lines = cm.display.lineDiv;
   eq(byClassName(lines, "foo").length, 2);
   eq(byClassName(lines, "bar").length, 1);
   eq(byClassName(lines, "baz").length, 1);
+  eq(byClassName(lines, "gutter-class").length, 1);
   cm.removeLineClass(0, "text", "foo");
-  cls(0, "bar", null, null);
+  cls(0, "bar", null, null, null);
   cm.removeLineClass(0, "text", "foo");
-  cls(0, "bar", null, null);
+  cls(0, "bar", null, null, null);
   cm.removeLineClass(0, "text", "bar");
   cls(0, null, null, null);
+
   cm.addLineClass(1, "wrap", "quux");
-  cls(1, null, "baz", "foo quux");
+  cls(1, null, "baz", "foo quux", "gutter-class");
   cm.removeLineClass(1, "wrap");
-  cls(1, null, "baz", null);
-}, {value: "hohoho\n"});
+  cls(1, null, "baz", null, "gutter-class");
+  cm.removeLineClass(1, "gutter", "gutter-class");
+  eq(byClassName(lines, "gutter-class").length, 0);
+  cls(1, null, "baz", null, null);
+
+  cm.addLineClass(1, "gutter", "gutter-class");
+  cls(1, null, "baz", null, "gutter-class");
+  cm.removeLineClass(1, "gutter", "gutter-class");
+  cls(1, null, "baz", null, null);
+
+}, {value: "hohoho\n", lineNumbers: true});
 
 testCM("atomicMarker", function(cm) {
   addDoc(cm, 10, 10);

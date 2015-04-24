@@ -12,20 +12,22 @@ function wpv_admin_archive_listing_page() {
 	?>
 	<div class="wrap toolset-views">
 
-        <div class="wpv-views-listing-page wpv-views-listing-archive-page" data-none-message="<?php _e("This WordPress Archive isn't being used for any loops.",'wpv-views') ?>">
-		<?php
-			// 'trash' or 'publish'
-			$current_post_status = ( isset( $_GET["status"] ) && 'trash' == sanitize_text_field( $_GET["status"] ) ) ? 'trash' : 'publish';
-			$search_term = isset( $_GET["s"] ) ? urldecode( sanitize_text_field( $_GET["s"] ) ) : '';
-			$arrange_by_usage = isset( $_GET["arrangeby"] ) && ( sanitize_text_field( $_GET["arrangeby"] ) == 'usage' );
-			
-			wp_nonce_field( 'work_views_listing', 'work_views_listing' );
-			wp_nonce_field( 'wpv_remove_view_permanent_nonce', 'wpv_remove_view_permanent_nonce' );
-		?>
-		<div id="icon-views" class="icon32"></div>
-        	<h2><!-- classname wpv-page-title removed -->
-        		<?php _e( 'WordPress Archives', 'wpv-views' ); ?>
-        		<?php
+        <!-- wpv-views-listing-archive-page can be removed -->
+        <div class="wpv-views-listing-page wpv-views-listing-archive-page" data-none-message="<?php _e("This WordPress Archive isn't being used for any loops.",'wpv-views') ?>" >
+			<?php
+				// 'trash' or 'publish'
+				$current_post_status = wpv_getget( 'status', 'publish', array( 'trash', 'publish' ) );
+				$search_term = urldecode( sanitize_text_field( wpv_getget( 's' ) ) );
+				$arrange_by_usage = ( sanitize_text_field( wpv_getget( 'arrangeby' ) ) == 'usage' );
+				
+				wp_nonce_field( 'work_views_listing', 'work_views_listing' );
+				wp_nonce_field( 'wpv_remove_view_permanent_nonce', 'wpv_remove_view_permanent_nonce' );
+			?>
+		
+			<div id="icon-views" class="icon32"></div>
+			<h2><!-- classname wpv-page-title removed -->
+				<?php _e( 'WordPress Archives', 'wpv-views' ); ?>
+				<?php
 					if ( $WPV_view_archive_loop->check_archive_loops_exists() ) {
 						?>
 						<a href="#"
@@ -48,7 +50,7 @@ function wpv_admin_archive_listing_page() {
 						<?php
 					}
 				?>
-        	</h2>
+			</h2>
 
 			<?php
 				// Messages: trashed, untrashed, deleted
@@ -56,10 +58,32 @@ function wpv_admin_archive_listing_page() {
 				// We can reuse the function from Views listing (there's a note saying we're doing that).
 				add_filter( 'wpv_maybe_show_listing_message_undo', 'wpv_admin_view_listing_message_undo', 10, 3 );
 
-				wpv_maybe_show_listing_message( 'trashed', __( 'WordPress Archive moved to the Trash.', 'wpv-views' ), __( '%d WordPress Archives moved to the Trash.', 'wpv-views' ), true );
-				wpv_maybe_show_listing_message( 'untrashed', __( 'WordPress Archive restored from the Trash.', 'wpv-views' ), __( '%d WordPress Archives restored from the Trash.', 'wpv-views' ) );
-				wpv_maybe_show_listing_message( 'deleted', __( 'WordPress Archive permanently deleted.', 'wpv-views' ), __( '%d WordPress Archives permanently deleted.', 'wpv-views' ) );
-			?>
+				wpv_maybe_show_listing_message(
+						'trashed', __( 'WordPress Archive moved to the Trash.', 'wpv-views' ), __( '%d WordPress Archives moved to the Trash.', 'wpv-views' ), true );
+				wpv_maybe_show_listing_message(
+						'untrashed', __( 'WordPress Archive restored from the Trash.', 'wpv-views' ), __( '%d WordPress Archives restored from the Trash.', 'wpv-views' ) );
+				wpv_maybe_show_listing_message(
+						'deleted', __( 'WordPress Archive permanently deleted.', 'wpv-views' ), __( '%d WordPress Archives permanently deleted.', 'wpv-views' ) );
+
+				// "Arrange by" tabs
+				?>
+			
+				<div class="wpv-admin-tabs">
+					<ul class="wpv-admin-tabs-links">
+						<li>
+							<a href="<?php echo add_query_arg( array( 'page' => 'view-archives' ), admin_url( 'admin.php' ) ); ?>"
+									<?php wpv_current_class( ! $arrange_by_usage ); ?> >
+								<?php _e( 'Arrange by name', 'wpv-views' ); ?>
+							</a>
+						</li>
+						<li>
+							<a href="<?php echo add_query_arg( array( 'page' => 'view-archives', 'arrangeby' => 'usage' ), admin_url( 'admin.php' ) ); ?>"
+									<?php wpv_current_class( $arrange_by_usage ); ?> >
+								<?php _e( 'Arrange by usage', 'wpv-views' ); ?>
+							</a>
+						</li>
+					</ul>
+				</div>
 
             <?php
 				if ( $arrange_by_usage ) {
@@ -74,16 +98,6 @@ function wpv_admin_archive_listing_page() {
 						</p>
 						<?php
 					}
-
-					?>
-					<div class="wpv-views-listing-arrange js-wpv-views-listing-arrange">
-						<p><?php _e('Arrange by','wpv-views'); ?>: </p>
-						<ul>
-						<li data-sortby="name"><a href="<?php echo add_query_arg( array( 'page' => 'view-archives' ), admin_url('admin.php') ); ?>"><?php _e('Name','wpv-views') ?></a></li>
-						<li data-sortby="usage" class="active"><?php _e('Usage','wpv-views') ?></li>
-						</ul>
-					</div>
-					<?php
 
 					wpv_admin_wordpress_archives_listing_table_by_usage();
 
@@ -102,7 +116,6 @@ function wpv_admin_archive_listing_page() {
 				} else {
 
 					// IDs of possible results and counts per post status.
-					// layouts-loop is DEPRECATED, keep for backwards compatibility
 					$views_pre_query_data = wpv_prepare_view_listing_query( array( 'archive', 'layouts-loop' ), $current_post_status );
 
 					// Do we have any Views at all?
@@ -166,7 +179,7 @@ function wpv_admin_wordpress_archives_listing_table_by_usage() {
 
 function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_status ) {
 
-	global $WP_Views, $WPV_view_archive_loop, $wpdb;
+	global $WP_Views, $WPV_settings, $WPV_view_archive_loop;
 
 	// array of URL modifiers
 	$mod_url = array(
@@ -188,29 +201,38 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 		'post_status' => $current_post_status
 	);
 
-	// perform the search in WPA titles and decriptions and add post__in argument to $wpv_args.
-	if ( isset( $_GET["s"] ) && '' != $_GET["s"] ) {
-		$wpv_args = wpv_modify_wpquery_for_search( $_GET["s"], $wpv_args );
-		$mod_url['s'] = sanitize_text_field( $_GET["s"] );
-	}
 	
-	if ( isset( $_GET["items_per_page"] ) && '' != $_GET["items_per_page"] ) {
-		$wpv_args['posts_per_page'] = (int) $_GET["items_per_page"];
-		$mod_url['items_per_page'] = (int) $_GET["items_per_page"];
+	$search_string = wpv_getget( 's', '' );
+	$is_search = ( '' != $search_string );
+	if ( $is_search ) {
+		// perform the search in WPA titles and decriptions and add post__in argument to $wpv_args.
+		$wpv_args = wpv_modify_wpquery_for_search( $search_string, $wpv_args );
+		
+		$mod_url['s'] = sanitize_text_field( $search_string );
+	}
+	$search_term = urldecode( sanitize_text_field( $search_string ) );
+
+	$items_per_page = (int) wpv_getget( 'items_per_page', 0 ); // 0 means "not set"
+	if ( $items_per_page > 0 ) {
+		$wpv_args['posts_per_page'] = $items_per_page;
+		$mod_url['items_per_page'] = $items_per_page;
 	}
 
-	if ( isset( $_GET["orderby"] ) && '' != $_GET["orderby"] ) {
-		$wpv_args['orderby'] = sanitize_text_field($_GET["orderby"]);
-		$mod_url['orderby'] = sanitize_text_field($_GET["orderby"]);
-		if ( isset( $_GET["order"] ) && '' != $_GET["order"] ) {
-			$wpv_args['order'] = sanitize_text_field($_GET["order"]);
-			$mod_url['order'] = sanitize_text_field($_GET["order"]);
+	$orderby = sanitize_text_field( wpv_getget( 'orderby' ) );
+	$order = sanitize_text_field( wpv_getget( 'order' ) );
+	if ( '' != $orderby ) {
+		$wpv_args['orderby'] = $orderby;
+		$mod_url['orderby'] = $orderby;
+		if ( '' != $order ) {
+			$wpv_args['order'] = $order;
+			$mod_url['order'] = $order;
 		}
 	}
 
-	if ( isset( $_GET["paged"] ) && '' != $_GET["paged"]) {
-		$wpv_args['paged'] = (int) $_GET["paged"];
-		$mod_url['paged'] = (int) $_GET["paged"];
+	$paged = (int) wpv_getget( 'paged', 0 );
+	if ( $paged > 0 ) {
+		$wpv_args['paged'] = $paged;
+		$mod_url['paged'] = $paged;
 	}
 
 	$wpv_query = new WP_Query( $wpv_args );
@@ -222,26 +244,15 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 	$wpv_found_posts = $wpv_query->found_posts;
 
 	?>
-	<div class="wpv-views-listing-arrange js-wpv-views-listing-arrange" style="clear:none;float:left">
-		<p style="margin-bottom:0"><?php _e('Arrange by','wpv-views'); ?>: </p>
-		<ul>
-			<li data-sortby="name" class="active"><?php _e('Name','wpv-views') ?></li>
-			<li data-sortby="usage">
-				<a href="<?php echo add_query_arg( array( 'page' => 'view-archives', 'arrangeby' => 'usage' ), admin_url( 'admin.php' ) ); ?>">
-					<?php _e( 'Usage', 'wpv-views' ); ?>
-				</a>
-			</li>
-		</ul>
-	</div>
-
+	
 	<!-- links to lists WPA in different statuses -->
-	<ul class="subsubsub" style="clear:left">
+	<ul class="subsubsub">
 		<li>
 			<?php
 				// Show link to published WPA templates.
 
 				// We show this link as current only if there is no search.
-				$is_plain_publish_current_status = ( 'publish' == $current_post_status && !isset( $_GET["s"] ) );
+				$is_plain_publish_current_status = ( 'publish' == $current_post_status && ! $is_search );
 
 				printf(
 						'<a href="%s" %s >%s</a> (%s) |',
@@ -257,7 +268,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 				// Show link to trashed WPA templates.
 
 				// We show this link as current only if there is no search.
-				$is_plain_trash_current_status = ( 'trash' == $current_post_status && !isset( $_GET["s"] ) );
+				$is_plain_trash_current_status = ( 'trash' == $current_post_status && ! $is_search );
 
 				printf(
 						'<a href="%s" %s >%s</a> (%s)',
@@ -268,6 +279,8 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 			?>
 		</li>
 	</ul>
+	<div style="clear:both;"></div>
+	
 	<?php
 
 	if ( !$WPV_view_archive_loop->check_archive_loops_exists() ) {
@@ -303,13 +316,12 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 		// Show search box
 		?>
 			<div class="alignright">
-				<form id="posts-filter" action="" method="get"
-					class="<?php // if ( !$WPV_view_archive_loop->check_archive_loops_exists() ) echo 'hidden'; WHY hide the search when all loops have been asigned? ?>">
+				<form id="posts-filter" action="" method="get">
 					<p class="search-box">
 						<label class="screen-reader-text" for="post-search-input"><?php _e('Search WordPress Archives','wpv-views'); ?>:</label>
-						<?php $search_term = isset( $_GET["s"] ) ? urldecode( sanitize_text_field($_GET["s"]) ) : ''; ?>
 						<input type="search" id="post-search-input" name="s" value="<?php echo $search_term; ?>" />
-						<input type="submit" name="" id="search-submit" class="button" value="<?php echo htmlentities( __('Search WordPress Archives','wpv-views'), ENT_QUOTES ); ?>" />
+						<input type="submit" name="" id="search-submit" class="button"
+								value="<?php echo htmlentities( __( 'Search WordPress Archives', 'wpv-views' ), ENT_QUOTES ); ?>" />
 						<input type="hidden" name="paged" value="1" />
 					</p>
 				</form>
@@ -410,7 +422,6 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 
 			<tbody class="js-wpv-views-listing-body">
 				<?php
-					$options = $WP_Views->get_options();
 					$loops = $WPV_view_archive_loop->_get_post_type_loops();
 					$builtin_loops = array(
 							'home-blog-page' => __('Home/Blog', 'wpv-views'),
@@ -505,7 +516,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 								if ( $view_settings['view-query-mode'] == 'archive' ) {
 									$selected = array();
 									foreach ( $loops as $loop => $loop_name ) {
-										if ( isset( $options[ 'view_' . $loop ] ) && $options[ 'view_' . $loop ] == $post->ID ) {
+										if ( isset( $WPV_settings[ 'view_' . $loop ] ) && $WPV_settings[ 'view_' . $loop ] == $post->ID ) {
 											$not_built_in = '';
 											if ( !isset( $builtin_loops[ $loop ] ) ) {
 												$not_built_in = __(' (post type archive)', 'wpv-views' );
@@ -523,8 +534,8 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 											continue;
 										}
 										$name = $category->name;
-										if ( isset ( $options[ 'view_taxonomy_loop_' . $name ] )
-											&& $options[ 'view_taxonomy_loop_' . $name ] == $post->ID )
+										if ( isset ( $WPV_settings[ 'view_taxonomy_loop_' . $name ] )
+											&& $WPV_settings[ 'view_taxonomy_loop_' . $name ] == $post->ID )
 										{
 											$selected[] = '<li>' . $category->labels->name . __(' (taxonomy archive)', 'wpv-views') . '</li>';
 										}
@@ -539,10 +550,10 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 										</ul>
 										<?php
 									} else {
-										echo __( "This WordPress Archive isn't being used for any loops.", 'wpv-views' );
+										_e( 'This WordPress Archive isn\'t being used for any loops.', 'wpv-views' );
 									}
 								} else if ( $view_settings['view-query-mode'] == 'layouts-loop' ) {
-									echo __( "This WordPress Archive is part of a Layout, so it will display the archive(s) to which the Layout is assigned.", 'wpv-views' );
+									_e( 'This WordPress Archive is part of a Layout, so it will display the archive(s) to which the Layout is assigned.', 'wpv-views' );
 								}
 								?>
 							</td>
@@ -574,14 +585,14 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 			<?php
 		}
 
-	wpv_admin_listing_pagination( 'view-archives', $wpv_found_posts, $wpv_args["posts_per_page"], $mod_url );
+		wpv_admin_listing_pagination( 'view-archives', $wpv_found_posts, $wpv_args["posts_per_page"], $mod_url );
 
 	} else {
 		// No WordPress Archives matches the criteria
 		?>
 		<div class="wpv-views-listing views-empty-list">
 			<?php
-				if ( isset( $_GET["status"] ) && $_GET["status"] == 'trash' && isset( $_GET["s"] ) && $_GET["s"] != '' ) {
+				if ( 'trash' == $current_post_status && $is_search ) {
 					printf(
 							'<p>%s</p><p><a class="button-secondary" href="%s">%s</a></p>',
 							__( 'No WordPress Archives in trash matched your criteria.', 'wpv-views' ),
@@ -595,7 +606,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 											'status' => 'trash' ),
 									admin_url( 'admin.php' ) ),
 							__( 'Return', 'wpv-views' ) );
-				} else if ( isset( $_GET["status"] ) && $_GET["status"] == 'trash' ) {
+				} else if ( 'trash' == $current_post_status ) {
 					printf(
 							'<p>%s</p><p><a class="button-secondary" href="%s">%s</a></p>',
 							__( 'No WordPress Archives in trash.', 'wpv-views' ),
@@ -608,7 +619,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 											'paged' => '1' ),
 									admin_url( 'admin.php' ) ),
 							__( 'Return', 'wpv-views' ) );
-				} else if ( isset( $_GET["s"] ) && $_GET["s"] != '' ) {
+				} else if ( $is_search ) {
 					printf(
 							'<p>%s</p><p><a class="button-secondary" href="%s">%s</a></p>',
 							__( 'No WordPress Archives matched your criteria.', 'wpv-views' ),
@@ -623,7 +634,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 							__( 'Return', 'wpv-views' ) );
 				} else {
 					?>
-					<p><?php _e('WordPress Archives let you customize the output of standard Archive pages.');?></p>
+					<p><?php _e( 'WordPress Archives let you customize the output of standard Archive pages.' );?></p>
 					<p>
 						<?php
 							// "Create your first archive" link
@@ -662,9 +673,8 @@ function wpv_admin_archive_listing_usage() {
 
 		<tbody class="js-wpv-views-listing-body">
 			<?php
-				global $WP_Views;
+				global $WPV_settings;
 
-				$options = $WP_Views->get_options();
 				$alternate = '';
 
 				$loops = array(
@@ -678,8 +688,8 @@ function wpv_admin_archive_listing_usage() {
 				foreach ( $loops as $slug => $name ) {
 					$alternate = ' alternate' == $alternate ? '' : ' alternate';
 					$post = null;
-					if ( isset( $options['view_' . $slug] ) ) {
-						$post = get_post( $options['view_' . $slug] );
+					if ( isset( $WPV_settings['view_' . $slug] ) ) {
+						$post = get_post( $WPV_settings['view_' . $slug] );
 					}
 
 					?>
@@ -736,8 +746,8 @@ function wpv_admin_archive_listing_usage() {
 					foreach ( $pt_loops as $slug => $name ) {
 						$alternate = ' alternate' == $alternate ? '' : ' alternate';
 						$post = null;
-						if ( isset( $options['view_' . $slug] ) ) {
-							$post = get_post( $options['view_' . $slug] );
+						if ( isset( $WPV_settings['view_' . $slug] ) ) {
+							$post = get_post( $WPV_settings['view_' . $slug] );
 						}
 						?>
 						<tr class="js-wpv-view-list-row<?php echo $alternate; ?>">
@@ -792,8 +802,8 @@ function wpv_admin_archive_listing_usage() {
 					$name = $category->name;
 					$label = $category->labels->singular_name;
 					$post = null;
-					if ( isset( $options['view_taxonomy_loop_'.$name] ) ) {
-						$post = get_post( $options['view_taxonomy_loop_' . $name] );
+					if ( isset( $WPV_settings['view_taxonomy_loop_'.$name] ) ) {
+						$post = get_post( $WPV_settings['view_taxonomy_loop_' . $name] );
 					}
 					?>
 					<tr class="js-wpv-view-list-row<?php echo $alternate; ?>">

@@ -8,7 +8,7 @@
 * Layout Wizard
 */
 
-add_action('wp_ajax_wpv_layout_wizard', 'wpv_layout_wizard_callback');
+add_action( 'wp_ajax_wpv_layout_wizard', 'wpv_layout_wizard_callback' );
 
 function wpv_layout_wizard_callback() {
     ob_start();
@@ -22,7 +22,8 @@ function wpv_layout_wizard_callback() {
 
 function wpv_layout_wizard_load_settings() {
     $settings = get_post_meta($_POST["view_id"], '_wpv_layout_settings', true);
-	$additional_settings = get_option('wpv_options');
+    
+    global $WPV_settings;
 	
 	if (class_exists('WPDD_Layouts_CSSFrameworkOptions')) {
 		$bootstrap_ver = WPDD_Layouts_CSSFrameworkOptions::getInstance()->get_current_framework();
@@ -30,8 +31,8 @@ function wpv_layout_wizard_load_settings() {
 	}else{
 		$settings['wpv_bootstrap_version'] = 1;
 		//Load bootstrap version from views settings
-		if ( isset($additional_settings['wpv_bootstrap_version']) ){
-			$settings['wpv_bootstrap_version'] = $additional_settings['wpv_bootstrap_version'];
+		if ( isset($WPV_settings['wpv_bootstrap_version']) ){
+			$settings['wpv_bootstrap_version'] = $WPV_settings['wpv_bootstrap_version'];
 		}
 	}	
 	 
@@ -39,87 +40,184 @@ function wpv_layout_wizard_load_settings() {
 }
 
 add_action('wp_ajax_wpv_create_layout_content_template', 'wpv_create_layout_content_template');
+
 function wpv_create_layout_content_template() {
-    $template = wpv_create_content_template( 'Loop item in '. $_POST['view_name']);
-   
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$data = array(
+			'type' => 'capability',
+			'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+	if ( 
+		! isset( $_POST["wpnonce"] )
+		|| ! wp_verify_nonce( $_POST["wpnonce"], 'layout_wizard_nonce' ) 
+	) {
+		$data = array(
+			'type' => 'nonce',
+			'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+	if (
+		! isset( $_POST["view_id"] )
+		|| ! is_numeric( $_POST["view_id"] )
+		|| intval( $_POST['view_id'] ) < 1 
+	) {
+		$data = array(
+			'type' => 'id',
+			'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+    $template = wpv_create_content_template( 'Loop item in '. $_POST['view_name'] );
+	$view_id = $_POST['view_id'];
     if ( isset( $template['success'] ) ) {
-        update_post_meta( $_POST['view_id'], '_view_loop_template', $template['success'] );
-        update_post_meta( $template['success'], '_view_loop_id', $_POST['view_id'] );
+        update_post_meta( $view_id, '_view_loop_template', $template['success'] );
+        update_post_meta( $template['success'], '_view_loop_id', $view_id );
         $ct_post_id = $template['success'];    
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Content Template for this Loop Output created', 'wpv-views' ),
+			'template_id' => $ct_post_id,
+			'template_title' => $template['title']			
+		);
         $post = get_post( $ct_post_id );
-        
-        $meta = get_post_meta( $_POST['view_id'], '_wpv_layout_settings', true );
+        $meta = get_post_meta( $view_id, '_wpv_layout_settings', true );
         $reg_templates = array();
         if ( isset( $meta['included_ct_ids'] ) ) {
             $reg_templates = explode( ',', $meta['included_ct_ids'] );
         }
-        if ( !in_array( $ct_post_id, $reg_templates ) ) {            
-            array_unshift($reg_templates, $ct_post_id);
+        if ( ! in_array( $ct_post_id, $reg_templates ) ) {            
+            array_unshift( $reg_templates, $ct_post_id );
             $meta['included_ct_ids'] = implode( ',', $reg_templates );
-            update_post_meta( $_POST['view_id'], '_wpv_layout_settings', $meta );
+            update_post_meta( $view_id, '_wpv_layout_settings', $meta );
             ob_start();
-            wpv_list_view_ct_item( $post, $ct_post_id, $_POST['view_id'], true );
-            $template['html'] = ob_get_clean();
+            wpv_list_view_ct_item( $post, $ct_post_id, $view_id, true );
+            $data['template_html'] = ob_get_clean();
         }
-        echo json_encode( $template );
-    }else{
-        echo json_encode( array( 'success' => 'error' ) );
+		do_action( 'wpv_action_wpv_save_item', $view_id );
+		wp_send_json_success( $data );
+    } else {
+        $data = array(
+			'type' => 'error',
+			'message' => __( 'Could not create a Content Template for this Loop Output. Please reload the page and try again.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
     }
-    die();
 }
 
-// @todo add nonces here
-// @todo sanitize, FGS!
-// @todo we are POSTing the view_id here and might not be needed at all
-add_action('wp_ajax_wpv_convert_layout_settings', 'wpv_layout_wizard_convert_settings');
-function wpv_layout_wizard_convert_settings() {
 
-    $settings = array();
-    $settings['style'] = $_POST['layout_style'];
-    $settings['table_cols'] = $_POST['numcol'];
-	$settings['bootstrap_grid_cols'] = $_POST['bootstrap_grid_cols'];
-	$settings['bootstrap_grid_container'] = $_POST['bootstrap_grid_container'];
-	$settings['bootstrap_grid_row_class'] = $_POST['bootstrap_grid_row_class'];
-	$settings['bootstrap_grid_individual'] = isset( $_POST['bootstrap_grid_individual'] ) ? $_POST['bootstrap_grid_individual'] : '';
-    $settings['include_field_names'] = $_POST['inc_headers'];
+/**
+ * Generate layout settings for a View.
+ *
+ * This is basically just a wrapper for the wpv_generate_view_loop_output() method that handles AJAX stuff.
+ * 
+ * Expects following POST arguments:
+ * - wpnonce: A valid layout_wizard_nonce.
+ * - view_id: ID of a View. Used to retrieve current View "_wpv_layout_settings". If ID is invalid or the View doesn't
+ *       have these settings, an empty array is used instead.
+ * - style: One of the valid Loop Output styles. @see wpv_generate_view_loop_output().
+ * - fields: Array of arrays of field attributes (= the fields whose shortcodes should be inserted into loop output).
+ *       For historical reason, each field is represented by a non-associative array whose elements have this meaning:
+ *       0 - prefix, text before [shortcode]
+ *       1 - [shortcode]
+ *       2 - suffix, text after [shortcode]
+ *       3 - field name
+ *       4 - header name
+ *       5 - row title <TH>
+ *       Note: 0,2 maybe not used since v1.3
+ * - args: An array of arguments for wpv_generate_view_loop_output(), encoded as a JSON string.
+ *
+ * Outputs a JSON-encoded array with following elements:
+ * - success: Boolean. If false, the AJAX call has failed and this is the only element present (or making sense).
+ * - loop_output_settings: An array with loop output settings (old values merged with new ones). Keys stored in database
+ *       and not updated by wpv_generate_view_loop_output() will be preserved.
+ * - ct_content: Content of the Content Template to be used in Loop Output, if such exists, or an empty string.
+ * 
+ * @see wpv_generate_view_loop_output() for detailed information.
+ *
+ * @since 1.8
+ */ 
+add_action( 'wp_ajax_wpv_generate_view_loop_output', 'wpv_generate_view_loop_output_callback' );
 
-    $new_fields = array();
-    foreach ($_POST['fields'] as $fields) {
-        $new_fields[] = stripslashes($fields[1]);
-    }
- 
-    // Compatibility
-    $comp = array();
-    $i = 0;
-    foreach ($_POST['fields'] as $fields) {
-        $comp["prefix_$i"] = ''; // 1
-        $fields[1] = stripslashes($fields[1]);
-        if (preg_match('/\[types.*?field=\"(.*?)\"/', $fields[1], $out)) {
-            $comp["name_$i"] = 'types-field'; // 2
-            $comp["types_field_name_$i"] = $out[1]; //3
-            $comp["types_field_data_$i"] = $fields[1]; //4
-        } else {
-            $comp["name_$i"] = trim($fields[1], '[]'); // 2
-            $comp["types_field_name_$i"] = ''; //3
-            $comp["types_field_data_$i"] = ''; // 4
-        }
-        
-        $comp["row_title_$i"] = $fields[3]; // 5
-        $comp["suffix_$i"] = ''; //6
-        $i++;
-    }
-    
-    $settings['fields'] = $comp;
-    $settings['real_fields'] = $new_fields;
+function wpv_generate_view_loop_output_callback() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$data = array(
+			'type' => 'capability',
+			'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+	if ( 
+		! isset( $_POST["wpnonce"] )
+		|| ! wp_verify_nonce( $_POST["wpnonce"], 'layout_wizard_nonce' ) 
+	) {
+		$data = array(
+			'type' => 'nonce',
+			'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
 
-    echo json_encode($settings);
-    die();
+	// @todo better validation
+	$view_id = $_POST['view_id'];
+	$style = $_POST['style'];
+	$fields = json_decode( stripslashes( $_POST['fields'] ), true );
+	$args = json_decode( stripslashes( $_POST['args'] ), true );
+
+    // Translate field data from non-associative arrays into something that wpv_generate_view_loop_output() understands.
+    $fields_normalized = array();
+    foreach( $fields as $field ) {
+	    $fields_normalized[] = array(
+				'prefix' => $field[0],
+				'shortcode' => $field[1],
+				'suffix' => $field[2],
+				'field_name' => $field[3],
+				'header_name' => $field[4],
+				'row_title' => $field[5] );
+	}
+	
+	$loop_output = wpv_generate_view_loop_output( $style, $fields_normalized, $args );
+
+	// Forward the fail when loop output couldn't have been generated. 
+	if ( null == $loop_output ) {
+		$data = array(
+			'type' => 'error',
+			'message' => __( 'Could not generate the Loop Output. PLease reload and try again.', 'wpv-views' )
+		);
+		wp_send_json_error( $data );
+	}
+		
+	// Merge new settings to existing ones (overwrite keys from $layout_settings but keep the rest).
+	$loop_output_settings = $loop_output['loop_output_settings'];
+	$prev_settings = get_post_meta( $view_id, '_wpv_layout_settings', true );
+	if( ! is_array( $prev_settings ) ) {
+		// Handle missing _wpv_layout_settings for given View.
+		$prev_settings = array();
+	}
+	$loop_output_settings = array_merge( $prev_settings, $loop_output_settings );
+
+	// Return the results.
+	$data = array(
+		'loop_output_settings' => $loop_output_settings,
+		'ct_content' => $loop_output['ct_content'] 
+	);
+	wp_send_json_success( $data );
 }
 
-add_action('wp_ajax_layout_wizard_add_field', 'wpv_layout_wizard_add_field');
+add_action( 'wp_ajax_layout_wizard_add_field', 'wpv_layout_wizard_add_field' );
 
 function wpv_layout_wizard_add_field() { // TODO this might need localization TODO this is seriously broken
-    if ( !isset($_POST["wpnonce"]) || ! wp_verify_nonce($_POST["wpnonce"], 'layout_wizard_nonce') ) die("Undefined Nonce.");
+    if ( ! current_user_can( 'manage_options' ) ) {
+		die( "Untrusted user" );
+	}
+	if ( 
+		! isset( $_POST["wpnonce"] ) 
+		|| ! wp_verify_nonce( $_POST["wpnonce"], 'layout_wizard_nonce' ) 
+	) {
+		die( "Undefined Nonce" );
+	}
 
     global $WP_Views, $wpdb;
     $settings = $WP_Views->get_view_settings($_POST["view_id"]);
@@ -423,7 +521,14 @@ function wpv_layout_wizard_add_field() { // TODO this might need localization TO
                         preg_match('/view_template\="(.*?)"/', $_POST['selected'], $out);
                         $selected_body_template = $out[1];
                         global $wpdb;
-                        $selected_body_template = $wpdb->get_var("SELECT post_title FROM {$wpdb->posts} WHERE post_name = '$selected_body_template'");
+                        $selected_body_template = $wpdb->get_var(
+							$wpdb->prepare(
+								"SELECT post_title FROM {$wpdb->posts} 
+								WHERE post_name = %s
+								LIMIT 1",
+								$selected_body_template
+							)
+						);
                    //     $value = trim($_POST['selected'], '[]');
                    //     if (!$selected_body_template) {
                    //     $value = $items[1];

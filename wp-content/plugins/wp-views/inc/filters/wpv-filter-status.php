@@ -72,7 +72,8 @@ class WPV_Status_Filter {
 		$filters['post_status'] = array(
 			'name' => __( 'Post status', 'wpv-views' ),
 			'present' => 'post_status',
-			'callback' => array( 'WPV_Status_Filter', 'wpv_add_new_filter_status_list_item' )
+			'callback' => array( 'WPV_Status_Filter', 'wpv_add_new_filter_status_list_item' ),
+			'group' => __( 'Post filters', 'wpv-views' )
 		);
 		return $filters;
 	}
@@ -135,6 +136,7 @@ class WPV_Status_Filter {
 			<div id="wpv-filter-post-status" class="js-wpv-filter-options js-wpv-filter-post-status-options js-filter-post-status-list">
 				<?php WPV_Status_Filter::wpv_render_post_status_options( $view_settings ); ?>
 			</div>
+			<div class="js-wpv-filter-toolset-messages"></div>
 		</div>
 		<?php
 		$res = ob_get_clean();
@@ -150,28 +152,71 @@ class WPV_Status_Filter {
 	*/
 	
 	static function wpv_filter_post_status_update_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_status_nonce') ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
-		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
-		if ( empty( $_POST['filter_options'] ) ) {
-			if ( isset( $view_array['post_status'] ) ) {
-				unset ( $view_array['post_status'] );
-				update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-			}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_status_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		$view_id = intval( $_POST['id'] );
+		$view_array = get_post_meta( $view_id, '_wpv_settings', true );
+		$changed = false;
+		if ( 
+			empty( $_POST['filter_options'] ) 
+			&& isset( $view_array['post_status'] )
+		) {
+			unset ( $view_array['post_status'] );
+			$changed = true;
 		} else {
 			parse_str( $_POST['filter_options'], $filter_status );
-			if ( ! isset( $view_array['post_status'] ) || $view_array['post_status'] != $filter_status['post_status'] ) {
+			if ( 
+				! isset( $view_array['post_status'] ) 
+				|| $view_array['post_status'] != $filter_status['post_status'] 
+			) {
+				if ( is_array( $filter_status['post_status'] ) ) {
+					$filter_status['post_status'] = array_map( 'sanitize_text_field', $filter_status['post_status'] );
+				} else {
+					$filter_status['post_status'] = sanitize_text_field( $filter_status['post_status'] );
+				}
+				$changed = true;
 				$view_array['post_status'] = $filter_status['post_status'];
-				$result = update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
 			}
+		}
+		if ( $changed ) {
+			update_post_meta( $view_id, '_wpv_settings', $view_array );
+			do_action( 'wpv_action_wpv_save_item', $view_id );
 		}
 		if ( ! isset( $filter_status['post_status'] ) ) {
 			$filter_status['post_status'] = array();
 		}
-		echo wpv_get_filter_status_summary_txt( $filter_status );
-		die();
+		$data = array(
+			'id' => $view_id,
+			'message' => __( 'Post status filter saved', 'wpv-views' ),
+			'summary' => wpv_get_filter_status_summary_txt( $filter_status )
+		);
+		wp_send_json_success( $data );
 	}
 
 	/**
@@ -200,17 +245,45 @@ class WPV_Status_Filter {
 	*/
 
 	static function wpv_filter_post_status_delete_callback() {
-		$nonce = $_POST["wpnonce"];
-		if ( ! wp_verify_nonce( $nonce, 'wpv_view_filter_post_status_delete_nonce' ) ) {
-			die( "Security check" );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$data = array(
+				'type' => 'capability',
+				'message' => __( 'You do not have permissions for that.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if ( 
+			! isset( $_POST["wpnonce"] )
+			|| ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_view_filter_post_status_delete_nonce' ) 
+		) {
+			$data = array(
+				'type' => 'nonce',
+				'message' => __( 'Your security credentials have expired. Please reload the page to get new ones.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
+		}
+		if (
+			! isset( $_POST["id"] )
+			|| ! is_numeric( $_POST["id"] )
+			|| intval( $_POST['id'] ) < 1 
+		) {
+			$data = array(
+				'type' => 'id',
+				'message' => __( 'Wrong or missing ID.', 'wpv-views' )
+			);
+			wp_send_json_error( $data );
 		}
 		$view_array = get_post_meta( $_POST["id"], '_wpv_settings', true );
 		if ( isset( $view_array['post_status'] ) ) {
 			unset( $view_array['post_status'] );
 		}
 		update_post_meta( $_POST["id"], '_wpv_settings', $view_array );
-		echo $_POST['id'];
-		die();
+		do_action( 'wpv_action_wpv_save_item', $_POST["id"] );
+		$data = array(
+			'id' => $_POST["id"],
+			'message' => __( 'Post status filter deleted', 'wpv-views' )
+		);
+		wp_send_json_success( $data );
 	}
 	
 	/**
@@ -243,7 +316,19 @@ class WPV_Status_Filter {
 	*/
 	
 	static function wpv_render_post_status_options( $view_settings = array() ) {
-		$statuses = array( 'publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash', 'any' );
+                // WordPress default statuses
+		$wp_statuses = array( 'publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash' );
+                
+                // All the statuses at this WordPress instance
+                $all_statuses = get_post_stati();
+                
+                // Maintain the order of the default statuses and add custom ones after them
+                $custom_statuses = array_diff( $all_statuses, $wp_statuses );
+                $statuses = array_merge( $wp_statuses, $custom_statuses );
+
+                // Finally, include "any" as the last option
+                $statuses[] = 'any';
+                
 		$selected = ( isset( $view_settings['post_status'] ) &&  is_array( $view_settings['post_status'] ) ) ? $view_settings['post_status'] : array() ;
 		?>
 		<h4><?php  _e( 'Check statuses', 'wpv-views' ); ?></h4>
@@ -257,8 +342,8 @@ class WPV_Status_Filter {
 			}
 			?>
 			<li>
-				<input type="checkbox" id="wpv-filter-status-<?php echo $status; ?>" name="post_status[]" value="<?php echo $status; ?>"<?php echo $checked; ?> />
-				<label for="wpv-filter-status-<?php echo $status; ?>"><?php echo $status; ?></label>
+				<input type="checkbox" id="wpv-filter-status-<?php echo esc_attr( $status ); ?>" name="post_status[]" value="<?php echo esc_attr( $status ); ?>"<?php echo $checked; ?> />
+				<label for="wpv-filter-status-<?php echo esc_attr( $status ); ?>"><?php echo $status; ?></label>
 			</li>
 			<?php
 		}

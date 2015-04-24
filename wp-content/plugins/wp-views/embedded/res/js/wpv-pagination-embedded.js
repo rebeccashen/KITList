@@ -210,7 +210,7 @@ function wpv_serialize_array(data) {
 // values after the fact.
 // An interesting error case submitted by Piotr Przybyl: If two <select> options had the same value, the clone() method would select the wrong one in the cloned box. The fix, suggested by Piotr
 // and implemented here, is to use the selectedIndex property on the <select> box itself rather than relying on jQuery's value-based val().
-(function (original) {
+;(function (original) {
 	jQuery.fn.clone = function () {
 		var result = original.apply(this, arguments),
 		my_textareas = this.find('textarea').add(this.filter('textarea')),
@@ -231,7 +231,7 @@ function wpv_serialize_array(data) {
 		}
 		return result;
 	};
-}) (jQuery.fn.clone);
+})(jQuery.fn.clone);
 
 //////////////////////////////////////////////////////////////////////////
 // Datepicker script
@@ -514,7 +514,8 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 	new_height,
 	is_callback = false;
 	if ( callback_next !== '' ) {
-		if ( eval( 'typeof(' + callback_next + ') === \'function\'' ) ) {
+		var callback_next_func = window[callback_next];
+		if ( typeof callback_next_func === "function" ) {
 			is_callback = true;
 		}
 	}
@@ -541,7 +542,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 					window.wpvPaginationAjaxLoaded[view_number] = true;
 					window.wpvPaginationAnimationFinished[view_number] = true;
 					if ( is_callback ) {
-						eval( callback_next + '();' );
+						callback_next_func();
 					}
 					wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 				});
@@ -553,7 +554,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -566,7 +567,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -588,7 +589,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 					window.wpvPaginationAjaxLoaded[view_number] = true;
 					window.wpvPaginationAnimationFinished[view_number] = true;
 					if ( is_callback ) {
-						eval( callback_next + '();' );
+						callback_next_func();
 					}
 					wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 				});
@@ -600,7 +601,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -613,7 +614,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -641,7 +642,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 					window.wpvPaginationAjaxLoaded[view_number] = true;
 					window.wpvPaginationAnimationFinished[view_number] = true;
 					if ( is_callback ) {
-						eval( callback_next + '();' );
+						callback_next_func();
 					}
 					wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 				});
@@ -653,7 +654,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -666,7 +667,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -688,7 +689,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 					window.wpvPaginationAjaxLoaded[view_number] = true;
 					window.wpvPaginationAnimationFinished[view_number] = true;
 					if ( is_callback ) {
-						eval( callback_next + '();' );
+						callback_next_func();
 					}
 					wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 				});
@@ -700,7 +701,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -713,7 +714,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 						window.wpvPaginationAjaxLoaded[view_number] = true;
 						window.wpvPaginationAnimationFinished[view_number] = true;
 						if ( is_callback ) {
-							eval( callback_next + '();' );
+							callback_next_func();
 						}
 						wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					});
@@ -733,7 +734,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 				window.wpvPaginationAjaxLoaded[view_number] = true;
 				window.wpvPaginationAnimationFinished[view_number] = true;
 				if ( is_callback ) {
-					eval( callback_next + '();' );
+					callback_next_func();
 				}
 				wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 			});
@@ -745,7 +746,7 @@ function wpv_pagination_slide( view_number, width, height, next, effect, speed, 
 					window.wpvPaginationAjaxLoaded[view_number] = true;
 					window.wpvPaginationAnimationFinished[view_number] = true;
 					if ( is_callback ) {
-						eval( callback_next + '();' );
+						callback_next_func();
 					}
 					wpvPaginationQueueTrigger( view_number, next, wpvPaginatorFilter );
 					responseView.hide().css( 'visibility', 'visible' ).fadeIn( speed );
@@ -1228,16 +1229,16 @@ function wpv_manage_update_form( fil, ajax_get ) {
 
 function wpv_manage_update_results( lay, new_lay, view_num, ajax_before, ajax_after ) {
 	if ( ajax_before !== '' ) {
-		if ( eval( 'typeof(' + ajax_before + ' ) === \'function\'' ) ) {
-			eval( ajax_before + '("' + view_num + '");' );
+		var ajax_before_func = window[ajax_before];
+		if ( typeof ajax_before_func === "function" ) {
+			ajax_before_func( view_num );
 		}
 	}
 	lay.fadeOut( 200, function() {
 		lay.html( new_lay ).fadeIn( 'fast', function() {
-			if ( ajax_after !== '' ) {
-				if ( eval( 'typeof(' + ajax_after + ' ) === \'function\'' ) ) {
-					eval( ajax_after + '("' + view_num + '");' );
-				}
+			var ajax_after_func = window[ajax_after];
+			if ( typeof ajax_after_func === "function" ) {
+				ajax_after_func( view_num );
 			}
 		});		
 	});
@@ -1293,8 +1294,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 					|| force_results_update
 				) {
 					if ( ajax_pre_before !== '' ) {
-						if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-							eval( ajax_pre_before + '("' + view_num + '");' );
+						var ajax_pre_before_func = window[ajax_pre_before];
+						if ( typeof ajax_pre_before_func === "function" ) {
+							ajax_pre_before_func( view_num );
 						}
 					}
 				}
@@ -1337,8 +1339,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 					|| force_results_update
 				) {
 					if ( ajax_pre_before !== '' ) {
-						if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-							eval( ajax_pre_before + '("' + view_num + '");' );
+						var ajax_pre_before_func = window[ajax_pre_before];
+						if ( typeof ajax_pre_before_func === "function" ) {
+							ajax_pre_before_func( view_num );
 						}
 					}
 				}
@@ -1391,8 +1394,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 					|| force_results_update
 				) {
 					if ( ajax_pre_before !== '' ) {
-						if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-							eval( ajax_pre_before + '("' + view_num + '");' );
+						var ajax_pre_before_func = window[ajax_pre_before];
+						if ( typeof ajax_pre_before_func === "function" ) {
+							ajax_pre_before_func( view_num );
 						}
 					}
 				}
@@ -1424,8 +1428,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 					|| force_results_update
 				) {
 					if ( ajax_pre_before !== '' ) {
-						if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-							eval( ajax_pre_before + '("' + view_num + '");' );
+						var ajax_pre_before_func = window[ajax_pre_before];
+						if ( typeof ajax_pre_before_func === "function" ) {
+							ajax_pre_before_func( view_num );
 						}
 					}
 				}
@@ -1468,8 +1473,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 						|| force_results_update
 					) {
 						if ( ajax_pre_before !== '' ) {
-							if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-								eval( ajax_pre_before + '("' + view_num + '");' );
+							var ajax_pre_before_func = window[ajax_pre_before];
+							if ( typeof ajax_pre_before_func === "function" ) {
+								ajax_pre_before_func( view_num );
 							}
 						}
 					}
@@ -1515,8 +1521,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 						|| force_results_update
 					) {
 						if ( ajax_pre_before !== '' ) {
-							if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-								eval( ajax_pre_before + '("' + view_num + '");' );
+							var ajax_pre_before_func = window[ajax_pre_before];
+							if ( typeof ajax_pre_before_func === "function" ) {
+								ajax_pre_before_func( view_num );
 							}
 						}
 					}
@@ -1552,8 +1559,9 @@ function wpv_manage_changed_form( fil, force_form_update, force_results_update )
 				|| force_results_update
 			) {
 				if ( ajax_pre_before !== '' ) {
-					if ( eval( 'typeof(' + ajax_pre_before + ' ) === \'function\'' ) ) {
-						eval( ajax_pre_before + '("' + view_num + '");' );
+					var ajax_pre_before_func = window[ajax_pre_before];
+					if ( typeof ajax_pre_before_func === "function" ) {
+						ajax_pre_before_func( view_num );
 					}
 				}
 				if ( spinnerItems ) {// TODO maybe only when updating results
@@ -1612,6 +1620,15 @@ jQuery( document ).on( 'click', '.js-wpv-ajax-results-enabled .js-wpv-submit-tri
 	var thiz = jQuery( this ),
 	fil = thiz.closest( 'form' );
 	wpv_manage_changed_form( fil, false, true );
+});
+
+jQuery( document).on( 'keypress', '.js-wpv-ajax-results-enabled .js-wpv-filter-trigger-delayed, .js-wpv-ajax-results-submit-enabled .js-wpv-filter-trigger-delayed', function( e ) {
+	// Enter pressed?
+	if ( e.which == 13 ) {
+		var thiz = jQuery( this ),
+		fil = thiz.closest( 'form' );
+		wpv_manage_changed_form( fil );
+	}
 });
 
 jQuery( document ).on( 'click', '.js-wpv-reset-trigger', function( e ) {

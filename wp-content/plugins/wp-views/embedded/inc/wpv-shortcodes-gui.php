@@ -75,7 +75,14 @@ function wpv_ajax_wpv_view_form_popup() {
 
         $view_id = $_GET['view_id'];
 		$orig_id = $_GET['orig_id'];
-        $title = $wpdb->get_var( $wpdb->prepare( "SELECT post_title FROM {$wpdb->posts} WHERE ID = %d", $view_id ) );
+        $title = $wpdb->get_var( 
+			$wpdb->prepare( 
+				"SELECT post_title FROM {$wpdb->posts} 
+				WHERE ID = %d 
+				LIMIT 1", 
+				$view_id 
+			) 
+		);
 		$has_submit = false;
 		$view_settings = $WP_Views->get_view_settings( $view_id );
 		if ( isset( $view_settings['filter_meta_html'] ) ) {
@@ -272,36 +279,53 @@ function wpv_suggest_form_targets() {
 	global $wpdb, $sitepress;
 	$trans_join = '';
 	$trans_where = '';
+	$values_to_prepare = array();
+	$title_q = '%' . wpv_esc_like( $_REQUEST['q'] ) . '%';
+	$values_to_prepare[] = $title_q;
+	$exclude_post_type_slugs_where = '';
+	$excluded_post_type_slugs = array();
+	$excluded_post_type_slugs = apply_filters( 'wpv_admin_exclude_post_type_slugs', $excluded_post_type_slugs );
+	if ( count( $excluded_post_type_slugs ) > 0 ) {
+		$excluded_post_type_slugs_count = count( $excluded_post_type_slugs );
+		$excluded_post_type_slugs_placeholders = array_fill( 0, $excluded_post_type_slugs_count, '%s' );
+		$excluded_post_type_slugs_flat = implode( ",", $excluded_post_type_slugs_placeholders );
+		foreach ( $excluded_post_type_slugs as $excluded_post_type_slugs_item ) {
+			$values_to_prepare[] = $excluded_post_type_slugs_item;
+		}
+		$exclude_post_type_slugs_where = "AND post_type NOT IN ({$excluded_post_type_slugs_flat})";
+	}
 	if ( isset( $sitepress ) && function_exists( 'icl_object_id' ) ) {
 		$current_lang_code = $sitepress->get_current_language();
 		$trans_join = " JOIN {$wpdb->prefix}icl_translations t ";
-		$trans_where = " AND ID = t.element_id AND t.language_code =  '{$current_lang_code}' ";
+		$trans_where = " AND ID = t.element_id AND t.language_code = %s ";
+		$values_to_prepare[] = $current_lang_code;
 	}
-	$excluded_post_type_slugs = array();
-	$exclude_post_type_slugs_where = '';
-	$excluded_post_type_slugs = apply_filters( 'wpv_admin_exclude_post_type_slugs', $excluded_post_type_slugs );
-	if ( count( $excluded_post_type_slugs ) > 0 ) {
-		$exclude_post_type_slugs_where = "AND post_type NOT IN ('" . implode( "','" , $excluded_post_type_slugs ) . "')";
-	}
-	$title_q = '%' . wpv_esc_like( $_REQUEST['q'] ) . '%';
-	$results = $wpdb->get_results( $wpdb->prepare( "
+	$results = $wpdb->get_results( 
+		$wpdb->prepare( "
             SELECT ID, post_title
             FROM {$wpdb->posts} {$trans_join}
             WHERE post_title LIKE '%s'
 			{$exclude_post_type_slugs_where}
-			AND post_status='publish' {$trans_where}
+			AND post_status='publish' 
+			{$trans_where}
             ORDER BY ID ASC
-			LIMIT 5", $title_q ) );
+			LIMIT 5",
+			$values_to_prepare 
+		) 
+	);
 	foreach ($results as $row) {
 		echo $row->post_title . " [#" . $row->ID . "]\n";
 	}
 	die();
 }
 
-add_Action('wp_ajax_wpv_create_form_target_page', 'wpv_create_form_target_page');
+add_action( 'wp_ajax_wpv_create_form_target_page', 'wpv_create_form_target_page' );
 
 function wpv_create_form_target_page() {
-	if ( wp_verify_nonce( $_GET['_wpnonce'], 'wpv_create_form_target_page_nonce' ) ) {
+	if ( 
+		current_user_can( 'publish_pages' )
+		&& wp_verify_nonce( $_GET['_wpnonce'], 'wpv_create_form_target_page_nonce' ) 
+	) {
 		$target_page = array(
 		  'post_title' => wp_strip_all_tags( $_GET['post_title'] ),
 		  'post_status' => 'publish',
@@ -413,12 +437,16 @@ add_action('wp_ajax_nopriv_wpv_suggest_wpml_contexts', 'wpv_suggest_wpml_context
 function wpv_suggest_wpml_contexts() {
 	global $wpdb;
 	$context_q = '%' . wpv_esc_like( $_REQUEST['q'] ) . '%';
-	$results = $wpdb->get_results( $wpdb->prepare( "
-            SELECT DISTINCT context 
+	$results = $wpdb->get_results( 
+		$wpdb->prepare( 
+            "SELECT DISTINCT context 
             FROM {$wpdb->prefix}icl_strings
-            WHERE context LIKE '%s'
-            ORDER BY context ASC", $context_q ) );
-	foreach ($results as $row) {
+            WHERE context LIKE %s
+            ORDER BY context ASC", 
+			$context_q 
+		) 
+	);
+	foreach ( $results as $row ) {
 		echo $row->context . "\n";
 	}
 	die();

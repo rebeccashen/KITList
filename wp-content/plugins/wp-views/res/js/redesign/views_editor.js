@@ -29,6 +29,45 @@ WPV_Toolset.CodeMirror_instance['wpv_layout_meta_html_css'] =  codemirror_views_
 WPV_Toolset.CodeMirror_instance['wpv_layout_meta_html_js'] =  codemirror_views_layout_js;
 WPV_Toolset.CodeMirror_instance['wpv_content'] =  codemirror_views_content;
 
+// Define 'save' command in CodeMirror object
+// This automatically adds Ctrl+S (Cmd+S in Mac) keyboard shortcut for saving
+// in every CodeMirror instance.
+// This code is partly duplicated in views_archive_editor.js
+CodeMirror.commands.save = function(cm) {
+    // Prevent Firefox trigger Save Dialog
+    var keypress_handler = function (cm, event) {
+        if (event.which == 115 && (event.ctrlKey || event.metaKey) || (event.which == 19)) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    };
+    CodeMirror.off(cm.getWrapperElement(), 'keypress', keypress_handler);
+    cm.on('keypress', keypress_handler);
+    
+    var textarea_id = cm.getTextArea().id;
+    if (
+            textarea_id === 'wpv_filter_meta_html_content' ||
+            textarea_id === 'wpv_filter_meta_html_css' ||
+            textarea_id === 'wpv_filter_meta_html_js'
+            ) {
+        /* Filter */
+        jQuery('.js-wpv-filter-extra-update').click();
+    } else if (
+            textarea_id === 'wpv_layout_meta_html_content' ||
+            textarea_id === 'wpv_layout_meta_html_css' ||
+            textarea_id === 'wpv_layout_meta_html_js'
+            ) {
+        /* Loop Output */
+        jQuery('.js-wpv-layout-extra-update').click();
+    } else if (
+            textarea_id === 'wpv_content'
+            ) {
+        /* Filter and Loop Output Integration */
+        jQuery('.js-wpv-content-update').click();
+    }
+};
+
 var WPViews = WPViews || {};
 
 WPViews.ViewEditScreen = function( $ ) {
@@ -42,14 +81,19 @@ WPViews.ViewEditScreen = function( $ ) {
 	self.pag_mode = $( '.js-wpv-pagination-mode:checked' ).val();
 	self.pag_instructions_selector = '.js-wpv-editor-instructions-for-pagination';
 		
-	self.action_bar = $( '.js-wpv-general-actions-bar' );
+	self.action_bar = $( '#js-wpv-general-actions-bar' );
+	self.action_bar_message_container = $( '#js-wpv-general-actions-bar .js-wpv-message-container' );
 	self.html = $( 'html' );
+	
+	self.overlay_container = $("<div class='wpv-setting-overlay js-wpv-setting-overlay'><div class='wpv-transparency'></div><i class='icon-lock'></i></div>");
 	
 	if ( self.action_bar && self.action_bar.offset() ) {
 		var toolbarPos = self.action_bar.offset().top,
-		adminBarHeight = 0;
+		adminBarHeight = 0,
+		adminBarWidth = $( '.wpv-title-section .wpv-setting-container' ).width();
 		if ( $('#wpadminbar').length !== 0 ) {
 			adminBarHeight = $('#wpadminbar').height();
+			self.action_bar.width( adminBarWidth );
 		}
 		self.set_toolbar_pos = function() {
 			if ( toolbarPos <= $(window).scrollTop() + adminBarHeight + 5) {
@@ -60,12 +104,81 @@ WPViews.ViewEditScreen = function( $ ) {
 			}
 		};
 
-		$(window).on('scroll', function() {
+		$( window ).on( 'scroll', function() {
 			self.set_toolbar_pos();
 		});
+		
+		$( window ).on( 'resize', function() {
+			var adminBarWidth = $( '.wpv-title-section .wpv-setting-container' ).width();
+			self.action_bar.width( adminBarWidth );
+		});
 
-		self.set_toolbar_pos(); // Initialize on DOM ready
+		self.set_toolbar_pos();
 	}
+	
+	// ---------------------------------
+	// Save actions: errors and successes
+	// ---------------------------------
+	
+	self.manage_ajax_fail = function( data, message_container ) {
+		if ( data.type ) {
+			switch ( data.type ) {
+				case 'nonce':
+				case 'id':
+				case 'capability':
+					self.manage_action_bar_error( data );
+					setConfirmUnload( false );
+					$( '.wpv-setting-container:not(.js-wpv-general-actions-bar)' ).prepend( self.overlay_container );
+					break;
+				default:
+					if ( data.message ) {
+						message_container
+							.wpvToolsetMessage({
+								text: data.message,
+								type: 'error',
+								inline: true,
+								stay: true
+							});
+					}
+					break;
+			}
+		} else {
+			if ( data.message ) {
+				message_container
+					.wpvToolsetMessage({
+						text: data.message,
+						type: 'error',
+						inline: true,
+						stay: true
+					});
+			}
+		}
+	};
+	
+	self.manage_ajax_success = function( data, message_container ) {
+		if ( data.message ) {
+			message_container
+				.wpvToolsetMessage({
+					text: data.message,
+					type: 'success',
+					inline: true,
+					stay: false
+				});
+		}
+	};
+	
+	self.manage_action_bar_error = function( data ) {
+		if ( data.message ) {
+			$.colorbox.close();
+			self.action_bar_message_container
+				.wpvToolsetMessage({
+					text: data.message,
+					type: 'error',
+					inline: false,
+					stay: true
+				});
+		}
+	};
 	
 	// ---------------------------------
 	// Screen options and View purpose
@@ -142,16 +255,12 @@ WPViews.ViewEditScreen = function( $ ) {
 				wpnonce: nonce
 			};
 			$.post( ajaxurl, data, function( response ) {
-				if ( ( typeof( response ) !== 'undefined') ) {
-					if ( 0 != response ) {
-						$( document ).trigger( 'js_event_wpv_screen_options_saved' );
-					} else {
-						console.log( "Error: WordPress AJAX returned ", response );
-					}
+				if ( response.success ) {
+					$( document ).trigger( 'js_event_wpv_screen_options_saved' );
 				} else {
-					console.log( "Error: AJAX returned ", response );
+					self.manage_action_bar_error( response.data );
 				}
-			})
+			}, 'json' )
 			.fail( function( jqXHR, textStatus, errorThrown ) {
 				console.log( "Error: ", textStatus, errorThrown );
 			})
@@ -291,7 +400,6 @@ WPViews.ViewEditScreen = function( $ ) {
 	// Content selection - mandatory selection
 	
 	self.content_selection_mandatory = function() {
-		var overlay_container = $("<div class='wpv-setting-overlay js-wpv-setting-overlay'><div class='wpv-transparency'></div><i class='icon-lock'></i></div>");
 		if (
 			( $('.js-wpv-query-post-type:checked').length == 0 && self.query_type == 'posts' )
 			|| ( $('.js-wpv-query-taxonomy-type:checked').length == 0 && self.query_type == 'taxonomy' )
@@ -300,7 +408,7 @@ WPViews.ViewEditScreen = function( $ ) {
 			// Show the warning message
 			$( '.js-wpv-content-selection-mandatory-warning' ).show();
 			// Disable further Views editing
-			$( '.wpv-setting-container:not(.js-wpv-no-lock)' ).prepend( overlay_container );
+			$( '.wpv-setting-container:not(.js-wpv-no-lock)' ).prepend( self.overlay_container );
 			// Add glow to inputs
 			$( '.js-wpv-query-post-type, .js-wpv-query-taxonomy-type, .js-wpv-query-users-type' ).css( {'box-shadow': '0 0 5px 1px #f6921e'} );
 		} else {
@@ -365,39 +473,30 @@ WPViews.ViewEditScreen = function( $ ) {
 			action: 'wpv_update_query_type',
 			id: self.view_id,
 			query_type: query_type,
-			post_types: wpv_query_post_items,
-			taxonomies: wpv_query_taxonomy_items,
-			users: wpv_query_users_items,
+			post_type_slugs: wpv_query_post_items,
+			taxonomy_type_slugs: wpv_query_taxonomy_items,
+			roles_type_slugs: wpv_query_users_items,
 			wpnonce: nonce
 		};
 		$.ajax({
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function(response){
-				if ( (typeof(response) !== 'undefined') ) {
-					decoded_response = $.parseJSON(response);
-					if ( decoded_response.success == data.id ) {
-						$('.js-screen-options').find('.toolset-alert').remove();
-						if ( decoded_response.wpv_filter_update_filters_list != 'no_change' ) {
-						$( '.js-filter-list' ).html( decoded_response.wpv_filter_update_filters_list );
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: data,
+			success: function( response ) {
+				if ( response.success ) {
+					$('.js-screen-options').find('.toolset-alert').remove();
+						if ( response.data.updated_filters_list != 'no_change' ) {
+							$( '.js-filter-list' ).html( response.data.updated_filters_list );
 						}
-						if ( decoded_response.wpv_update_flatten_types_relationship_tree == 'NONE' ) {
-							$('.js-flatten-types-relation-tree').val('NONE');
+						if ( response.data.updated_flatten_types_relationship_tree == 'NONE' ) {
+							$('.js-flatten-types-relation-tree').val( 'NONE' );
 						} else {
-							$('.js-flatten-types-relation-tree').val(decoded_response.wpv_update_flatten_types_relationship_tree);
+							$('.js-flatten-types-relation-tree').val( response.data.updated_flatten_types_relationship_tree );
 						}
 						$( document ).trigger( 'js_event_wpv_query_type_saved' );
-					}
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error: function (ajaxContext) {
@@ -453,29 +552,23 @@ WPViews.ViewEditScreen = function( $ ) {
 		var data = {
 			action: 'wpv_update_query_options',
 			id: view_id,
-			dont: $('.js-wpv-query-options-post-type-dont:checked').length,
-			hide: $('.js-wpv-query-options-taxonomy-hide-empty:checked').length,
-			empty: $('.js-wpv-query-options-taxonomy-non-empty-decendants:checked').length,
-			pad: $('.js-wpv-query-options-taxonomy-pad-counts:checked').length,
+			post_type_dont_include_current_page: $('.js-wpv-query-options-post-type-dont:checked').length,
+			taxonomy_hide_empty: $('.js-wpv-query-options-taxonomy-hide-empty:checked').length,
+			taxonomy_include_non_empty_decendants: $('.js-wpv-query-options-taxonomy-non-empty-decendants:checked').length,
+			taxonomy_pad_counts: $('.js-wpv-query-options-taxonomy-pad-counts:checked').length,
 			uhide : $('.js-wpv-query-options-users-show-current:checked').length,
 			wpnonce: nonce
 		};
 		$.ajax({
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) && ( response == data.id ) ) {
-					$('.js-screen-options').find('.toolset-alert').remove();// TODO Review this
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: data,
+			success: function( response ) {
+				if ( response.success ) {
+					$('.js-screen-options').find('.toolset-alert').remove();
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error: function (ajaxContext) {
@@ -531,21 +624,15 @@ WPViews.ViewEditScreen = function( $ ) {
 			wpnonce: nonce
 		};
 		$.ajax({
-			type:"POST",
-			url:ajaxurl,
-			data:data,
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: data,
 			success: function( response ) {
-				if ( ( typeof( response ) !== 'undefined') && ( response == data.id ) ) {
+				if ( response.success ) {
 					$('.js-screen-options').find('.toolset-alert').remove();
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error: function (ajaxContext) {
@@ -617,22 +704,15 @@ WPViews.ViewEditScreen = function( $ ) {
 			wpnonce: nonce
 		};
 		$.ajax({
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function( response ) {
-				if ( ( typeof( response ) !== 'undefined') && ( response == data.id ) ) {
-					$( '.js-screen-options' ).find( '.toolset-alert' ).remove();
-
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: data,
+			success: function( response ) {
+				if ( response.success ) {
+					$('.js-screen-options').find('.toolset-alert').remove();
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error: function (ajaxContext) {
@@ -733,21 +813,15 @@ WPViews.ViewEditScreen = function( $ ) {
 		};
 		$.ajax({
 			async:false,
-			type:"POST",
-			url:ajaxurl,
-			data:data,
-			success:function(response){
-				if ( ( typeof( response ) !== 'undefined' ) && ( response == data.id ) ) {
-					$( '.js-screen-options' ).find( '.toolset-alert' ).remove();
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: data,
+			success: function( response ) {
+				if ( response.success ) {
+					$('.js-screen-options').find('.toolset-alert').remove();
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error: function (ajaxContext) {
@@ -828,24 +902,18 @@ WPViews.ViewEditScreen = function( $ ) {
 			action: 'wpv_filter_update_dps_settings',
 			id: view_id,
 			dpsdata: dps_data,
-			nonce: nonce
+			wpnonce: nonce
 		}
 		$.ajax({
-			type:"POST",
-			url:ajaxurl,
-			data:params,
-			success:function(response){
-				if ( (typeof(response) !== 'undefined') && (response == params.id)) {
+			type: "POST",
+			dataType: "json",
+			url: ajaxurl,
+			data: params,
+			success: function( response ) {
+				if ( response.success ) {
 					
 				} else {
-					messages_container
-						.wpvToolsetMessage({
-							text:unsaved_message,
-							type:'error',
-							inline:true,
-							stay:true
-						});
-					console.log( "Error: AJAX returned ", response );
+					self.manage_ajax_fail( response.data, messages_container );
 				}
 			},
 			error:function(ajaxContext){
@@ -1069,6 +1137,44 @@ WPViews.ViewEditScreen = function( $ ) {
 				$( '.toolset-help a, .wpv-setting a' ).attr( "target", "_blank" );
 			}
 		}
+	};
+	
+	// ---------------------------------
+	// CodeMirror panels
+	// ---------------------------------
+	
+	self.codemirror_panel = function( instance, content, keep, type ) {
+		
+		var filter_editor_panel = document.createElement( "div" ),
+		filter_editor_panel_content,
+		filter_editor_panel_close,
+		filter_editor_panel_close_feedback,
+		filter_editor_panel_instance;
+		
+		filter_editor_panel.className = "wpv-codemirror-panel";
+		filter_editor_panel.className += " wpv-codemirror-panel-" + type;
+		
+		filter_editor_panel_content = filter_editor_panel.appendChild( document.createElement( "span" ) );
+		filter_editor_panel_content.textContent = content;
+		
+		if ( keep ) {
+			filter_editor_panel_close = filter_editor_panel.appendChild( document.createElement( "i" ) );
+			filter_editor_panel_close.className = "icon-remove-sign js-wpv-codemirror-panel-close";
+		} else {
+			filter_editor_panel_close_feedback = filter_editor_panel.appendChild(document.createElement("div"));
+			filter_editor_panel_close_feedback.className = "wpv-codemirror-panel-close-feedback";
+		}
+		
+		filter_editor_panel_instance = instance.addPanel( filter_editor_panel );
+		
+		if ( keep ) {
+			CodeMirror.on(filter_editor_panel_close, "click", function() { filter_editor_panel_instance.clear(); });
+		} else {
+			setTimeout( function() {
+				filter_editor_panel_instance.clear();
+			}, 3000);
+		}
+		
 	};
 	
 	// ---------------------------------
