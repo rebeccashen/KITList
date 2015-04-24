@@ -1,14 +1,16 @@
 @charset "UTF-8";
 /***************************************
 	Theme Name: Sahifa child
-	Theme URI: http://themes.tielabs.com/sahifa-child/
+	Theme URI: http://dev.kitlist.org/sahifa-child/
 	Description: A Premium WordPress News Theme based on Sahifa theme
 	Author: TieLabs
-    Template: Sahifa
-	Author URI: http://tielabs.com/
+    Template: sahifa
+	Author URI: http://dev.kitlist.org/
 	Version: 4.3.2
 	License: license purchased
 	License URI: http://themeforest.net/licenses/regular_extended
 	
 	Tags: two-columns, fixed-width, custom-background, threaded-comments, translation-ready, custom-menu
 ***************************************/
+
+@import url("../sahifa/style.css");

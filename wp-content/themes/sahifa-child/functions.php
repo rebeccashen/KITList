@@ -1,17 +1,18 @@
 <?php
+$themename = "Sahifa-child";
+$themefolder = "sahifa-child";
 
+define ('theme_name', $themename );
+define ('theme_ver' , 1 );
 add_action( 'wp_enqueue_scripts', 'theme_enqueue_styles' );
 function theme_enqueue_styles() {
     wp_enqueue_style( 'parent-style', get_template_directory_uri() . '/style.css' );
-
 }
-?>
-//REBECCA CUSTOMIZATION
-<?php
-remove_action( 'woocommerce_before_shop_loop', 'woocommerce_catalog_ordering', 30 );
 
+remove_action( 'woocommerce_before_shop_loop', 'woocommerce_catalog_ordering', 30 );
 add_filter( 'woocommerce_payment_complete_order_status', 'virtual_order_payment_complete_order_status', 10, 2 );
-function virtual_order_payment_complete_order_status( $order_status, $order_id ) {
+
+/*function virtual_order_payment_complete_order_status( $order_status, $order_id ) {
     $order = new WC_Order( $order_id );
     if ( 'processing' == $order_status &&
         ( 'on-hold' == $order->status || 'pending' == $order->status || 'failed' == $order->status ) ) {
@@ -37,8 +38,30 @@ function virtual_order_payment_complete_order_status( $order_status, $order_id )
     }
     // non-virtual order, return original status
     return $order_status;
+}*/
+
+/**
+ * Auto Complete all WooCommerce orders.
+ * Add to theme functions.php file
+ */
+
+add_action( 'woocommerce_thankyou', 'custom_woocommerce_auto_complete_order' );
+function custom_woocommerce_auto_complete_order( $order_id ) {
+	global $woocommerce;
+
+	if ( !$order_id )
+		return;
+	$order = new WC_Order( $order_id );
+	$order->update_status( 'completed' );
 }
+// Add WooCommerce customer username to edit/view order admin page
+add_action( 'woocommerce_admin_order_data_after_billing_address', 'woo_display_order_username', 10, 1 );
 
+function woo_display_order_username( $order ){
 
+	global $post;
 
+	$customer_user = get_post_meta( $post->ID, '_customer_user', true );
+	echo '<p><strong style="display: block;">'.__('Customer Username').':</strong> <a href="user-edit.php?user_id=' . $customer_user . '">' . get_user_meta( $customer_user, 'nickname', true ) . '</a></p>';
+}
 ?>
