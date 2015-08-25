@@ -79,8 +79,10 @@ $.typesSuggest = function($input, $container, $dropdown, $img, ajax_action, call
 
         params = {
             'action': action,
-            'q': q
+            'q': q,
+            'wpnonce' : jQuery('#wpcf-access-error-pages').attr('value')
         };
+
         // abort previous request
         if (xhr) xhr.abort();
 
@@ -90,7 +92,7 @@ $.typesSuggest = function($input, $container, $dropdown, $img, ajax_action, call
             type: 'POST',
             url: ajaxurl,
             data: params,
-            dataType: 'json',
+            dataType: 'json',           
             success: function(response) {
                 xhr = null;
                 $img.hide();

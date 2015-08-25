@@ -2055,11 +2055,22 @@ class CRED_Form_Builder_Helper implements CRED_Friendly, CRED_FriendlyStatic {
                     //$zebraForm->controls[$_form_fields[$files[$fkey]['name_orig']][0]]->set_values(array('value'=>$upload['url']));
                 }
                 else {
-                    $all_ok = false;
-                    if ($track)
-                        $tmp_data = $this->getLocalisedMessage('upload_failed');
-                    $fields[$fkey] = '';
-                    $files[$fkey]['upload_fail'] = true;
+                    //Fix if there a File generi cred field not required
+                    //https://onthegosystems.myjetbrains.com/youtrack/issue/cred-14
+                    $data_field = $out_['fields']['post_fields'][$fkey];
+                    if (isset($data_field['cred_generic']) && $data_field['cred_generic'] == 1 &&
+                            (isset($data_field['data']['validate']['required']['active']) &&
+                            $data_field['data']['validate']['required']['active'] == 0)) 
+                    {                        
+                    } else {
+                        $all_ok = false;
+                        if ($track)
+                            $tmp_data = $this->getLocalisedMessage('upload_failed');
+
+                        $fields[$fkey] = '';
+                        $files[$fkey]['upload_fail'] = true;
+                    }
+
                     //$zebraForm->controls[$_form_fields[$files[$fkey]['name_orig']][0]]->set_values(array('value'=>''));
                     //$zebraForm->controls[$_form_fields[$files[$fkey]['name_orig']][0]]->addError($upload['error']);
                 }

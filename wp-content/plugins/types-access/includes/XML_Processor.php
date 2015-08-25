@@ -332,12 +332,14 @@ final class Access_XML_Processor
 						$new_settings['types'][$key] = array();
 						if ( is_array($types_value['post_types']['item']) ){
 							for ( $j=0, $types_lim = count($types_value['post_types']['item']); $j<$types_lim; $j++){
-								$sup_key = $types_value['post_types']['item'][$j]['item_name'];
-								foreach ($types_value['post_types']['item'][$j] as $role => $action){
-									if ( $role != 'item_name' ){
-										$new_settings['types'][$key][$sup_key]['permissions']['read'][$role] = $action; 	
-									}	
-								}
+								if ( isset($types_value['post_types']['item'][$j]['item_name']) ){
+                                    $sup_key = $types_value['post_types']['item'][$j]['item_name'];
+                                    foreach ($types_value['post_types']['item'][$j] as $role => $action){
+                                        if ( $role != 'item_name' ){
+                                            $new_settings['types'][$key][$sup_key]['permissions']['read'][$role] = $action; 	
+                                        }	
+                                    }
+                                }
 							}
 						}	
 					}

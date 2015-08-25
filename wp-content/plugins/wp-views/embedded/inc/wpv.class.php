@@ -90,9 +90,10 @@ class WP_Views {
 		add_action('wp_ajax_wpv_format_date', array( $this, 'wpv_format_date' ) );
 		add_action('wp_ajax_nopriv_wpv_format_date', array( $this, 'wpv_format_date' ) );
 		
-		// Basic values when get_view_settings
+		// Basic values when get_view_settings and get_view_layout_settings
 		
-		add_filter( 'wpv_view_settings', array( $this, 'wpv_view_settings_set_fallbacks' ), 10, 2 );
+		add_filter( 'wpv_view_settings', array( $this, 'wpv_view_settings_set_fallbacks' ), 5, 2 );
+		add_filter( 'wpv_view_layout_settings', array( $this, 'wpv_view_layout_settings_set_fallbacks' ), 5, 2 );
 
 		if ( is_admin() ) {
 			
@@ -244,7 +245,7 @@ class WP_Views {
 
 					// Modify the URL
 					$query_args_to_add['add-to-cart'] = $parsed_query['add-to-cart'];
-					$add_to_cart_url = remove_query_arg( 'added-to-cart', add_query_arg( $query_args_to_add, $base_url ) );
+					$add_to_cart_url = esc_url( remove_query_arg( 'added-to-cart', add_query_arg( $query_args_to_add, $base_url ) ) );
 				}
 			}
 		}
@@ -312,7 +313,7 @@ class WP_Views {
 	function include_admin_css() {
 		printf(
 				'<link rel="stylesheet" href="%s" type="text/css" media="all" />',
-				add_query_arg( array( 'v' => WPV_VERSION ), WPV_URL . '/res/css/wpv-views.css' ) );
+				esc_url( add_query_arg( array( 'v' => WPV_VERSION ), WPV_URL . '/res/css/wpv-views.css' ) ) );
 	}
 
 
@@ -757,7 +758,7 @@ class WP_Views {
 		* wpv_view_settings
 		*
 		* Internal filter to set some View settings that will overwrite the ones existing in the _wpv_settings postmeta
-		* Usually used to set default values that need to be there on the returned array
+		* Only used to set default values that need to be there on the returned array, but may not be there for legacy reasons
 		* Use wpv_filter_override_view_settings to override View settings - like on the Theme Frameworks integration
 		*
 		* @param $post_meta (array) Unserialized array of the _wpv_settings postmeta
@@ -841,7 +842,7 @@ class WP_Views {
 		* wpv_view_layout_settings
 		*
 		* Internal filter to set some View layout settings that will overwrite the ones existing in the _wpv_layout_settings postmeta
-		* Usually used to set default values that need to be there on the returned array
+		* Only used to set default values that need to be there on the returned array, but may not be there for legacy reasons
 		* Use wpv_filter_override_view_layout_settings to override View layout settings
 		*
 		* @param $post_meta (array) Unserialized array of the _wpv_layout_settings postmeta
@@ -869,6 +870,27 @@ class WP_Views {
 		
 		$view_layout_settings = apply_filters( 'wpv_filter_override_view_layout_settings', $view_layout_settings, $view_id );
 		
+		return $view_layout_settings;
+	}
+	
+	/**
+	* wpv_view_layout_settings_set_fallbacks
+	*
+	* Callback hooked into the wpv_view_settings filter to set default values
+	* that should be in the _wpv_settings postmeta but might be missing somehow
+	*
+	* @param $view_settings (array)
+	* @param $view_id (integer)
+	*
+	* @return $view_settings (array)
+	*
+	* @since 1.8.1
+	*/
+	
+	function wpv_view_layout_settings_set_fallbacks( $view_layout_settings, $view_id ) {
+		if ( ! is_array( $view_layout_settings ) ) {
+			$view_layout_settings = array();
+		}
 		return $view_layout_settings;
 	}
 
@@ -2310,10 +2332,10 @@ function wpv_views_plugin_redirect() {
 	if ( get_option( 'wpv_views_plugin_do_activation_redirect', false ) ) {
 		delete_option( 'wpv_views_plugin_do_activation_redirect' );
 		$redirect = wp_redirect( 
-			add_query_arg(
+			esc_url_raw( add_query_arg(
 				array( 'page' => WPV_FOLDER .'/menu/help.php' ),
 				admin_url( 'admin.php' ) 
-			)
+			) )
 		);
 		if ( $redirect ) {
 			exit;
@@ -2327,9 +2349,9 @@ function wpv_views_plugin_action_links( $links, $file ) {
 	if( $file == $this_plugin ) {
 		$links[] = sprintf(
 				'<a href="%s">%s</a>',
-				add_query_arg(
+				esc_url( add_query_arg(
 						array( 'page' => basename( WPV_PATH ) . '/menu/help.php' ),
-						admin_url( 'admin.php' ) ),
+						admin_url( 'admin.php' ) ) ),
 				__( 'Getting started', 'wpv-views' ) );
 	}
 	return $links;

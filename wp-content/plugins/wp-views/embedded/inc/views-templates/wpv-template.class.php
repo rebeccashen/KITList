@@ -277,7 +277,11 @@ class WPV_template{
 		<?php
         $edit_link = '';
         $edit_link_visible = ' hidden';
-        if ( ! empty( $template_selected ) && $template_selected !== 0 ) {
+        if ( 
+			! empty( $template_selected ) 
+			&& $template_selected !== 0 
+			&& get_post_status( $template_selected ) == 'publish'
+		) {
             $edit_link = 'post.php?post=' . $template_selected . '&action=edit';
             $edit_link_visible = '';
         }

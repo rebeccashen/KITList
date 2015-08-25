@@ -2,7 +2,7 @@
 /**
  * Types fields specific
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.types.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/toolset-forms/classes/class.types.php $
  * $LastChangedDate: 2015-02-25 11:07:34 +0000 (Wed, 25 Feb 2015) $
  * $LastChangedRevision: 31886 $
  * $LastChangedBy: marcin $

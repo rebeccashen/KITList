@@ -1,3 +1,111 @@
+var WPV_Toolset = WPV_Toolset  || {};
+
+WPV_Toolset.activeUrlEditor = null;
+
+if ( typeof WPV_Toolset.CodeMirror_instance === "undefined" ) {
+	WPV_Toolset.CodeMirror_instance = [];
+}
+
+if ( typeof WPV_Toolset.add_qt_editor_buttons !== 'function' ) {
+    WPV_Toolset.add_qt_editor_buttons = function( qt_instance, editor_instance ) {
+        QTags._buttonsInit();
+		WPV_Toolset.CodeMirror_instance[qt_instance.id] = editor_instance;
+
+        for ( var button_name in qt_instance.theButtons ) {
+			if ( qt_instance.theButtons.hasOwnProperty( button_name ) ) {
+				qt_instance.theButtons[button_name].old_callback = qt_instance.theButtons[button_name].callback;
+                if ( qt_instance.theButtons[button_name].id == 'img' ){
+                    qt_instance.theButtons[button_name].callback = function( element, canvas, ed ) {
+                    var t = this,
+                    id = jQuery( canvas ).attr( 'id' ),
+                    selection = WPV_Toolset.CodeMirror_instance[id].getSelection(),
+                    e = "http://",
+                    g = prompt( quicktagsL10n.enterImageURL, e ),
+                    f = prompt( quicktagsL10n.enterImageDescription, "" );
+                    t.tagStart = '<img src="'+g+'" alt="'+f+'" />';
+                    selection = t.tagStart;
+                    t.closeTag( element, ed );
+                    WPV_Toolset.CodeMirror_instance[id].replaceSelection( selection, 'end' );
+                    WPV_Toolset.CodeMirror_instance[id].focus();
+                    }
+                } else if ( qt_instance.theButtons[button_name].id == 'close' ) {
+
+                } else if ( qt_instance.theButtons[button_name].id == 'link' ) {
+					var t = this;
+					qt_instance.theButtons[button_name].callback =
+                        function ( b, c, d, e ) {
+                            WPV_Toolset.activeUrlEditor = c;var f,g=this;return"undefined"!=typeof wpLink?void wpLink.open(d.id):(e||(e="http://"),void(g.isOpen(d)===!1?(f=prompt(quicktagsL10n.enterURL,e),f&&(g.tagStart='<a href="'+f+'">',a.TagButton.prototype.callback.call(g,b,c,d))):a.TagButton.prototype.callback.call(g,b,c,d)))
+						};
+                    if( WPV_Toolset.activeUrlEditor ){
+                        jQuery( '#wp-link-submit' ).off();
+                        jQuery( '#wp-link-submit' ).on( 'click', function() {
+                            try{
+                                var id = jQuery( WPV_Toolset.activeUrlEditor ).attr('id'),
+                                    selection = WPV_Toolset.CodeMirror_instance[id].getSelection(),
+                                    target = '';
+                                if ( jQuery( '#link-target-checkbox' ).prop('checked') ) {
+                                    target = '_blank';
+                                }
+                                html = '<a href="' + jQuery('#url-field').val() + '"';
+                                title = '';
+                                if ( jQuery( '#link-title-field' ).val() ) {
+                                    title = jQuery( '#link-title-field' ).val().replace( /</g, '&lt;' ).replace( />/g, '&gt;' ).replace( /"/g, '&quot;' );
+                                    html += ' title="' + title + '"';
+                                }
+                                if ( target ) {
+                                    html += ' target="' + target + '"';
+                                }
+                                html += '>';
+                                if ( selection === '' ) {
+                                    html += title;
+                                } else {
+                                    html += selection;
+                                }
+                                html += '</a>';
+                                t.tagStart = html;
+                                selection = t.tagStart;
+                                WPV_Toolset.CodeMirror_instance[id].replaceSelection( selection, 'end' );
+                                WPV_Toolset.CodeMirror_instance[id].focus();
+                                jQuery( '#wp-link-backdrop,#wp-link-wrap' ).hide();
+                                jQuery( document.body ).removeClass( 'modal-open' );
+                                return false;
+                            } catch( e ){
+                                console.log( e.message, WPV_Toolset.activeUrlEditor );
+                            }
+
+                        });
+                    }
+
+                } else {
+                    qt_instance.theButtons[button_name].callback = function( element, canvas, ed ) {
+                        var id = jQuery( canvas ).attr( 'id' ),
+                        t = this,
+                        selection = WPV_Toolset.CodeMirror_instance[id].getSelection();
+						if ( selection.length > 0 ) {
+							if ( !t.tagEnd ) {
+								selection = selection + t.tagStart;
+							} else {
+								selection = t.tagStart + selection + t.tagEnd;
+							}
+						} else {
+							if ( !t.tagEnd ) {
+								selection = t.tagStart;
+							} else if ( t.isOpen( ed ) === false ) {
+								selection = t.tagStart;
+								t.openTag( element, ed );
+							} else {
+								selection = t.tagEnd;
+								t.closeTag( element, ed );
+							}
+						}
+                        WPV_Toolset.CodeMirror_instance[id].replaceSelection(selection, 'end');
+                        WPV_Toolset.CodeMirror_instance[id].focus();
+                    }
+                }
+			}
+		}
+    }
+}
 
 var iclEditorWidth = 550;
 var iclEditorWidthMin = 195;
@@ -142,14 +250,14 @@ jQuery(document).ready(function(){
             icl_editor_popup(drop_down);
 
 			jQuery(drop_down).find('.search_field').focus();
-			
+
 			// Make sure the dialog fits on the screen when used in
 			// Layouts for the Post Content dialog
 			if (jQuery(drop_down).closest('#ddl-default-edit').length > 0) {
 				var dialog_bottom = jQuery(drop_down).offset().top + jQuery(drop_down).height();
 				dialog_bottom -= jQuery(window).scrollTop();
 				var window_height = jQuery(window).height();
-				
+
 				if (dialog_bottom > window_height) {
 					var new_top = window_height - jQuery(drop_down).height() - 80;
 					if (new_top < 0) {
@@ -291,20 +399,6 @@ jQuery(document).ready(function(){
 
     });
 });
-
-
-/*
- *
- *
- *
- *
- *
- *
- *
- *
- *
- * FUNCTIONS
- */
 
 /**
  *
@@ -535,8 +629,8 @@ function insert_b64_shortcode_to_editor(b64_shortcode, text_area) {
     if(shortcode.indexOf('[types') == 0 && shortcode.indexOf('[/types') === false) {
         shortcode += '[/types]';
     }
-
     window.wpcfActiveEditor = text_area;
+
     icl_editor.insert(shortcode);
 }
 
@@ -718,18 +812,76 @@ var icl_editor = (function(window, $){
 
     function isCodeMirror($textarea)
     {
-        //console.log(typeof($textarea[0]));
-        var textareaNext = $textarea[0].nextSibling;
-        // if CodeMirror
-        if (
-            textareaNext && $textarea.is('textarea')&&
-            //$(textareaNext).is('textarea')&&
-            textareaNext.CodeMirror &&
-            $textarea[0]==textareaNext.CodeMirror.getTextArea()
-                )
-            return textareaNext.CodeMirror;
+        if ( ! $textarea.is('textarea') ) {
+			return false;
+		}
+		var textareaNext = $textarea[0].nextSibling;
+		if ( typeof textareaNext === 'undefined' ) {
+			return false;
+		}
+		if ( textareaNext ) {
+			//Usual way before WordPress 4.1
+			if (
+				textareaNext.CodeMirror
+				&& $textarea[0] == textareaNext.CodeMirror.getTextArea()
+			) {
+				return textareaNext.CodeMirror;
+			}
+			// Juan: CodeMirror panels wrap the CodeMirror div and themselves into a div.
+			// Depending on the panels position, the CodeMirror div becomes the first or last child of that wrapper.
+			// We need to check if the relevant node contains the right CodeMirror div as a child node.
+			// Note that we will do the same below, so we can have CodeMirror panels in main editors too.
+			var textareaNextHasPanels = isCodeMirrorWithPanels( $textarea, textareaNext );
+			if ( textareaNextHasPanels ) {
+				return textareaNextHasPanels;
+			}
+			// Emerson: WordPress 4.0+ introduces 'content-textarea-clone' div which in some instances is loaded after our textarea and before the CodeMirror div.
+			// This core feature in WP is used in their auto-resize editor and distraction free writing.
+			// This is particularly found in pages and post affecting syntax highlighting in main editors.
+			// Let's skip that node and check if the nextsibling is really the CodeMirror div.
+			var textareaNextNext = textareaNext.nextSibling;
+			if ( textareaNextNext ) {
+				if (
+					textareaNextNext.CodeMirror
+					&& $textarea[0] == textareaNextNext.CodeMirror.getTextArea()
+				) {
+					return textareaNextNext.CodeMirror;
+				}
+				var textareaNextNextHasPanels = isCodeMirrorWithPanels( $textarea, textareaNextNext );
+				if ( textareaNextNextHasPanels ) {
+					return textareaNextNextHasPanels;
+				}
+			}
+		}
         return false;
     };
+
+	function isCodeMirrorWithPanels( $textarea, candidateNode ) {
+		if ( ! $textarea.is('textarea') ) {
+			return false;
+		}
+		if ( typeof candidateNode === 'undefined' ) {
+			return false;
+		}
+		if ( candidateNode ) {
+			var candidateNodeFirstChild = candidateNode.firstChild,
+			candidateNodeLastChiild = candidateNode.lastChild;
+			if (
+				candidateNodeFirstChild
+				&& candidateNodeFirstChild.CodeMirror
+				&& $textarea[0] == candidateNodeFirstChild.CodeMirror.getTextArea()
+			) {
+				return candidateNodeFirstChild.CodeMirror;
+			} else if (
+				candidateNodeLastChiild
+				&& candidateNodeLastChiild.CodeMirror
+				&& $textarea[0] == candidateNodeLastChiild.CodeMirror.getTextArea()
+			) {
+				return candidateNodeLastChiild.CodeMirror;
+			}
+		}
+		return false;
+	}
 
     function getContent($area)
     {
@@ -910,5 +1062,6 @@ var icl_editor = (function(window, $){
             return window.iclCodemirror[textarea];
         }
     };
+
 
 })(window, jQuery, undefined);

@@ -569,8 +569,10 @@ class WPV_Usermeta_Field_Filter {
 			) {
 				if ( is_array( $filter_data ) ) {
 					$filter_data = array_map( 'sanitize_text_field', $filter_data );
+					$filter_data = array_map( array( 'WPV_Usermeta_Field_Filter', 'fix_lower_saving' ), $filter_data );
 				} else {
 					$filter_data = sanitize_text_field( $filter_data );
+					$filter_data = WPV_Usermeta_Field_Filter::fix_lower_saving( $filter_data );
 				}
 				$change = true;
 				$view_array[$filter_key] = $filter_data;
@@ -667,6 +669,28 @@ class WPV_Usermeta_Field_Filter {
 		}
 		$summary .= $result;
 		return $summary;
+	}
+	
+	/**
+	* fix_lower_saving
+	*
+	* Fix saving of "lower than" and "lower or equal to" comparisons, which get HTML-encoded when passed through sanitize_text_field
+	*
+	* @param $data string
+	*
+	* @return string
+	*
+	* @since 1.8.10
+	*/
+	
+	static function fix_lower_saving( $data ) {
+		if (
+			'&lt;' == $data 
+			|| '&lt;=' == $data
+		) {
+			$data = str_replace( '&lt;', '<', $data );
+		}
+		return $data;
 	}
     
 }

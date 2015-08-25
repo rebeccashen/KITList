@@ -4,11 +4,11 @@
 
 @font-face {
   font-family: "onthegosystems-icons";
-  src: font-url("../fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.eot");
-  src: font-url("../fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.eot?#iefix") format("embedded-opentype"),
-       font-url("../fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.woff") format("woff"),
-       font-url("../fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.ttf") format("truetype"),
-       font-url("../fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.svg#onthegosystems-icons") format("svg");
+  src: font-url("../fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.eot");
+  src: font-url("../fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.eot?#iefix") format("embedded-opentype"),
+       font-url("../fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.woff") format("woff"),
+       font-url("../fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.ttf") format("truetype"),
+       font-url("../fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.svg#onthegosystems-icons") format("svg");
   font-weight: normal;
   font-style: normal;
 }
@@ -16,7 +16,7 @@
 @media screen and (-webkit-min-device-pixel-ratio:0) {
   @font-face {
     font-family: "onthegosystems-icons";
-    src: font-url("../fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.svg#onthegosystems-icons") format("svg");
+    src: font-url("../fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.svg#onthegosystems-icons") format("svg");
   }
 }
 
@@ -33,11 +33,14 @@
 .icon-layouts-logo:before,
 .icon-module:before,
 .icon-module-logo:before,
+.icon-packager:before,
+.icon-packager-logo:before,
 .icon-toolset-logo:before,
 .icon-types:before,
 .icon-types-logo:before,
 .icon-views:before,
-.icon-views-logo:before {
+.icon-views-logo:before,
+.icon-wpml-logo:before {
   display: inline-block;
   font-family: "onthegosystems-icons";
   font-style: normal;
@@ -62,8 +65,11 @@
 .icon-layouts-logo:before { content: "\f117"; }
 .icon-module:before { content: "\f118"; }
 .icon-module-logo:before { content: "\f119"; }
+.icon-packager:before { content: "\f120"; }
+.icon-packager-logo:before { content: "\f121"; }
 .icon-toolset-logo:before { content: "\f11a"; }
 .icon-types:before { content: "\f11b"; }
 .icon-types-logo:before { content: "\f11c"; }
 .icon-views:before { content: "\f11d"; }
 .icon-views-logo:before { content: "\f11e"; }
+.icon-wpml-logo:before { content: "\f11f"; }

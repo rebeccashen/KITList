@@ -2,10 +2,10 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/bootstrap.php $
- * $LastChangedDate: 2015-03-28 17:35:46 +0000 (Sat, 28 Mar 2015) $
- * $LastChangedRevision: 32697 $
- * $LastChangedBy: francesco $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/toolset-forms/bootstrap.php $
+ * $LastChangedDate: 2015-04-13 09:09:52 +0000 (Mon, 13 Apr 2015) $
+ * $LastChangedRevision: 32877 $
+ * $LastChangedBy: marcin $
  *
  */
 require_once 'api.php';
@@ -48,12 +48,6 @@ class WPToolset_Forms_Bootstrap {
         add_action('wp_ajax_wpt_suggest_taxonomy_term', array($this, 'wpt_suggest_taxonomy_term'));
         add_action('wp_ajax_nopriv_wpt_suggest_taxonomy_term', array($this, 'wpt_suggest_taxonomy_term'));
 
-        // File media popup
-        if ((isset($_GET['context']) && $_GET['context'] == 'wpt-fields-media-insert') || (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'context=wpt-fields-media-insert') !== false)
-        ) {
-            require_once WPTOOLSET_FORMS_ABSPATH . '/classes/class.file.php';
-            add_action('init', array('WPToolset_Field_File', 'mediaPopup'));
-        }
         add_filter('sanitize_file_name', array($this, 'sanitize_file_name'));
 
         add_filter('wptoolset_filter_wptoolset_repdrag_image', array($this, 'set_default_repdrag_image'), 10, 1);

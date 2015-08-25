@@ -4,9 +4,9 @@
  *
  * Since Types 1.2
  *
- * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.2/embedded/includes/module-manager.php $
- * $LastChangedDate: 2015-03-25 12:38:40 +0000 (Wed, 25 Mar 2015) $
- * $LastChangedRevision: 1120400 $
+ * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.5/embedded/includes/module-manager.php $
+ * $LastChangedDate: 2015-05-12 12:24:38 +0000 (Tue, 12 May 2015) $
+ * $LastChangedRevision: 1158787 $
  * $LastChangedBy: iworks $
  *
  */
@@ -572,6 +572,18 @@ function wpcf_admin_export_selected_data ( array $items, $_type = 'all', $return
                 array() ), $_items );
         } else {
             $custom_types = get_option( 'wpcf-custom-types', array() );
+            /**
+             * fix custom field array for proper XML output
+             */
+            foreach ( $custom_types as $custom_type_key => $custom_type_data ) {
+                if ( !isset($custom_type_data['custom_fields']) || empty($custom_type_data['custom_fields']) ) {
+                    continue;
+                }
+                $custom_types[$custom_type_key]['custom_fields'] = array();
+                foreach( $custom_type_data['custom_fields'] as $custom_field_name ) {
+                    $custom_types[$custom_type_key]['custom_fields'][$custom_field_name] = 1;
+                }
+            }
         }
         // Get custom types
         if ( !empty( $custom_types ) ) {

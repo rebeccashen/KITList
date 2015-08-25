@@ -1,13 +1,12 @@
 .types-suggest .dropdown_bottom{	
 	bottom:auto !important;
-	top:-30px;
-	right:140px;
+	top:0px;
+    right:170px;
 	box-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 .types-suggest .dropdown {
     position: absolute;
-	bottom: 61px;
-    z-index: 9;
+	z-index: 9;
     visibility: hidden;
     height: auto !important;
 }

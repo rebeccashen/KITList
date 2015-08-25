@@ -5,7 +5,7 @@ require "common/cred_functions.php";
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/classes/CRED.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/classes/CRED.php $
  * $LastChangedDate: 2015-03-31 10:39:37 +0000 (Tue, 31 Mar 2015) $
  * $LastChangedRevision: 32729 $
  * $LastChangedBy: francesco $

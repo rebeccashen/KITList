@@ -534,7 +534,7 @@ function wpv_is_valid_non_empty_value_to_filter( $value ) {
 * @since 1.8.0
 */
 
-add_filter( 'wpv_view_settings', 'wpv_resolve_variable_view_setings', 100 );
+add_filter( 'wpv_filter_override_view_settings', 'wpv_resolve_variable_view_setings', 1 );
 
 function wpv_resolve_variable_view_setings( $view_settings = array() ) {
 	if ( ! is_array( $view_settings ) ) {

@@ -363,7 +363,7 @@ function wpv_users_query_user_filters( $args, $view_settings ) {
 					}
 				}
 				break;
-			case 'url':
+			case 'by_url':
 				if (
 					isset( $view_settings['users_url'] )
 					&& '' != $view_settings['users_url']

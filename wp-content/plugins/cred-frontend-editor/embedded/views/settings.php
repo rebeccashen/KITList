@@ -1,7 +1,7 @@
 <?php
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/views/settings.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/views/settings.php $
  * $LastChangedDate: 2015-03-03 14:08:45 +0000 (Tue, 03 Mar 2015) $
  * $LastChangedRevision: 32049 $
  * $LastChangedBy: francesco $

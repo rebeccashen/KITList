@@ -343,6 +343,7 @@ WPViews.CTEditScreen = function( $ ) {
 	self.init = function() {
 		QTags.addButton( 'wpv_ct_syntax_highlight', wpv_ct_edit_texts.syntax_highlight_disable, self.content_template_syntax_highlight_toggle );
 		
+		$( '#delete-action, .add-new-h2' ).hide();
 		$( '.wp-editor-tools' ).css( { "z-index": "7" } );
 		// @todo move this to a PHP action...
 		$( '<div class="wpv-content-template-help-message"></div>' ).insertAfter( '#titlediv' );

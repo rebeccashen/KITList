@@ -3,7 +3,7 @@
  * Basic and init functions.
  * Since Types 1.2 moved from /embedded/types.php
  *
- * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.2/embedded/functions.php $
+ * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.5/embedded/functions.php $
  * $LastChangedDate: 2015-04-03 10:15:58 +0000 (Fri, 03 Apr 2015) $
  * $LastChangedRevision: 1126927 $
  * $LastChangedBy: iworks $

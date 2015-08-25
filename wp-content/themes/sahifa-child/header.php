@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<?php if ( function_exists('yoast_breadcrumb') ) {
+    yoast_breadcrumb('<p id="breadcrumbs">','</p>');
+} ?>
+
 <html <?php language_attributes(); ?> prefix="og: http://ogp.me/ns#">
 <head>
 <meta charset="<?php bloginfo( 'charset' ); ?>" />

@@ -3,6 +3,14 @@ CRED Front end Editor, by OnTheGoSystems
 
 Changelog:
 
+1.3.6.1
+
+- Security improvements.
+
+- Fixed the issue with _wpnonce.
+
+- Added new class for success message.
+
 1.3.6
 
 - Security improvements.

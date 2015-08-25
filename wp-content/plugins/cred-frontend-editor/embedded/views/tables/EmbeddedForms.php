@@ -309,7 +309,7 @@ class CRED_Forms_List_Table extends WP_List_Table implements CRED_Singleton {
         $current_url = remove_query_arg(array('hotkeys_highlight_last', 'hotkeys_highlight_first'), $current_url);
 
         $current_url = remove_query_arg(array('per_page'), $current_url);
-
+        $current_url = esc_url($current_url);
         //$current_url = add_query_arg( 'per_page', $per_page, $current_url );
 
         $page_links = array();

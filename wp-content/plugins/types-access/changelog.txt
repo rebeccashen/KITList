@@ -2,6 +2,30 @@ Wordpress Plugin:
 Access, by OnTheGoSystems
 
 Changelog:
+1.2.5
+* Fixed problem with suggest user script.
+
+1.2.4
+* Fixed Access shortcode: it now accepts role names with lowercase and uppercase letters.
+
+* Fixed an issue with custom errors with PHP template: it now works for parent and child theme PHP templates.
+
+* Added groups permissions to feeds. Works only when the post type exists in the feed query.
+
+* Added Access button to all TinyMCE editors on the post/page editing pages.
+
+* Added the notification dialog that is shown when the post fields on the edit Access settings page exceed the "max_input_vars" PHP setting.
+
+* Added the options to set the user capabilities for the Layouts plugin.
+
+* Fixed function to get the current page.
+
+* Added new Access capabilities that allow users to assign single posts to Access groups.
+
+* Added new filter that allows advanced users to hide Access button from all editors.
+
+* Security improvements.
+
 1.2.3
 * Fixed a problem where the assignment of specific user’s permissions wasn’t working for custom groups.
 
@@ -11,6 +35,7 @@ Changelog:
 
 * Fixed a problem where WYSIWYG field created with Advanced Custom Fields plugin wasn’t working correctly when Access plugin was activate. 
   http://wp-types.com/forums/topic/advanced-custom-fiels-access-plugin-bug-with-wysiwyg-editor/
+
 
 1.2.2
 * Improved function for load custom read errors

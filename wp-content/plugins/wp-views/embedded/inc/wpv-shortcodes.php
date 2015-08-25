@@ -690,7 +690,7 @@ function wpv_get_post_permalink( $post_id ) {
 		case 'draft':
 		case 'pending':
 			// append preview=true argument to permalink
-			$post_link = add_query_arg( array( 'preview' => 'true' ), $post_link );
+			$post_link = esc_url( add_query_arg( array( 'preview' => 'true' ), $post_link ) );
 			break;
 
 		default: // also when get_post_status fails and returns false, which should never happen

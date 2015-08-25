@@ -25,6 +25,7 @@ require_once WPV_PATH_EMBEDDED . '/common/visual-editor/editor-addon.class.php';
 
 function views_archive_redesign_html() {
 	global $WP_Views, $post;
+	
 	if ( 
 		isset( $_GET['view_id'] ) 
 		&& is_numeric( $_GET['view_id'] ) 
@@ -38,10 +39,43 @@ function views_archive_redesign_html() {
 			wpv_die_toolset_alert_error( __( 'You attempted to edit a WordPress Archive that doesn&#8217;t exist. Perhaps it was deleted?', 'wpv-views') );
 		} else {
 			$view_settings = get_post_meta( $_GET['view_id'], '_wpv_settings', true );
+			
+			/**
+			* wpv_view_settings
+			*
+			* Internal filter to set some View settings that will overwrite the ones existing in the _wpv_settings postmeta
+			* Only used to set default values that need to be there on the returned array, but may not be there for legacy reasons
+			* Use wpv_filter_override_view_settings to override View settings - like on the Theme Frameworks integration
+			*
+			* @param $view_settings (array) Unserialized array of the _wpv_settings postmeta
+			* @param $view_id (integer) The View ID
+			*
+			* @return $view_settings (array) The View settings
+			*
+			* @since unknown
+			*/
+			
+			$view_settings = apply_filters( 'wpv_view_settings', $view_settings, $view_id );
+			
 			$view_layout_settings = get_post_meta( $_GET['view_id'], '_wpv_layout_settings', true );
-			if ( ! is_array( $view_layout_settings) ) {
-				$view_layout_settings = array();
-			}
+			
+			/**
+			* wpv_view_layout_settings
+			*
+			* Internal filter to set some View layout settings that will overwrite the ones existing in the _wpv_layout_settings postmeta
+			* Only used to set default values that need to be there on the returned array,, but may not be there for legacy reasons
+			* Use wpv_filter_override_view_layout_settings to override View layout settings
+			*
+			* @param $view_layout_settings (array) Unserialized array of the _wpv_layout_settings postmeta
+			* @param $view_id (integer) The View ID
+			*
+			* @return $view_layout_settings (array) The View layout settings
+			*
+			* @since 1.8.0
+			*/
+			
+			$view_layout_settings = apply_filters( 'wpv_view_layout_settings', $view_layout_settings, $view_id );
+			
 			if ( isset( $view_settings['view-query-mode'] )
 				&& (
 					'archive' ==  $view_settings['view-query-mode']

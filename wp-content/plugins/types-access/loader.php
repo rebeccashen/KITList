@@ -67,7 +67,12 @@ final class TAccess_Loader
                     'views-utils-script'=>array(
                         'version'=>WPCF_ACCESS_VERSION,
                         'dependencies'=>array('jquery', 'wp-pointer'),
-                        'path'=>TACCESS_ASSETS_URL.'/js/popup/utils.js'
+                        'path'=>TACCESS_ASSETS_URL.'/js/popup/utils.js',
+						'localization_name'=>'wpv_help_box_texts',
+						'localization_data'=>array(
+							'wpv_dont_show_it_again' => __("Got it! Don't show this message again", 'wpv-views'),
+							'wpv_close' => __("Close", 'wpv-views')
+						)
                     )
                 ),
                 'STYLE'=>array(
@@ -313,8 +318,12 @@ final class TAccess_Loader
                 if ( !wp_script_is($registerAs, 'registered') ){
                 	wp_register_script($registerAs, $_class['path'], $_class['dependencies'], $_class['version'], $isFooter);
 				}
-                if ($enqueueIt)
+                if ($enqueueIt) {
                     wp_enqueue_script($registerAs);
+					if ( isset( $_class['localization_name'] ) && isset( $_class['localization_data'] ) ) {
+						wp_localize_script( $registerAs, $_class['localization_name'], $_class['localization_data'] );
+					}
+				}
             }
             elseif ('STYLE'==$type && isset($_class['path']))
             {

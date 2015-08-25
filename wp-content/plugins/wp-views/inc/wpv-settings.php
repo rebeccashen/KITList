@@ -138,17 +138,17 @@ class WPV_Settings extends WPV_Settings_Embedded {
             <div class="wp-filter wpv-settings-filter">
                 <ul class="filter-links wpv-settings-filter-links">
                     <li class="wpv-settings-tab-features">
-                        <a href="<?php echo add_query_arg( array( 'tab' => 'features' ) ); ?>" class="     <?php echo $tab == 'features' ? 'current' : '' ?>">  
+                        <a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'features' ) ) ); ?>" class="     <?php echo $tab == 'features' ? 'current' : '' ?>">  
                             <?php _e( 'Features', 'wpv-views' ); ?>
                         </a> 
                     </li>
                     <li class="wpv-settings-tab-compatibility">
-                        <a href="<?php echo add_query_arg( array( 'tab' => 'compatibility' ) ); ?>" class="<?php echo $tab == 'compatibility' ? 'current' : '' ?>">                           
+                        <a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'compatibility' ) ) ); ?>" class="<?php echo $tab == 'compatibility' ? 'current' : '' ?>">                           
                             <?php _e( 'Compatibility', 'wpv-views' ); ?>
                         </a> 
                     </li>
                     <li class="wpv-settings-tab-development">
-                        <a href="<?php echo add_query_arg( array( 'tab' => 'development' ) ); ?>" class="  <?php echo $tab == 'development' ? 'current' : '' ?>">                             
+                        <a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'development' ) ) ); ?>" class="  <?php echo $tab == 'development' ? 'current' : '' ?>">                             
                             <?php _e( 'Development', 'wpv-views' ); ?>
                         </a> 
                     </li>

@@ -72,7 +72,7 @@ if (!class_exists("CredFormCreator", false)) {
          * @param type $post_type
          * return $post_id if created
          */
-        public static function cred_create_form($name, $mode/* new/edit */, $post_type) {            
+        public static function cred_create_form($name, $mode/* new/edit */, $post_type) {
             $name = sanitize_text_field($name);
             if (empty(self::$_created) && !in_array($name, self::$_created)) {
                 self::$_created[] = $name;
@@ -80,7 +80,7 @@ if (!class_exists("CredFormCreator", false)) {
                 $fields_model = CRED_Loader::get('MODEL/Fields');
 
                 $fields_all = $fields_model->getFields($post_type);
-                
+
                 $form = get_page_by_title(html_entity_decode($name), OBJECT, CRED_FORMS_CUSTOM_POST_NAME);
                 if (isset($form) && isset($form->ID)) {
                     //TODO: give message? CRED form already exists
@@ -442,7 +442,7 @@ if (!class_exists("CredFormCreator", false)) {
                 }
                 $field_out = '[cred_field field="' . $field->slug . '"' . $post_type . $value . ']';
             }
-            if (isset($field) && isset($field->taxonomy)) {
+            if (isset($field) && (isset($field->taxonomy) || isset($field->aux))) {
                 if (isset($field->hierarchical))
                     $field_out = '[cred_field field="' . $field->name . '" display="checkbox"]';
                 else

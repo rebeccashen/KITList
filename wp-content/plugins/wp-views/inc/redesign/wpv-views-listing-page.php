@@ -171,9 +171,9 @@ function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_stat
 				$is_current = ( ( 'publish' == $current_post_status ) && !isset( $_GET["s"] ) );
 				printf(
 						'<li><a href="%s" %s >%s</a> (%s) | </li>',
-						add_query_arg(
+						esc_url( add_query_arg(
 								array( 'page' => 'views', 'status' => 'publish' ),
-								admin_url('admin.php') ),
+								admin_url('admin.php') ) ),
 						$is_current ? ' class="current" ' : '',
 						__( 'Published', 'wpv-views' ),
 						$views_pre_query_data['published_count'] );
@@ -182,9 +182,9 @@ function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_stat
 				$is_current = ( ( 'trash' == $current_post_status ) && !isset( $_GET["s"] ) );
 				printf(
 						'<li><a href="%s" %s >%s</a> (%s)</li>',
-						add_query_arg(
+						esc_url( add_query_arg(
 								array( 'page' => 'views', 'status' => 'trash' ),
-								admin_url('admin.php') ),
+								admin_url('admin.php') ) ),
 						$is_current ? ' class="current" ' : '',
 						__( 'Trash', 'wpv-views' ),
 						$views_pre_query_data['trashed_count'] );
@@ -352,9 +352,9 @@ function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_stat
 										echo $post->post_title;
 									} else {
 										printf( '<a href="%s">%s</a>',
-												add_query_arg(
+												esc_url( add_query_arg(
 														array( 'page' => 'views-editor', 'view_id' => $post->ID ),
-														admin_url( 'admin.php' ) ),
+														admin_url( 'admin.php' ) ) ),
 												$post->post_title );
 									}
 								?>
@@ -377,9 +377,9 @@ function wpv_admin_view_listing_table( $views_pre_query_data, $current_post_stat
 									if ( 'publish' == $current_post_status ) {
 										$row_actions['edit'] = sprintf(
 												'<a href="%s">%s</a>',
-												add_query_arg(
+												esc_url( add_query_arg(
 													array( 'page' => 'views-editor', 'view_id' => $post->ID ),
-													admin_url( 'admin.php' ) ),
+													admin_url( 'admin.php' ) ) ),
 												__( 'Edit', 'wpv-views' ) );
 										$row_actions['duplicate js-views-actions-duplicate'] = sprintf( '<a href="#">%s</a>', __( 'Duplicate', 'wpv-views' ) );
 										$row_actions['trash js-views-actions-trash'] = sprintf( '<a href="#">%s</a>', __( 'Move to trash', 'wpv-views' ) );

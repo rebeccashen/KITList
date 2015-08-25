@@ -2,7 +2,7 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/views/templates/notification-condition.tpl.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/views/templates/notification-condition.tpl.php $
  * $LastChangedDate: 2014-07-21 14:02:20 +0000 (Mon, 21 Jul 2014) $
  * $LastChangedRevision: 25151 $
  * $LastChangedBy: marcin $

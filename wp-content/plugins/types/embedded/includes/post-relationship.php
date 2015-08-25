@@ -2,7 +2,7 @@
 /*
  * Post relationship code.
  *
- * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.2/embedded/includes/post-relationship.php $
+ * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.5/embedded/includes/post-relationship.php $
  * $LastChangedDate: 2015-04-01 14:15:17 +0000 (Wed, 01 Apr 2015) $
  * $LastChangedRevision: 1125405 $
  * $LastChangedBy: iworks $

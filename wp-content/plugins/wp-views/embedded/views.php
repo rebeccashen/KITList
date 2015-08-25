@@ -7,7 +7,7 @@ if ( defined( 'WPV_VERSION' ) ) {
 
 // EMBEDDED VERSION
 
-define('WPV_VERSION', '1.8');
+define('WPV_VERSION', '1.8.1');
 
 /*
  * Note: This modification was not authorized, but might be in the future. I'll dare to just leave it here. --Jan

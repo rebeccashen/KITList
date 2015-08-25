@@ -2,7 +2,7 @@
 /*
  * Fields and groups list functions
  *
- * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.2/includes/fields-list.php $
+ * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.5/includes/fields-list.php $
  * $LastChangedDate: 2015-03-02 10:49:00 +0000 (Mon, 02 Mar 2015) $
  * $LastChangedRevision: 1103173 $
  * $LastChangedBy: iworks $

@@ -7,9 +7,9 @@
  *
  * @since Types 1.2
  *
- * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.2/embedded/bootstrap.php $
- * $LastChangedDate: 2015-04-10 07:30:43 +0000 (Fri, 10 Apr 2015) $
- * $LastChangedRevision: 1131818 $
+ * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.5/embedded/bootstrap.php $
+ * $LastChangedDate: 2015-05-20 11:41:05 +0000 (Wed, 20 May 2015) $
+ * $LastChangedRevision: 1164110 $
  * $LastChangedBy: iworks $
  *
  */
@@ -138,7 +138,7 @@ function wpcf_embedded_init() {
     // Define necessary constants if plugin is not present
     // This ones are skipped if used as embedded code!
     if ( !defined( 'WPCF_VERSION' ) ) {
-        define( 'WPCF_VERSION', '1.6.6.2' );
+        define( 'WPCF_VERSION', '1.6.6.5' );
         define( 'WPCF_META_PREFIX', 'wpcf-' );
     }
 

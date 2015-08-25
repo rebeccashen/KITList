@@ -6,7 +6,7 @@ require_once 'class.file.php';
  *
  * @author Srdjan
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.image.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/toolset-forms/classes/class.image.php $
  * $LastChangedDate: 2014-09-29 16:01:46 +0000 (Mon, 29 Sep 2014) $
  * $LastChangedRevision: 27533 $
  * $LastChangedBy: marcin $

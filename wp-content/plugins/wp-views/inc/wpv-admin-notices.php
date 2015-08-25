@@ -60,7 +60,7 @@ class WPToolset_Admin_Notices {
 				$notice_text = sprintf(
 					__( 'The last Views update fixed one important security issue which may require some extra action | <a href="%1s">More details</a> | <a class="js-wpv-dismiss" href="%2s">Dismiss</a>.', 'wpv-views' ),
 					admin_url('admin.php?page=views-update-help&help-subject=wpv-if'),
-					add_query_arg( array( 'wpv_wpv_if_changes_ignore' => 'yes' ) )
+					esc_url( add_query_arg( array( 'wpv_wpv_if_changes_ignore' => 'yes' ) ) )
 				);
 				$args = array(
 					'notice_class' => 'error',
@@ -116,8 +116,8 @@ class WPToolset_Admin_Notices {
 							. sprintf(
 								__( '<a class="button button-primary button-primary-toolset" href="%1s">Get WooCommerce Views</a> <a class="button button-secondary js-wpv-dismiss" href="%2s">Dismiss</a>', 'wpv-views' ),
 								$get_link,
-								add_query_arg( array( 'wpv_dismiss_global_notice' => 'wc_active_wcv_missing' )
-							)
+								esc_url( add_query_arg( array( 'wpv_dismiss_global_notice' => 'wc_active_wcv_missing' )
+							) )
 				);
 				$args = array(
 					'notice_class' => 'update-nag',

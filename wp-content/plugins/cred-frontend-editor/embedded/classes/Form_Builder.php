@@ -2,9 +2,9 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/classes/Form_Builder.php $
- * $LastChangedDate: 2015-03-23 15:31:47 +0000 (Mon, 23 Mar 2015) $
- * $LastChangedRevision: 32578 $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/classes/Form_Builder.php $
+ * $LastChangedDate: 2015-05-05 10:01:32 +0000 (Tue, 05 May 2015) $
+ * $LastChangedRevision: 33226 $
  * $LastChangedBy: francesco $
  *
  */
@@ -124,7 +124,7 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
                 // parce and cache form
                 self::getCachedForm($form_id, $post_id, $preview, $form_count);
             }
-        }
+        }        
     }
 
     private static function getCachedForm($form_id, $post_id, $preview, $force_count = false, $specific_post_id = null) {
@@ -338,7 +338,8 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
 
         //Check dates
         foreach ($_POST as $name => &$value) {
-            if (isset($value['datepicker'])) {
+            if ($name==StaticClass::NONCE) continue;
+            if (is_array($value) && isset($value['datepicker'])) {
                 if (!function_exists('adodb_date')) {
                     require_once WPTOOLSET_FORMS_ABSPATH . '/lib/adodb-time.inc.php';
                 }
@@ -488,7 +489,7 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
                         $saved_message = apply_filters('cred_data_saved_message', $saved_message, $form_id, $post_id, $preview);
                         // add success message
                         //$zebraForm->add_form_message('data-saved', $formHelper->getLocalisedMessage('post_saved'));
-                        $zebraForm->add_field_message($saved_message);
+                        $zebraForm->add_success_message($saved_message);
                     }
                     else {
                         if (isset($_FILES) && count($_FILES) > 0) {
@@ -566,7 +567,7 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
             $saved_message = apply_filters('cred_data_saved_message_' . $form_id, $saved_message, $form_id, $post_id, $preview);
             $saved_message = apply_filters('cred_data_saved_message', $saved_message, $form_id, $post_id, $preview);
             //$zebraForm->add_form_message('data-saved', $saved_message);
-            $zebraForm->add_field_message($saved_message);
+            $zebraForm->add_success_message($saved_message);
         }
 
 //        $msgs = "";
@@ -576,8 +577,9 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
 //               $msgs .= "<label class=\"wpt-form-error\">$text</label><div style='clear:both;'></div>";
 //           }
 //        }
-
-        $msgs = $zebraForm->getFieldsErrorMessages();
+        
+        $msgs = $zebraForm->getFieldsSuccessMessages();
+        $msgs .= $zebraForm->getFieldsErrorMessages();
         $js = $zebraForm->getFieldsErrorMessagesJs();
 
         if (false !== $message)
@@ -1169,12 +1171,7 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
         } else {
             $all_ok = $formHelper->CRED_uploadAttachments($post_id, $fields, $files, $extra_files, $trackNotification);
         }
-
-//        foreach ($fields as $k => $v) {
-//            if (isset($_POST[$k])&&  is_array($_POST[$k]))
-//                $fields[$k] = $_POST[$k];
-//        }
-
+        
         if ($all_ok) {
             add_filter('terms_clauses', array(&$this, 'terms_clauses'));
             add_filter('wpml_save_post_lang', array(&$this, 'wpml_save_post_lang'));
@@ -1228,6 +1225,10 @@ class CRED_Form_Builder implements CRED_Friendable, CRED_FriendableStatic {
                 do_action('cred_save_data_' . $form_id, $new_post_id, $thisform);
                 do_action('cred_save_data', $new_post_id, $thisform);
             }
+        } else {
+            $WP_Error = new WP_Error();
+            $WP_Error->add('upload', 'Error some required upload field failed.');
+            $new_post_id = $WP_Error;
         }
         // return saved post_id as result
         return $new_post_id;

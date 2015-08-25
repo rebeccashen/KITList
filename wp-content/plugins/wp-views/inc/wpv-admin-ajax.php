@@ -719,16 +719,12 @@ function wpv_show_views_for_loop_callback() {
 	if ( ! wp_verify_nonce( $_POST["wpnonce"], 'wpv_wp_archive_arrange_usage' ) ) {
 		die( "Security check" );
 	}
-	if (
-		! isset( $_POST["id"] )
-		|| ! is_numeric( $_POST["id"] )
-		|| intval( $_POST['id'] ) < 1 
-	) {
+	if ( ! isset( $_POST["id"] )	) {
 		die( "Untrusted data" );
 	}
 	global $WPV_view_archive_loop, $WPV_settings;
 	// Slug of the loop.
-	$loop_key = $_POST["id"];
+	$loop_key = sanitize_text_field( $_POST["id"] );
     $loops = $WPV_view_archive_loop->_get_post_type_loops();
 
 	?>
@@ -2492,7 +2488,7 @@ function wpv_bulk_content_templates_move_to_trash_callback() {
 								data-ct-ids="%s" data-replace-ids="%s" data-nonce="%s">%s</button>',
 							urlencode( implode( ',', $ct_ids ) ),
 							urlencode( implode( ',', array_keys( $used_templates ) ) ),
-							$nonce,
+							wp_create_nonce( 'wpv_view_listing_actions_nonce' ),
 							__( 'Change', 'wpv-views' ) );
 				?>
 			</div>

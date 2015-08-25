@@ -652,7 +652,7 @@ function wpv_remove_content_template_from_view_callback() {
 		wpv_dismiss_dialog( 'remove-content-template-from-view' );
 	}
 	$data = array(
-		'id' => $_POST["id"],
+		'id' => $_POST["view_id"],
 		'message' => __( 'Inline Content Template removed', 'wpv-views' )
 	);
 	wp_send_json_success( $data );

@@ -510,7 +510,7 @@ class WPV_template_plugin extends WPV_template
 				$wpdb->query( 
 					$wpdb->prepare(
 						"UPDATE {$wpdb->posts} 
-						SET post_name = %s' 
+						SET post_name = %s 
 						WHERE ID = %d",
 						$slug,
 						$pidd

@@ -28,14 +28,40 @@ final class Access_Ajax_Helper
 		add_action('wp_ajax_wpcf_access_show_role_caps', array(__CLASS__, 'wpcf_access_show_role_caps_ajax'));
 		add_action('wp_ajax_wpcf_create_new_cap', array(__CLASS__, 'wpcf_create_new_cap'));
 		add_action('wp_ajax_wpcf_delete_cap', array(__CLASS__, 'wpcf_delete_cap'));
+        add_action('wp_ajax_wpcf_hide_max_fields_message', array(__CLASS__, 'wpcf_hide_max_fields_message'));
 
     }
-
+    
+    /**
+    * Hide mewssage about input fields limit
+    */
+    
+    public static function wpcf_hide_max_fields_message()
+    {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
+        if (
+            isset($_POST['_wpnonce']) &&
+            wp_verify_nonce($_POST['_wpnonce'], 'wpcf-access-edit')
+        )
+        {
+            update_option('wpcf_hide_max_fields_message', 1);
+        }
+        die();
+    }   
     /**
      * Saves Access settings.
      */
     public static function wpcf_access_save_settings()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
         if (
             isset($_POST['_wpnonce']) &&
             wp_verify_nonce($_POST['_wpnonce'], 'wpcf-access-edit')
@@ -76,6 +102,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_error_value']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types['_custom_read_errors_value'][$type] = $data;
                 }
                 $model->updateAccessTypes($settings_access_types);
@@ -86,6 +113,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_archive_error_type']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types['_archive_custom_read_errors'][$type] = $data;
                 }
 
@@ -95,6 +123,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_archive_error_value']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types['_archive_custom_read_errors_value'][$type] = $data;
                 }
                 $model->updateAccessTypes($settings_access_types);
@@ -106,6 +135,7 @@ final class Access_Ajax_Helper
                 $caps = Access_Helper::wpcf_access_types_caps_predefined();
                 foreach ($_POST['types_access']['types'] as $type => $data)
                 {
+                    $type = sanitize_text_field($type);
                     $mode = isset($data['mode']) ? $data['mode'] : 'not_managed';
                     // Use saved if any and not_managed
                     if ( isset($data['mode']) && $data['mode'] == 'not_managed'
@@ -114,7 +144,7 @@ final class Access_Ajax_Helper
                     }
                     $data['mode'] = $mode;
 					if ( strpos($type, 'wpcf-custom-group-') === 0 && isset($_POST['groupvalue-'.$type]) ){
-						 $data['title'] = $_POST['groupvalue-'.$type];
+						 $data['title'] = sanitize_text_field($_POST['groupvalue-'.$type]);
 					}
                     $data['permissions'] = Access_Helper::wpcf_access_parse_permissions($data, $caps);
                     //taccess_log($data['permissions']);
@@ -309,6 +339,8 @@ final class Access_Ajax_Helper
                 $access_roles = $model->getAccessRoles();
                 foreach ($_POST['roles'] as $role => $level)
                 {
+                    $role = sanitize_text_field($role);
+                    $level = sanitize_text_field($level);
                     $role_data = get_role($role);
                     if (!empty(/*$role*/$role_data))
                     {
@@ -357,6 +389,11 @@ final class Access_Ajax_Helper
      */
     public static function wpcf_access_save_settings_section()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
         if (
             isset($_POST['_wpnonce']) &&
             wp_verify_nonce($_POST['_wpnonce'], 'wpcf-access-edit')
@@ -392,6 +429,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_error_type']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types_previous['_custom_read_errors'][$type] = $data;
                 }
                 $model->updateAccessTypes($settings_access_types_previous);
@@ -400,6 +438,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_error_value']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types_previous['_custom_read_errors_value'][$type] = $data;
                 }
                 $model->updateAccessTypes($settings_access_types_previous);
@@ -410,6 +449,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_archive_error_type']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types_previous['_archive_custom_read_errors'][$type] = $data;
                 }
 
@@ -419,6 +459,7 @@ final class Access_Ajax_Helper
             {
                 foreach ($_POST['types_access_archive_error_value']['types'] as $type => $data)
                 {
+                     $type = sanitize_text_field($type);
                      $settings_access_types_previous['_archive_custom_read_errors_value'][$type] = $data;
                 }
                 $model->updateAccessTypes($settings_access_types_previous);
@@ -442,7 +483,7 @@ final class Access_Ajax_Helper
 
                     $data['mode'] = $mode;
 					if ( strpos($type, 'wpcf-custom-group-') === 0 && isset($_POST['groupvalue-'.$type]) ){
-						 $data['title'] = $_POST['groupvalue-'.$type];
+						 $data['title'] = sanitize_text_field($_POST['groupvalue-'.$type]);
 					}
 
                     $data['permissions'] = Access_Helper::wpcf_access_parse_permissions($data, $caps);
@@ -596,6 +637,7 @@ final class Access_Ajax_Helper
 
                     foreach ($area_data as $group => $group_data)
                     {
+                        $group = sanitize_text_field($group);                        
                         // Set user IDs
                         $group_data['permissions'] = Access_Helper::wpcf_access_parse_permissions($group_data,  $caps, true);
 
@@ -614,6 +656,8 @@ final class Access_Ajax_Helper
                 $access_roles = $model->getAccessRoles();
                 foreach ($_POST['roles'] as $role => $level)
                 {
+                    $role = sanitize_text_field($role);
+                    $level = sanitize_text_field($level);
                     $role_data = get_role($role);
                     if (!empty(/*$role*/$role_data))
                     {
@@ -661,6 +705,11 @@ final class Access_Ajax_Helper
      */
     public static function wpcf_access_ajax_reset_to_default()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
         if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'],
                         'wpcf_access_ajax_reset_to_default')) {
             die('verification failed');
@@ -677,8 +726,8 @@ final class Access_Ajax_Helper
             }
             echo json_encode(array(
                 'output' => $output,
-                'type' => $_GET['type'],
-                'button_id' => $_GET['button_id'],
+                'type' => sanitize_text_field($_GET['type']),
+                'button_id' => sanitize_text_field($_GET['button_id']),
             ));
         }
         die();
@@ -689,6 +738,11 @@ final class Access_Ajax_Helper
      */
     public static function wpcf_access_ajax_set_level()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
         if (!isset($_POST['_wpnonce'])
                 || !wp_verify_nonce($_POST['_wpnonce'], 'wpcf-access-error-pages')) {
             die('verification failed');
@@ -699,15 +753,13 @@ final class Access_Ajax_Helper
 		$default_caps = getDefaultCaps();
 		$default_wordpress_caps = $default_caps[10];
 
-
-
-
         if (!empty($_POST['roles']))
         {
             $access_roles = $model->getAccessRoles();
             foreach ($_POST['roles'] as $role => $level)
             {
-
+                $role = sanitize_text_field($role);
+                $level = sanitize_text_field($level);
 				$add_caps = array();
 				$clone_from = 'subscriber';
 				if ( $level == 1){
@@ -781,17 +833,28 @@ final class Access_Ajax_Helper
      */
     public static function wpcf_access_wpcf_access_suggest_user_ajax()
     {
-        global $wpdb;
-        $users = array();
-        $q = esc_sql(trim($_POST['q']));
-        $q = like_escape($q);
-        $found = $wpdb->get_results("SELECT ID, display_name, user_login FROM $wpdb->users WHERE user_nicename LIKE '%%$q%%' OR user_login LIKE '%%$q%%' OR display_name LIKE '%%$q%%' OR user_email LIKE '%%$q%%' LIMIT 10");
-        if (!empty($found)) {
-            foreach ($found as $user) {
-                $users[$user->ID] = $user->display_name . ' (' . $user->user_login . ')';
-            }
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
         }
-        echo json_encode($users);
+
+        if (
+            isset($_POST['wpnonce']) &&
+            wp_verify_nonce($_POST['wpnonce'], 'wpcf-access-error-pages')
+        )
+        {
+            global $wpdb;
+            $users = array();
+            $q = Access_Helper::wpcf_esc_like(trim($_POST['q']));
+            $q = Access_Helper::wpcf_esc_like($q);
+            $found = $wpdb->get_results("SELECT ID, display_name, user_login FROM $wpdb->users WHERE user_nicename LIKE '%%$q%%' OR user_login LIKE '%%$q%%' OR display_name LIKE '%%$q%%' OR user_email LIKE '%%$q%%' LIMIT 10");
+            if (!empty($found)) {
+                foreach ($found as $user) {
+                    $users[$user->ID] = $user->display_name . ' (' . $user->user_login . ')';
+                }
+            }
+            echo json_encode($users);
+        }
         die();
     }
 
@@ -800,6 +863,16 @@ final class Access_Ajax_Helper
      */
     public static function wpcf_access_add_role_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             echo json_encode(
+                array(
+                    'error' => 'false',
+                    'output' => '<div class="error toolset-alert toolset-alert-error js-toolset-alert">'
+                            . __('There are security problems. You do not have permissions.', 'wpcf_access') . '</div>'
+                )
+                );
+             die();
+        }
         TAccess_Loader::load('CLASS/Admin_Edit');
         $model = TAccess_Loader::get('MODEL/Access');
         $access_roles = $model->getAccessRoles();
@@ -814,11 +887,12 @@ final class Access_Ajax_Helper
         }
 		$capabilities['wpcf_access_role'] = true;
         $role_slug = str_replace('-', '_', sanitize_title($_POST['role']));
-        $success = add_role($role_slug, $_POST['role'], $capabilities);
+        $role_slug = str_replace('%','',$role_slug);
+        $success = add_role($role_slug, sanitize_text_field($_POST['role']), $capabilities);
         if (!is_null($success))
         {
             $access_roles[$role_slug]=array(
-                'name'=> $_POST['role'],
+                'name'=> sanitize_text_field($_POST['role']),
                 'caps'=> $capabilities
             );
             $model->updateAccessRoles($access_roles);
@@ -839,6 +913,11 @@ final class Access_Ajax_Helper
      */
     public static function wpcf_access_delete_role_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
         if (!isset($_POST['wpcf_access_delete_role_nonce'])
                 || !wp_verify_nonce($_POST['wpcf_access_delete_role_nonce'],
                         'delete_role')) {
@@ -851,25 +930,25 @@ final class Access_Ajax_Helper
             $error = 'true';
             $output = '<div class="error toolset-alert toolset-alert-error js-toolset-alert">' . __('Role can not be deleted', 'wpcf_access') . '</div>';
         } else {
+            $delete_role = sanitize_text_field($_POST['wpcf_access_delete_role']);
             TAccess_Loader::load('CLASS/Admin_Edit');
             $model = TAccess_Loader::get('MODEL/Access');
             $access_roles = $model->getAccessRoles();
             if ($_POST['wpcf_reassign'] != 'ignore')
             {
-                $users = get_users('role=' . $_POST['wpcf_access_delete_role']);
+                $users = get_users('role=' . $delete_role);
                 foreach ($users as $user)
                 {
                     $user = new WP_User($user->ID);
-                    $user->add_role($_POST['wpcf_reassign']);
-					$user->remove_role($_POST['wpcf_access_delete_role']);
+                    $user->add_role(Access_Helper::wpcf_esc_like($_POST['wpcf_reassign']));
+					$user->remove_role($delete_role);
                 }
             }
-            remove_role($_POST['wpcf_access_delete_role']);
-            if (isset($access_roles[$_POST['wpcf_access_delete_role']]))
+            remove_role($delete_role);
+            if (isset($access_roles[$delete_role]))
             {
-                unset($access_roles[$_POST['wpcf_access_delete_role']]);
+                unset($access_roles[$delete_role]);
             }
-            //taccess_log(array($_POST['wpcf_access_delete_role'], $access_roles));
             $model->updateAccessRoles($access_roles);
 
             $error = 'false';
@@ -887,18 +966,23 @@ final class Access_Ajax_Helper
 	 */
 	public static function wpcf_access_show_error_list_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if ( !isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'], 'wpcf-access-error-pages') ) {
             die('verification failed');
         }
-		$post_type = $_POST['posttype'];
-		$is_archive = $_POST['is_archive'];
+		$post_type = sanitize_text_field($_POST['posttype']);
+		$is_archive = sanitize_text_field($_POST['is_archive']);
 		$out = '
 			<form method="" id="wpcf-access-set_error_page">
-				<input type="hidden" value="'. $_POST['access_type'].'" name="typename">
-				<input type="hidden" value="'.$_POST['access_value'].'" name="valuename">';
+				<input type="hidden" value="'. esc_attr($_POST['access_type']) .'" name="typename">
+				<input type="hidden" value="'. esc_attr($_POST['access_value']) .'" name="valuename">';
 		if ( $is_archive == 1){
-		$out .= '<input type="hidden" value="'. $_POST['access_archivetype'].'" name="archivetypename">
-				<input type="hidden" value="'.$_POST['access_archivevalue'].'" name="archivevaluename">';
+		$out .= '<input type="hidden" value="'. esc_attr($_POST['access_archivetype']) .'" name="archivetypename">
+				<input type="hidden" value="'. esc_attr($_POST['access_archivevalue']) .'" name="archivevaluename">';
 		}
 
 		$out .= '<h2>'. __('Single post error','wpcf_access') .'</h2>';
@@ -922,7 +1006,7 @@ final class Access_Ajax_Helper
 						<input type="radio" value="error_404" name="error_type"'.$checked.' class="js-wpcf-access-type"> '. __('Show 404 - page not found','wpcf_access') .'
 					</label>
 				</p>';
-		if( class_exists('WP_Views') ){
+		if( class_exists('WP_Views') && !class_exists('WPDD_Layouts') ){
 			$checked = ( isset($_POST['cur_type']) && $_POST['cur_type'] == 'error_ct' )?' checked="checked" ':'';
 			$out .= '
 				<p>
@@ -936,7 +1020,7 @@ final class Access_Ajax_Helper
 			foreach ( $content_tempaltes as $post ) :
 				$selected = ( isset($_POST['cur_value']) && $_POST['cur_value'] == $post->ID )?' selected="selected" ':'';
 				$out .= '
-						<option value="'.$post->ID.'"'. $selected .'>'.$post->post_title.'</option>';
+						<option value="'.esc_attr($post->ID).'"'. $selected .'>'.$post->post_title.'</option>';
 			endforeach;
 			$out .= '
 					</select>
@@ -954,7 +1038,7 @@ final class Access_Ajax_Helper
 						<option value="">'.__('None','wpcf_access').'</option>';
 							foreach ( $templates as $template_name => $template_filename ) {
 							   $selected = ( isset($_POST['cur_value']) && $_POST['cur_value'] == $template_filename )?' selected="selected" ':'';
-							   $out .= '<option value="'.$template_filename.'"'. $selected .'>'.$template_filename.'</option>';
+							   $out .= '<option value="'.esc_attr($template_filename).'"'. $selected .'>'.$template_filename.'</option>';
 							}
 			$out .= '
 					</select>
@@ -971,7 +1055,7 @@ final class Access_Ajax_Helper
 
 
 
-			if( class_exists('WP_Views') && function_exists('wpv_force_wordpress_archive') ){
+			if( class_exists('WP_Views') && function_exists('wpv_force_wordpress_archive') && !class_exists('WPDD_Layouts') ){
 				global $WPV_view_archive_loop, $WP_Views;
 
 				$have_archives = wpv_has_wordpress_archive( 'post', $post_type);
@@ -991,7 +1075,7 @@ final class Access_Ajax_Helper
 									if ( is_object($view) ){
 										$has_items = array_diff($has_items, array($have_archives));
 										$custom_error = sprintf(
-										__( 'This custom post archive displays with the WordPress Archive "%s".', 'wpcf_access' ), $view->post_title );
+										__( 'This custom post archive displays with the WordPress Archive "%s".', 'wpcf_access' ), esc_attr($view->post_title) );
 									}
 							$archive_out .= '</label>';
 						$wpv_args = array( // array of WP_Query parameters
@@ -1014,7 +1098,7 @@ final class Access_Ajax_Helper
 
 								$post = get_post($post_id);
 								$selected = ( isset($_POST['cur_archivevalue']) && $_POST['cur_archivevalue'] == $post->ID )?' selected="selected" ':'';
-								$archive_out .= '<option value="'.$post->ID.'" '.$selected.'>'.$post->post_title.'</option>';
+								$archive_out .= '<option value="'.esc_attr($post->ID).'" '.$selected.'>'.$post->post_title.'</option>';
 							endwhile;
 							$archive_out .= '</select>';
 						}
@@ -1068,7 +1152,7 @@ final class Access_Ajax_Helper
 					<option value="">'.__('None','wpcf_access').'</option>';
 						for ( $i=0,$limit=count($theme_files);$i<$limit;$i++){
 							$selected = ( isset($_POST['cur_archivevalue']) && $_POST['cur_archivevalue'] == $theme_files[$i] )?' selected="selected" ':'';
-							$archive_out .= '<option value="'.$theme_files[$i].'" '.$selected.'>'.preg_replace("/.*(\/.*\/)/","$1",$theme_files[$i]).'</option>';
+							$archive_out .= '<option value="'.esc_attr($theme_files[$i]).'" '.$selected.'>'.preg_replace("/.*(\/.*\/)/","$1",$theme_files[$i]).'</option>';
 						}
 					$archive_out .= '</select></p>';
 			}
@@ -1109,14 +1193,14 @@ final class Access_Ajax_Helper
 			</div>
 			<div class="wpv-dialog-footer">
 				<button class="button js-dialog-close"><?php _e('Cancel', 'wpcf_access')?></button>
-				<button class="button button-primary js-set-error-page" data-error1="<?php _e('Show 404 - page not found','wpcf_access')?>"
-				data-error2="<?php echo __('Show Content Template','wpcf_access').' - ';?>"
-				 data-error3="<?php echo __('Show Page template','wpcf_access').' - ';?>"
-				 data-inf01="<?php echo __('Template','wpcf_access');?>"
-				 data-inf02="<?php echo __('PHP Template','wpcf_access');?>"
-				 data-inf03="<?php echo __('PHP Archive','wpcf_access');?>"
-				 data-inf04="<?php echo __('View Archive','wpcf_access');?>"
-				 data-inf05="<?php echo __('Display: \'No posts found\'','wpcf_access');?>"
+				<button class="button button-primary js-set-error-page" data-error1="<?php esc_attr(_e('Show 404 - page not found','wpcf_access'))?>"
+				data-error2="<?php echo esc_attr(__('Show Content Template','wpcf_access')).' - ';?>"
+				 data-error3="<?php echo esc_attr(__('Show Page template','wpcf_access')).' - ';?>"
+				 data-inf01="<?php echo esc_attr(__('Template','wpcf_access'));?>"
+				 data-inf02="<?php echo esc_attr(__('PHP Template','wpcf_access'));?>"
+				 data-inf03="<?php echo esc_attr(__('PHP Archive','wpcf_access'));?>"
+				 data-inf04="<?php echo esc_attr(__('View Archive','wpcf_access'));?>"
+				 data-inf05="<?php echo esc_attr(__('Display: \'No posts found\'','wpcf_access'));?>"
 				 ><?php _e('Set errors', 'wpcf_access')?></button>
 			</div>
     	</div>
@@ -1132,6 +1216,12 @@ final class Access_Ajax_Helper
 	 * Scan directory for php files.
 	 */
 	public static function wpcf_access_scan_dir( $dir, $files = array(), $exclude = ''){
+        
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		$file_list = scandir($dir);
 		foreach($file_list as $file){
 	        if($file != '.' && $file != '..' && preg_match("/\.php/",$file) && !preg_match("/^comments|^single|^image|^functions|^header|^footer|^page/",$file) && $file != $exclude ){
@@ -1152,6 +1242,11 @@ final class Access_Ajax_Helper
 	 */
 	public static function wpcf_access_add_new_group_form_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
     	if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],'wpcf-access-error-pages')) {
             die('verification failed');
         }
@@ -1160,7 +1255,7 @@ final class Access_Ajax_Helper
 		$title = '';
 		if ( isset($_POST['modify']) ) {
 			$act = 'Modify';
-			$id = $_POST['modify'];
+			$id = sanitize_text_field($_POST['modify']);
 			$model = TAccess_Loader::get('MODEL/Access');
 			$settings_access = $model->getAccessTypes();
             $current_role = $settings_access[$id];
@@ -1179,12 +1274,13 @@ final class Access_Ajax_Helper
 			<p>
 				<label for="wpcf-access-suggest-posts">'. __('Search posts','wpcf_access') .'</label><br>
 				<input type="text" id="wpcf-access-suggest-posts">
-				<input type="button" value="'. __('Search','wpcf_access') .'" class="button js-wpcf-search-posts">
+				<input type="button" value="'. esc_attr(__('Search','wpcf_access')) .'" class="button js-wpcf-search-posts">
+                <input type="button" value="'. esc_attr(__('Clear','wpcf_access')) .'" class="button js-wpcf-search-posts-clear">
 			</p>';
 
 		$out .= '
 			<h4>' . __('Search result','wpcf_access') . '</h4>
-			<p class="hidden js-use-search toolset-alert toolset-alert-info">'. __('Search for posts to add more','wpcf_access') .'</p>
+			<p class="hidden js-use-search toolset-alert toolset-alert-info">'. esc_attr(__('Search for posts to add more','wpcf_access')) .'</p>
 			<div class="wpcf-suggested-posts js-wpcf-suggested-posts">
 				<ul>';
 					$post_types_array = array();
@@ -1199,7 +1295,7 @@ final class Access_Ajax_Helper
 						if ( $the_query->have_posts() ) {
 							while ( $the_query->have_posts() ) {
 								$the_query->the_post();
-								$out .= '<li>'. get_the_title() .' <a href="" class="js-wpcf-add-post-to-group" data-title="'.esc_js(get_the_title()).'" data-id="'.get_the_ID().'">+' . __('Add','wpcf_access') . '</a></li>';
+								$out .= '<li>'. get_the_title() .' <a href="" class="js-wpcf-add-post-to-group" data-title="'.esc_attr(get_the_title()).'" data-id="'.esc_attr(get_the_ID()).'">+' . __('Add','wpcf_access') . '</a></li>';
 							};
 						}
 					}
@@ -1226,9 +1322,9 @@ final class Access_Ajax_Helper
 						if ( $the_query->have_posts() ) {
 							while ( $the_query->have_posts() ) {
 								$the_query->the_post();
-								$out .= '<li class="js-assigned-access-post-'.get_the_ID().'">'.get_the_title().'
-								 <a href="" class="js-wpcf-unassign-access-post" data-id="'.get_the_ID().'"> ' . __('Remove','wpcf_access') . '</a>'.
-								'<input type="hidden" value="'.get_the_ID().'" name="assigned-posts[]"></li>';
+								$out .= '<li class="js-assigned-access-post-'.esc_attr(get_the_ID()).'">'.get_the_title().'
+								 <a href="" class="js-wpcf-unassign-access-post" data-id="'.esc_attr(get_the_ID()).'"> ' . __('Remove','wpcf_access') . '</a>'.
+								'<input type="hidden" value="'.esc_attr(get_the_ID()).'" name="assigned-posts[]"></li>';
 							};
 						}
 					}
@@ -1249,7 +1345,7 @@ final class Access_Ajax_Helper
 				<?php if ( $act == 'Modify'){?>
 					<button class="button button-primary js-wpcf-process-modify-access-group"
 							data-error="<?php echo esc_js(__('Group title aready exists', 'wpcf_access'))?>"
-							data-id="<?php echo $id?>"><?php _e('Modify Group', 'wpcf_access')?>
+							data-id="<?php echo esc_attr($id)?>"><?php _e('Modify Group', 'wpcf_access')?>
 					</button>
 				<?php } else { ?>
 				<button class="button button-primary js-wpcf-process-new-access-group"
@@ -1269,6 +1365,12 @@ final class Access_Ajax_Helper
 	 * Proccss new access group
 	 */
 	public static function wpcf_process_new_access_group_ajax() {
+    
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
     	if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
@@ -1277,14 +1379,14 @@ final class Access_Ajax_Helper
 		$nice = sanitize_title('wpcf-custom-group-'.$_POST['title']);
 		$posts = array();
 		if ( isset($_POST['posts']) ) {
-			$posts = $_POST['posts'];
+			$posts = array_map('intval',$_POST['posts']);
 		}
 
 		$model = TAccess_Loader::get('MODEL/Access');
 		$settings_access = $model->getAccessTypes();
 
 		$groups[$nice] = array(
-			'title' => $_POST['title'],
+			'title' => sanitize_text_field($_POST['title']),
 			'mode' => 'permissions',
 			'__permissions' => array( 'read'=>array('role'=>'guest') ),
 			'permissions' => array( 'read'=>array('role'=>'guest') ),
@@ -1313,7 +1415,7 @@ final class Access_Ajax_Helper
 		$model->updateAccessTypes( $settings_access );
 			$enabled = true;
 			$group['id'] = $nice;
-			$group['name']= $_POST['title'];
+			$group['name']= sanitize_text_field($_POST['title']);
 
             $output = '<a name="' . $group['id'] . '"></a>';
             $output .= '<div class="wpcf-access-type-item is-enabled" id="js-box-' . $nice . '">';
@@ -1338,11 +1440,11 @@ final class Access_Ajax_Helper
 
 					$output .= '<p class="wpcf-access-buttons-wrap">';
 						$output .= '<span class="ajax-loading spinner"></span>';
-						$output .= '<input data-group="' . $nice . '"  type="button" value="' . __('Modify Group', 'wpcf_access') . '"  class="js-wpcf-modify-group button-secondary" /> ';
-						$output .= '<input data-group="' . $nice . '"  type="button" value="' . __('Remove Group', 'wpcf_access') . '"  class="button-secondary js-wpcf-remove-group" /> ';
+						$output .= '<input data-group="' . esc_attr($nice). '"  type="button" value="' . esc_attr(__('Modify Group', 'wpcf_access')) . '"  class="js-wpcf-modify-group button-secondary" /> ';
+						$output .= '<input data-group="' . esc_attr($nice) . '"  type="button" value="' . esc_attr(__('Remove Group', 'wpcf_access')) . '"  class="button-secondary js-wpcf-remove-group" /> ';
 						$output .= Access_Admin_Edit::wpcf_access_submit_button($enabled, true, $group['name']);
 					$output .= '</p>';
-					$output .= '<input type="hidden" name="groupvalue-' . $nice . '" value="' . $_POST['title'] . '">';
+					$output .= '<input type="hidden" name="groupvalue-' . $nice . '" value="' . esc_attr($_POST['title']) . '">';
             $output .= '</div>	<!-- .wpcf-access-mode -->';
 //        $output .= '<p class="wpcf-access-top-anchor"><a href="#wpcf-access-top-anchor">'. __('Back to Top', 'wpcf_access') .'</a></p>';
 		$output .= '</div>	<!-- .wpcf-access-type-item -->';
@@ -1356,14 +1458,19 @@ final class Access_Ajax_Helper
 	 */
 	public static function wpcf_process_modify_access_group_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
     	if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
         }
-		$nice = $_POST['id'];
+		$nice = sanitize_text_field($_POST['id']);
 		$posts = array();
 		if ( isset($_POST['posts']) ){
-			$posts = $_POST['posts'];
+			$posts = array_map('intval',$_POST['posts']);
 		}
 
 		$model = TAccess_Loader::get('MODEL/Access');
@@ -1371,7 +1478,7 @@ final class Access_Ajax_Helper
     	$process = true;
 		if ( isset($settings_access[$nice]) ){
 			foreach ($settings_access as $permission_slug => $data){
-				if ( isset($data['title']) && $data['title'] == $_POST['title'] && $permission_slug != $nice ){
+				if ( isset($data['title']) && $data['title'] == sanitize_text_field($_POST['title']) && $permission_slug != $nice ){
 					$process = false;
 				}
 			}
@@ -1379,7 +1486,7 @@ final class Access_Ajax_Helper
 			$process = false;
 		}
 
-		$settings_access[$nice]['title'] = $_POST['title'];
+		$settings_access[$nice]['title'] = sanitize_text_field($_POST['title']);
 		TAccess_Loader::load('CLASS/Admin_Edit');
 		$roles = Access_Helper::wpcf_get_editable_roles();
 		$model->updateAccessTypes( $settings_access );
@@ -1402,6 +1509,11 @@ final class Access_Ajax_Helper
 	 */
 	public static function wpcf_remove_group_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
     	if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'], 'wpcf-access-error-pages')) {
             die('verification failed');
         }
@@ -1422,7 +1534,7 @@ final class Access_Ajax_Helper
 
 			<div class="wpv-dialog-footer">
 				<button class="button js-dialog-close"><?php _e('Cancel','wpcf_access')?></button>
-				<button class="button button-primary js-wpcf-delete-group-process" data-group="<?php echo $_POST['group_id']?>"><?php _e('Remove Group','wpcf_access')?></button>
+				<button class="button button-primary js-wpcf-delete-group-process" data-group="<?php echo esc_attr($_POST['group_id'])?>"><?php _e('Remove Group','wpcf_access')?></button>
 			</div>
 
     	</div>
@@ -1438,6 +1550,11 @@ final class Access_Ajax_Helper
 	 */
 	public static function wpcf_remove_group_process_ajax()
     {
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
     	if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'], 'wpcf-access-error-pages')) {
             die('verification failed');
         }
@@ -1457,7 +1574,11 @@ final class Access_Ajax_Helper
 	 */
 	public static function wpcf_search_posts_for_groups_ajax()
     {
-
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
@@ -1472,7 +1593,7 @@ final class Access_Ajax_Helper
 			'posts_per_page' => '10',
 			'post_status' => 'publish',
 			'post_type' => $post_types_array,
-			's' => $_POST['title']);
+			's' => Access_Helper::wpcf_esc_like($_POST['title']));
 		$the_query = new WP_Query( $args );
 		if ( $the_query->have_posts() ) {
 			while ( $the_query->have_posts() ) {
@@ -1480,7 +1601,7 @@ final class Access_Ajax_Helper
 			 	$out .= '
 					<li>'. get_the_title() .' <a href="" class="js-wpcf-add-post-to-group"
 						data-title="'.esc_js(get_the_title()).'"
-						data-id="'.get_the_ID().'">+ '.__('Add','wpcf_access').'</a>
+						data-id="'.esc_attr(get_the_ID()).'">+ '.__('Add','wpcf_access').'</a>
 					</li>';
 			};
 		}
@@ -1493,22 +1614,34 @@ final class Access_Ajax_Helper
 	 * Remove post from group
 	 */
 	public static function wpcf_remove_postmeta_group_ajax(){
+    
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
         }
-		delete_post_meta($_POST['id'], '_wpcf_access_group');
+		delete_post_meta(sanitize_text_field($_POST['id']), '_wpcf_access_group');
 	}
 
 	/*
 	 * Set group for post
 	 */
 	public static function wpcf_select_access_group_for_post_ajax(){
+    
+        if ( !current_user_can('manage_options') && !current_user_can('access_change_post_group') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
         }
-		$group = get_post_meta($_POST['id'], '_wpcf_access_group', true);
+		$group = get_post_meta(sanitize_text_field($_POST['id']), '_wpcf_access_group', true);
 		$model = TAccess_Loader::get('MODEL/Access');
 		$settings_access = $model->getAccessTypes();
 
@@ -1533,7 +1666,7 @@ final class Access_Ajax_Helper
 					</select>
 				</p>
 		';
-
+        if ( current_user_can('manage_options') || current_user_can('access_create_new_group') ){
 		$out .= '
 				<p>
 					<input type="radio" name="wpcf-access-group-method" id="wpcf-access-group-method-new-group" value="new_group">
@@ -1541,7 +1674,7 @@ final class Access_Ajax_Helper
 					<input type="text" name="wpcf-access-new-group" class="hidden">
 					<div class="js-error-container"></div>
 				</p>';
-
+        }
 		$out .= '</form>';
 		ob_start();
 		?>
@@ -1559,7 +1692,7 @@ final class Access_Ajax_Helper
 				<button class="button js-dialog-close"><?php _e('Cancel', 'wpcf_access')?></button>
 				<button class="button button-primary js-wpcf-process-access-assign-post-to-group"
 						data-error="<?php echo esc_js(__('Group already exists','wpcf_access'))?>"
-						data-id="<?php echo $_POST['id']?>"><?php _e('Assign group', 'wpcf_access')?>
+						data-id="<?php echo esc_attr($_POST['id'])?>"><?php _e('Assign group', 'wpcf_access')?>
 				</button>
 			</div>
 
@@ -1575,6 +1708,12 @@ final class Access_Ajax_Helper
 	 *
 	 */
 	public static function wpcf_process_select_access_group_for_post_ajax() {
+    
+        if ( !current_user_can('manage_options') && !current_user_can('access_change_post_group') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
@@ -1584,19 +1723,23 @@ final class Access_Ajax_Helper
 
 		if ( $_POST['methodtype'] == 'existing_group' ){
 
-			update_post_meta( $_POST['id'], '_wpcf_access_group', $_POST['group']);
+			update_post_meta( sanitize_text_field($_POST['id']), '_wpcf_access_group', sanitize_text_field($_POST['group']));
 			if ( $_POST['group'] != ''){
 			$message = sprintf(
-					__( '<p><strong>%s</strong> permissions will be applied to this post.', 'wpcf_access' ), $settings_access[$_POST['group']]['title'] ).'</p>
-						<p><a href="admin.php?page=types_access#'.$_POST['group'].'">'.
-					sprintf(__( 'Edit %s group privileges', 'wpcf_access' ), $settings_access[$_POST['group']]['title']).'</a></p>';
+					__( '<p><strong>%s</strong> permissions will be applied to this post.', 'wpcf_access' ), esc_attr($settings_access[$_POST['group']]['title']) ).'</p>
+						<p><a href="admin.php?page=types_access#'.esc_attr($_POST['group']).'">'.
+					sprintf(__( 'Edit %s group privileges', 'wpcf_access' ), $settings_access[sanitize_text_field($_POST['group'])]['title']).'</a></p>';
 			}else{
 				$message =  __( 'No group selected.', 'wpcf_access' );
 			}
 		}else{
+            if ( !current_user_can('manage_options') && !current_user_can('access_create_new_group') ){
+                 _e('There are security problems. You do not have permissions.','wpcf_access');
+                die();
+            }
 			$nice = sanitize_title('wpcf-custom-group-'.$_POST['new_group']);
 			$groups[$nice] = array(
-				'title' => $_POST['new_group'],
+				'title' => sanitize_text_field($_POST['new_group']),
 				'mode' => 'permissions',
 				'__permissions' => array( 'read' => array('role' => 'guest')),
 				'permissions' => array( 'read' => array('role' => 'guest')),
@@ -1613,14 +1756,16 @@ final class Access_Ajax_Helper
 				echo 'error';
 				die();
 			}
-			update_post_meta( $_POST['id'], '_wpcf_access_group', $nice);
+			update_post_meta( sanitize_text_field($_POST['id']), '_wpcf_access_group', $nice);
 			TAccess_Loader::load('CLASS/Admin_Edit');
 			$roles = Access_Helper::wpcf_get_editable_roles();
 			$settings_access = array_merge( $settings_access, $groups);
 			$model->updateAccessTypes( $settings_access );
 			$message = sprintf(
-					__( '<p><strong>%s</strong> permissions will be applied to this post.', 'wpcf_access' ), $_POST['new_group'] ).'</p>
-						<p><a href="admin.php?page=types_access#'.$nice.'">'.sprintf(__( 'Edit %s group privileges', 'wpcf_access' ), $_POST['new_group']).'</a></p>';
+					__( '<p><strong>%s</strong> permissions will be applied to this post.', 'wpcf_access' ), esc_attr($_POST['new_group']) ).'</p>';
+                if ( current_user_can('manage_options') ){
+                    $message .= '<p><a href="admin.php?page=types_access#'.$nice.'">'.sprintf(__( 'Edit %s group privileges', 'wpcf_access' ), esc_attr($_POST['new_group']) ).'</a></p>';
+                }         
 		}
 
 		print $message;
@@ -1631,11 +1776,17 @@ final class Access_Ajax_Helper
 	 * Show popup for custom roles: caps
 	 */
 	public static function wpcf_access_change_role_caps_ajax(){
+    
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
         }
-		$role = $_POST['role'];
+		$role = sanitize_text_field($_POST['role']);
 		$out = '<form method="#" id="wpcf-access-set_error_page">';
 		$wordpress_caps = getDefaultWordpressCaps();
 		$model = TAccess_Loader::get('MODEL/Access');
@@ -1666,9 +1817,18 @@ final class Access_Ajax_Helper
 			}
 			$out .= '</label></p>';
 		}
-
+        
+        $access_caps = array( 'access_change_post_group'=>__('Select access group for content','wpcf_access'), 'access_create_new_group'=>__('Create new access groups','wpcf_access') );
+        $out .= '<h3>'.__('Access capabilities','wpcf_access').'</h3>';
+		foreach ($access_caps as $cap => $cap_info){
+				$checked = ( isset($role_caps[$cap]) && $role_caps[$cap] == 1 )?' checked="checked" ':'';
+				$out .= '<p><label for="cap_'.$cap.'"><input type="checkbox" name="current_role_caps[]" value="cap_'.$cap.'" id="cap_'.$cap.'" '.$checked.'>
+				'.$cap.'<br><small>'. $cap_info .'</small></label></p>';
+		}
+		
+        
 		//Check if WPMl is installed
-		if( defined('ICL_SITEPRESS_VERSION') and ICL_SITEPRESS_VERSION >= 3.1){
+		if( defined('ICL_SITEPRESS_VERSION') && ICL_SITEPRESS_VERSION >= 3.1){
 			$out .= '<h3>'.__('WPML capabilities','wpcf_access').'</h3>';
 			foreach ($wpml_caps_list as $cap => $cap_info){
 				$checked = ( isset($role_caps[$cap]) && $role_caps[$cap] == 1 )?' checked="checked" ':'';
@@ -1695,6 +1855,17 @@ final class Access_Ajax_Helper
 				$checked = ( isset($role_caps[$cap]) && $role_caps[$cap] == 1 )?' checked="checked" ':'';
 				$out .= '<p><label for="cap_'.$cap.'"><input type="checkbox" name="current_role_caps[]" value="cap_'.$cap.'" id="cap_'.$cap.'" '.$checked.'>
 				'.$cap.'<br><small>'. $cap_info .'</small></label></p>';
+			}
+		}
+        
+        
+		if ( class_exists('WPDD_Layouts_Users_Profiles') ){
+
+			$out .= '<h3>'.__('Layouts capabilities','wpcf_access').'</h3>';
+			foreach (WPDD_Layouts_Users_Profiles::ddl_get_capabilities() as $cap => $cap_info){
+				$checked = ( isset($role_caps[$cap]) && $role_caps[$cap] == 1 )?' checked="checked" ':'';
+				$out .= '<p><label for="cap_'.$cap.'"><input type="checkbox" name="current_role_caps[]" value="cap_'.$cap.'" id="cap_'.$cap.'" '.$checked.'>
+				'.$cap.'<br><small> '. $cap_info .'</small></label></p>';
 			}
 		}
 
@@ -1734,12 +1905,12 @@ final class Access_Ajax_Helper
 				</p>
 				<p class="wpcf-access-buttons-wrap wpcf-access-buttons-wrap-left">
 					<button class="button js-wpcf-new-cap-cancel"><?php _e('Cancel','wpcf_access')?></button>
-					<button class="button button-primary js-wpcf-new-cap-add" disabled="disabled" data-error="<?php _e('Only lowercase letters, numbers and _ allowed in capability name','wpcf_access')?>"><?php _e('Add','wpcf_access')?></button>
+					<button class="button button-primary js-wpcf-new-cap-add" disabled="disabled" data-error="<?php echo esc_attr(__('Only lowercase letters, numbers and _ allowed in capability name','wpcf_access'))?>"><?php _e('Add','wpcf_access')?></button>
 					<span class="ajax-loading spinner js-new-cap-spinner"></span>
 				</p>
 			</div>
 		</div>
-		<input type="hidden" value="<?php echo $role?>" class="js-wpcf-current-edit-role">
+		<input type="hidden" value="<?php echo esc_attr($role)?>" class="js-wpcf-current-edit-role">
 		<?php
 		$out .= ob_get_contents();
 		ob_end_clean();
@@ -1759,7 +1930,7 @@ final class Access_Ajax_Helper
 
         <div class="wpv-dialog-footer">
             <button class="button js-dialog-close"><?php _e('Cancel','wpcf_access')?></button>
-            <button class="button button-primary js-wpcf-access-role-caps-process" data-role="<?php echo $role?>"><?php _e('Change permissions','wpcf_access')?></button>
+            <button class="button button-primary js-wpcf-access-role-caps-process" data-role="<?php echo esc_attr($role)?>"><?php _e('Change permissions','wpcf_access')?></button>
         </div>
 
     	</div>
@@ -1774,15 +1945,21 @@ final class Access_Ajax_Helper
 	 * Proccess custom role caps
 	 */
 	public static function wpcf_process_change_role_caps_ajax(){
+        
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
         }
 
-		$role = $_POST['role'];
+		$role = sanitize_text_field($_POST['role']);
 		$caps = '';
 		if ( isset($_POST['caps']) ){
-			$caps = $_POST['caps'];
+			$caps = array_map('sanitize_text_field',$_POST['caps']);
 		}
 
 		TAccess_Loader::load('CLASS/Admin_Edit');
@@ -1795,7 +1972,7 @@ final class Access_Ajax_Helper
 		$wpml_caps_list = get_wpml_caps();
 		$custom_caps = get_option('wpcf_access_custom_caps');
 		//$toolset_caps_list = get_toolset_caps();
-
+        
 		$role_data = get_role($role);
 		for ($i=0, $caps_limit = count($default_wordpress_caps);$i<$caps_limit;$i++)
         {
@@ -1824,6 +2001,25 @@ final class Access_Ajax_Helper
 				}
 			}
 		}
+        
+        if ( class_exists('WPDD_Layouts_Users_Profiles') ){
+			foreach (WPDD_Layouts_Users_Profiles::ddl_get_capabilities() as $cap => $cap_info){
+                if ( isset( $access_roles[$role]['caps'][$cap] ) ){
+                    unset( $access_roles[$role]['caps'][$cap] );
+					$role_data->remove_cap($cap);
+                }
+			}
+		}
+        
+        $access_caps = array( 'access_change_post_group'=>__('Select access group for content','wpcf_access'), 'access_create_new_group'=>__('Create new access groups','wpcf_access') );
+        foreach ($access_caps as $cap => $cap_info){
+			if ( isset( $access_roles[$role]['caps'][$cap] ) ){
+				unset( $access_roles[$role]['caps'][$cap] );
+				$role_data->remove_cap($cap);
+			}	
+		}
+        
+        
 		/*
 		foreach ($toolset_caps_list as $cap => $cap_info){
 			if ( isset( $access_roles[$role]['caps'][$cap] ) ){
@@ -1847,12 +2043,18 @@ final class Access_Ajax_Helper
 	 * Show popup for custom roles: caps (read only)
 	 */
 	public static function wpcf_access_show_role_caps_ajax(){
+    
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
         }
 
-		$role = $_POST['role'];
+		$role = sanitize_text_field($_POST['role']);
 
 		$out = '<form method="#">';
 		$role_info = get_role($role);
@@ -1914,6 +2116,12 @@ final class Access_Ajax_Helper
 	 * Create new custom capability
 	 */
 	public static function wpcf_create_new_cap(){
+        
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
@@ -1930,8 +2138,8 @@ final class Access_Ajax_Helper
 		$default_wordpress_caps = getDefaultWordpressCaps();
 		$wocommerce_caps = get_woocommerce_caps();
 		$wpml_caps_list = get_wpml_caps();
-		$cap = $_POST['cap_name'];
-		$description = $_POST['cap_description'];
+		$cap = sanitize_text_field($_POST['cap_name']);
+		$description = sanitize_text_field($_POST['cap_description']);
 
 		if ( isset($custom_caps[$cap]) || isset($default_wordpress_caps[$cap]) || isset($wocommerce_caps[$cap]) || isset($wpml_caps_list[$cap]) ){
 			$output = array('error', __('This capability already exists in your site','wpcf_access'));
@@ -1957,6 +2165,12 @@ final class Access_Ajax_Helper
 	 * Create new custom capability
 	 */
 	public static function wpcf_delete_cap(){
+        
+        if ( !current_user_can('manage_options') ){
+             _e('There are security problems. You do not have permissions.','wpcf_access');
+             die();
+        }
+        
 		if (!isset($_POST['wpnonce']) || !wp_verify_nonce($_POST['wpnonce'],
                         'wpcf-access-error-pages')) {
             die('verification failed');
@@ -1968,11 +2182,11 @@ final class Access_Ajax_Helper
 			$custom_caps = array();
 		}
 		$output = '';
-		$edit_role = $_POST['edit_role'];
+		$edit_role = sanitize_text_field($_POST['edit_role']);
 		$model = TAccess_Loader::get('MODEL/Access');
 		$access_roles = $model->getAccessRoles();
-		$cap = $_POST['cap_name'];
-		$remove = $_POST['remove'];
+		$cap = sanitize_text_field($_POST['cap_name']);
+		$remove = sanitize_text_field($_POST['remove']);
 		$roles = '';
 		if ( $remove == 0 ){
 			foreach ($access_roles as $role => $role_info){
@@ -1985,7 +2199,7 @@ final class Access_Ajax_Helper
 				$output = '<div class="js-wpcf-removediv js-removediv_'.$cap.'">'
 						. '<p>' . __( 'The following role(s) have this capability:', 'wpcf_access' ) . '</p>' . $roles;
 				$output .= '<p><button class="js-wpcf-remove-cap-cancel button" data-cap="'.$cap.'">'.__( 'Cancel', 'wpcf_access' ).'</button> '
-						. '<button class="js-wpcf-remove-cap-anyway button-primary button" data-remove="1" data-object="'.$_POST['remove_div'].'" data-cap="'.$cap.'">' . __( 'Delete anyway', 'wpcf_access' ) . '</button> '
+						. '<button class="js-wpcf-remove-cap-anyway button-primary button" data-remove="1" data-object="'.sanitize_text_field($_POST['remove_div']).'" data-cap="'.$cap.'">' . __( 'Delete anyway', 'wpcf_access' ) . '</button> '
 						. '<span class="ajax-loading spinner"></span>'
 						. '</p></div>';
 			}

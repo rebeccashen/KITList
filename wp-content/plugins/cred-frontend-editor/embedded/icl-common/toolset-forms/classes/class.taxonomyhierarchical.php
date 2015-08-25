@@ -2,9 +2,9 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/toolset-forms/classes/class.taxonomyhierarchical.php $
- * $LastChangedDate: 2015-03-13 11:00:53 +0000 (Fri, 13 Mar 2015) $
- * $LastChangedRevision: 32293 $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/toolset-forms/classes/class.taxonomyhierarchical.php $
+ * $LastChangedDate: 2015-04-23 10:53:39 +0000 (Thu, 23 Apr 2015) $
+ * $LastChangedRevision: 33072 $
  * $LastChangedBy: francesco $
  *
  */
@@ -303,7 +303,8 @@ class WPToolset_Field_Taxonomyhierarchical extends WPToolset_Field_Textfield {
                     '#before' => sprintf('<li class="%s">', implode(' ', $clases)),
                     '#after' => '</li>',
                     '#attributes' => array(
-                        'data-parent' => $parent
+                        'data-parent' => $parent,
+                        'data-value' => $names[$tid]
                     ),
                     '#pattern' => '<BEFORE><PREFIX><ELEMENT><LABEL><ERROR><SUFFIX><DESCRIPTION><AFTER>',
                 );

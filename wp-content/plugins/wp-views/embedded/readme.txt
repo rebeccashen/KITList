@@ -13,6 +13,19 @@ You're done!
 
 = Changelog =
 
+v. 1.8.1
+
+	- Fixed an inconsistency on query filters getting values from shortcode attributes - empty values should apply no filter.
+	
+	- Fixed a bug on Views listing users and filtering by specific users set on a URL parameter.
+	
+	- Fixed a bug about "lower than" options on the query filters by custom field, usermeta field and post date.
+	  https://wp-types.com/forums/topic/custom-date-filter-stopped-working/
+	
+	- Fixed the frameworks integration - frameworks using an option to store values were not registered correctly.
+		
+	- Improved the compatibility with Layouts related to archives pagination.
+
 v. 1.8 aka R2-D2
 
 	- Added a complete GUI for the Views Embedded plugin.

@@ -96,7 +96,7 @@ class WP_Views_framework_api {
 			$cap = 'manage_options';
 			global $WP_Views;
 			if ( ! $WP_Views->is_embedded() ) {
-				add_submenu_page( 'views', __( 'Framework', 'wpv-views' ), __( 'Framework', 'wpv-views' ), $cap, 'views-framework-integration', array( $this, 'framework_integration_page' ) );
+				add_submenu_page( 'views', __( 'Views Integration', 'wpv-views' ), __( 'Views Integration', 'wpv-views' ), $cap, 'views-framework-integration', array( $this, 'framework_integration_page' ) );
 			}
 		}
 	}
@@ -188,7 +188,7 @@ class WP_Views_framework_api {
 				?></code></pre>
 				<p><?php echo sprintf(
 					__( 'For details, check the <a href="%s" title="Documentation for Views theme framework integration">documentation page</a>', 'wpv-views' ),
-					'http://www.google.es'
+					WPV_LINK_FRAMEWORK_INTEGRATION_DOCUMENTATION
 				); ?></p>
 				</div>
 				<?php
@@ -221,37 +221,38 @@ class WP_Views_framework_api {
 	*
 	* AJAX callback for saving the VIews theme framework integration settings
 	*
-	* @since 1.8.9
+	* @since 1.8.0
 	*/
 	
 	function wpv_update_framework_integration_keys() {
 		if ( ! wp_verify_nonce( $_POST['wpv_framework_integration_nonce'], 'wpv_framework_integration_nonce' ) ) {
-            die( "Security check" );
+            wp_send_json_error();
         }
 		$fw_keys = $this->get_framework_keys();
 		if ( 
-			isset( $_POST['csaction'] ) 
-			&& isset( $_POST['cstarget'] ) 
+			isset( $_POST['update_action'] ) 
+			&& isset( $_POST['update_tag'] ) 
 		) {
-            switch ( $_POST['csaction'] ) {
+            $update_tag = sanitize_text_field( $_POST['update_tag'] );
+			switch ( $_POST['update_action'] ) {
                 case 'add':
-                    if ( !in_array( $_POST['cstarget'], $fw_keys ) ) {
-                        $fw_keys[] = $_POST['cstarget'];
+                    if ( ! in_array( $update_tag, $fw_keys ) ) {
+                        $fw_keys[] = $update_tag;
                     }
                     break;
                 case 'delete':
-                    $key = array_search( $_POST['cstarget'], $fw_keys );
+                    $key = array_search( $update_tag, $fw_keys );
                     if ( $key !== false ) {
                         unset( $fw_keys[$key] );
                     }
                     break;
             }
             $this->set_framework_keys( $fw_keys );
-            echo 'ok';
+            wp_send_json_success();
         } else {
-            echo 'error';
+            wp_send_json_error();
         }
-		die();
+		wp_send_json_error();
 	}
 	
 	/**
@@ -498,7 +499,7 @@ class WP_Views_framework_api {
 						$return = call_user_func( $fw_name, $key );
 						break;
 					case 'option':
-						$framework_options = get_option( $framework_data['api_handler'], array() );
+						$framework_options = get_option( $this->framework_data['api_handler'], array() );
 						if ( isset( $framework_options[$key] ) ) {
 							$return = $framework_options[$key];
 						}

@@ -8,7 +8,7 @@ Cred fields model
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/models/Fields.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/models/Fields.php $
  * $LastChangedDate: 2015-03-31 13:30:58 +0000 (Tue, 31 Mar 2015) $
  * $LastChangedRevision: 32734 $
  * $LastChangedBy: francesco $

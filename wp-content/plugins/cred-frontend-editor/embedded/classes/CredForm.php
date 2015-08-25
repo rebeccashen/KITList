@@ -2,9 +2,9 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/classes/CredForm.php $
- * $LastChangedDate: 2015-03-20 09:15:22 +0000 (Fri, 20 Mar 2015) $
- * $LastChangedRevision: 32512 $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/classes/CredForm.php $
+ * $LastChangedDate: 2015-05-05 10:01:32 +0000 (Tue, 05 May 2015) $
+ * $LastChangedRevision: 33226 $
  * $LastChangedBy: francesco $
  *
  */
@@ -1546,6 +1546,19 @@ class CredForm {
             $this->field_messages[$form_id][$field_slug] = $message;
     }
     
+    function add_success_message($message, $field_slug = 'generic') {
+        $form_id = $this->form_id;
+        if ($message == '') {
+            return;
+        }
+        if (!isset($this->succ_messages[$form_id]))
+            $this->succ_messages[$form_id] = array();
+        if (!isset($this->succ_messages[$form_id][$field_slug]))
+            $this->succ_messages[$form_id][$field_slug] = array();
+        if (!empty($message) && !in_array(trim($message), $this->succ_messages[$form_id]))
+            $this->succ_messages[$form_id][$field_slug] = $message;
+    }
+    
     function add_preview_message($message) {
         $this->preview_messages[] = $message;
     }
@@ -1574,6 +1587,21 @@ class CredForm {
         foreach ($field_messages as $id_field => $text) {
             //if ($id_field!='generic') $text = "<b>".$id_field."</b>: ".$text;
             $msgs .= "<label id=\"lbl_$id_field\" class=\"wpt-form-error\">$text</label><div style='clear:both;'></div>";
+        }
+        return $msgs;
+    }
+    
+    function getFieldsSuccessMessages() {
+        $form_id = $this->form_id;
+        //
+        $msgs = "";
+        if (!$this->succ_messages)
+            return $msgs;
+        
+        $field_messages = $this->succ_messages[$form_id];        
+        foreach ($field_messages as $id_field => $text) {
+            //if ($id_field!='generic') $text = "<b>".$id_field."</b>: ".$text;
+            $msgs .= "<label id=\"lbl_$id_field\" class=\"wpt-form-success\">$text</label><div style='clear:both;'></div>";
         }
         return $msgs;
     }

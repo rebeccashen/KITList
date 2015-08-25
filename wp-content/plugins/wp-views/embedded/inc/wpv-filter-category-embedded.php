@@ -78,7 +78,10 @@ function wpv_filter_post_category( $query, $view_settings ) {
 						$attribute_format = 'name';
 					}
 					$view_attrs = $WP_Views->get_view_shortcodes_attributes();
-					if ( isset( $view_attrs[$attribute] ) ) {
+					if ( 
+						isset( $view_attrs[$attribute] ) 
+						&& '' != $view_attrs[$attribute]
+					) {
 						$terms = explode( ',', $view_attrs[$attribute] );
 						$term_ids = array();
 						foreach ( $terms as $t ) {

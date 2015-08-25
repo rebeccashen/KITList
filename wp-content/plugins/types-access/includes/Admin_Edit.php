@@ -16,6 +16,18 @@ public static function wpcf_access_admin_edit_access($enabled = true)
     $shortcuts = array();
     $output = '';
     $output .= '<form id="wpcf_access_admin_form" method="post" action="">';
+    $show_message = get_option('wpcf_hide_max_fields_message',0);
+    $fields_limit = ini_get('max_input_vars');
+    if ( $show_message == 0 ){
+        $fields_limit = 99999999999;
+    }
+    $output .= '<input type="hidden" value="'.$fields_limit.'" name="max_input_vars" id="js-max-input-vars"
+        data-message="'. esc_js(__('The changes on this page may not save because it requires more input variables. Please modify the "max_input_vars" setting in your php.ini or .htaccess files to <!NUM!> or more.', 'wpcf_access')) .'"
+        data-btn="'.__('Ok', 'wpcf_access').'"
+        data-header="'.__('Warning', 'wpcf_access').'" 
+        data-hide_error="'.__("Don't show this message again", 'wpcf_access').'"
+        />';
+      
 	$output .= '<div class="js-submit-button-all"><input type="submit"
 		   value="'. __('Save everything', 'wpcf_access').'"
 		   id="submit-999"
@@ -108,7 +120,7 @@ public static function wpcf_access_admin_edit_access($enabled = true)
 				$type_data['labels']['name'],
 				$type_slug);
 
-			$output .= '<div class="wpcf-access-type-item '. $container_class .' wpcf-access-post-type-name-' . $type_slug . ' js-wpcf-access-type-item">';
+                $output .= '<div class="wpcf-access-type-item '. $container_class .' wpcf-access-post-type-name-' . $type_slug . ' js-wpcf-access-type-item">';
 				$output .= '<h4>' . $type_data['labels']['name'] . '</h4>';
 				$output .= '<div class="wpcf-access-mode">';
 				$output .= '<p class="wpcf-access-mode-control">

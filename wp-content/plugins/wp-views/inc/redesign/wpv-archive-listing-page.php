@@ -31,7 +31,7 @@ function wpv_admin_archive_listing_page() {
 					if ( $WPV_view_archive_loop->check_archive_loops_exists() ) {
 						?>
 						<a href="#"
-								data-target="<?php echo add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url('admin-ajax.php') ); ?>"
+								data-target="<?php echo esc_url( add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url('admin-ajax.php') ) ); ?>"
 								class="add-new-h2 js-wpv-views-archive-add-new wpv-views-archive-add-new">
 							<?php _e('Add new WordPress Archive','wpv-views') ?>
 						</a>
@@ -71,13 +71,13 @@ function wpv_admin_archive_listing_page() {
 				<div class="wpv-admin-tabs">
 					<ul class="wpv-admin-tabs-links">
 						<li>
-							<a href="<?php echo add_query_arg( array( 'page' => 'view-archives' ), admin_url( 'admin.php' ) ); ?>"
+							<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'view-archives' ), admin_url( 'admin.php' ) ) ); ?>"
 									<?php wpv_current_class( ! $arrange_by_usage ); ?> >
 								<?php _e( 'Arrange by name', 'wpv-views' ); ?>
 							</a>
 						</li>
 						<li>
-							<a href="<?php echo add_query_arg( array( 'page' => 'view-archives', 'arrangeby' => 'usage' ), admin_url( 'admin.php' ) ); ?>"
+							<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'view-archives', 'arrangeby' => 'usage' ), admin_url( 'admin.php' ) ) ); ?>"
 									<?php wpv_current_class( $arrange_by_usage ); ?> >
 								<?php _e( 'Arrange by usage', 'wpv-views' ); ?>
 							</a>
@@ -105,8 +105,8 @@ function wpv_admin_archive_listing_page() {
 						?>
 						<p class="add-new-view js-add-new-view">
 							<a class="button js-wpv-views-archive-add-new wpv-views-archive-add-new"
-									data-target="<?php echo add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url('admin-ajax.php') ); ?>"
-									href="<?php echo add_query_arg( array( 'page' => 'view-archives-new' ), admin_url( 'admin.php' ) ); ?>">
+									data-target="<?php echo esc_url( add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url('admin-ajax.php') ) ); ?>"
+									href="<?php echo esc_url( add_query_arg( array( 'page' => 'view-archives-new' ), admin_url( 'admin.php' ) ) ); ?>">
 								<i class="icon-plus"></i><?php _e('Add new WordPress Archive','wpv-views') ?>
 							</a>
 						</p>
@@ -142,8 +142,8 @@ function wpv_admin_archive_listing_page() {
 							<p><?php _e( 'WordPress Archives let you customize the output of standard Archive pages.', 'wpv-views' );?></p>
 							<p>
 							<a class="button js-wpv-views-archive-create-new"
-									data-target="<?php echo add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url( 'admin-ajax.php' ) ); ?>"
-									href="<?php echo add_query_arg( array( 'page' => 'view-archives-new' ), admin_url( 'admin.php' ) ); ?>">
+									data-target="<?php echo esc_url( add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url( 'admin-ajax.php' ) ) ); ?>"
+									href="<?php echo esc_url( add_query_arg( array( 'page' => 'view-archives-new' ), admin_url( 'admin.php' ) ) ); ?>">
 								<i class="icon-plus"></i>
 								<?php _e( 'Create your first WordPress Archive', 'wpv-views' );?>
 							</a>
@@ -256,7 +256,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 
 				printf(
 						'<a href="%s" %s >%s</a> (%s) |',
-						add_query_arg( array( 'page' => 'view-archives', 'status' => 'publish' ), admin_url( 'admin.php' ) ),
+						esc_url( add_query_arg( array( 'page' => 'view-archives', 'status' => 'publish' ), admin_url( 'admin.php' ) ) ),
 						$is_plain_publish_current_status ? 'class="current"' : '',
 						__( 'Published', 'wpv-views' ),
 						$views_pre_query_data['published_count'] );
@@ -272,7 +272,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 
 				printf(
 						'<a href="%s" %s >%s</a> (%s)',
-						add_query_arg( array( 'page' => 'view-archives', 'status' => 'trash' ), admin_url( 'admin.php' ) ),
+						esc_url( add_query_arg( array( 'page' => 'view-archives', 'status' => 'trash' ), admin_url( 'admin.php' ) ) ),
 						$is_plain_trash_current_status ? 'class="current"' : '',
 						__( 'Trash', 'wpv-views' ),
 						$views_pre_query_data['trashed_count'] );
@@ -458,9 +458,9 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 											// Title + edit link
 											printf(
 													'<a href="%s">%s</a>',
-													add_query_arg(
+													esc_url( add_query_arg(
 															array( 'page' => 'view-archives-editor', 'view_id' => $post->ID ),
-															admin_url( 'admin.php' ) ),
+															admin_url( 'admin.php' ) ) ),
 													trim( $post->post_title ) );
 										}
 									?>
@@ -484,9 +484,9 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 									if ( 'publish' == $current_post_status ) {
 										$row_actions['edit'] = sprintf(
 												'<a href="%s">%s</a>',
-												add_query_arg(
+												esc_url( add_query_arg(
 														array( 'page' => 'view-archives-editor', 'view_id' => $post->ID ),
-														admin_url( 'admin.php' ) ),
+														admin_url( 'admin.php' ) ) ),
 												__( 'Edit', 'wpv-views' ) );
 										/* Note that hash in <a href="#"> is present so the link behaves like a link.
 										 * <a href=""> causes problems with colorbox and with mere <a> the mouse cursor
@@ -577,7 +577,7 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 			?>
 			<p class="add-new-view js-add-new-view">
 				<a class="button js-wpv-views-archive-add-new wpv-views-archive-add-new"
-						data-target="<?php echo add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url( 'admin-ajax.php' ) );?>"
+						data-target="<?php echo esc_url( add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url( 'admin-ajax.php' ) ) );?>"
 						href="">
 					<i class="icon-plus"></i><?php _e('Add new WordPress Archive','wpv-views') ?>
 				</a>
@@ -640,8 +640,8 @@ function wpv_admin_archive_listing_name( $views_pre_query_data, $current_post_st
 							// "Create your first archive" link
 							printf(
 									'<a data-target="%s" href="%s" class="button js-wpv-views-archive-create-new"><i class="icon-plus"></i> %s</a>',
-									add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url( 'admin-ajax.php' ) ),
-									add_query_arg( array( 'page' => 'view-archives-new' ), admin_url( 'admin.php' ) ),
+									esc_url( add_query_arg( array( 'action' => 'wpv_create_wp_archive_button' ), admin_url( 'admin-ajax.php' ) ) ),
+									esc_url( add_query_arg( array( 'page' => 'view-archives-new' ), admin_url( 'admin.php' ) ) ),
 									__( 'Create your first WordPress Archive', 'wpv-views' ) );
 						?>
 					</p>
@@ -718,9 +718,9 @@ function wpv_admin_archive_listing_usage() {
 									<?php
 										printf(
 												'<a href="%s">%s</a>',
-												add_query_arg(
+												esc_url( add_query_arg(
 														array( 'page' => 'view-archives-editor', 'view_id' => $post->ID ),
-														admin_url( 'admin.php' ) ),
+														admin_url( 'admin.php' ) ) ),
 												$post->post_title );
 									?>
 								</td>
@@ -772,9 +772,9 @@ function wpv_admin_archive_listing_usage() {
 										<?php
 											printf(
 													'<a href="%s">%s</a>',
-													add_query_arg(
+													esc_url( add_query_arg(
 															array( 'page' => 'view-archives-editor', 'view_id' => $post->ID ),
-															admin_url( 'admin.php' ) ),
+															admin_url( 'admin.php' ) ) ),
 													$post->post_title );
 										?>
 									</td>
@@ -828,9 +828,9 @@ function wpv_admin_archive_listing_usage() {
 									<?php
 										printf(
 												'<a href="%s">%s</a>',
-												add_query_arg(
+												esc_url( add_query_arg(
 														array( 'page' => 'view-archives-editor', 'view_id' => $post->ID ),
-														admin_url( 'admin.php' ) ),
+														admin_url( 'admin.php' ) ) ),
 												$post->post_title );
 									?>
 								</td>

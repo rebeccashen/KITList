@@ -1,4 +1,35 @@
 -------------------------------------------------------------------------------------------------------------------
+Views 1.8.1
+	- Fixed an inconsistency on query filters getting values from shortcode attributes - empty values should apply no filter.
+	
+	- Fixed the export workflow - some setting were not exported.
+	
+	- Fixed an issue about old Views which do not have a "view-query-mode" setting that can not be edited.
+	  https://wp-types.com/forums/topic/after-1-8-update-i-get-this-msg-you-tried-to-edit-a-view-that-doesnt-exist/ 
+	  https://wp-types.com/forums/topic/the-latest-update-of-wp-views-1-8-is-preventing-me-editing-existing-views/
+	
+	- Fixed a bug about removing inline Content Templates from a View.
+	
+	- Fixed a bug about bulk trashing two or more CT when one of them has posts assigned - there was a PHP error for a $nonce variable not set.
+	
+	- Fixed a bug on Views listing users and filtering by specific users set on a URL parameter.
+	
+	- Fixed a bug about "lower than" options on the query filters by custom field, usermeta field and post date.
+	  https://wp-types.com/forums/topic/custom-date-filter-stopped-working/
+	
+	- Fixed the frameworks integration - frameworks using an option to store values were not registered correctly.
+	
+	- Fixed an issue about Content Templates saved without slug.
+	
+	- Fixed an issue that avoided changing the WordPress Archive assigned to an archive loop from the admin listing page.
+	
+	- Adjusted the documentation links for the new date query filter and the frameworks integration functionality.
+	
+	- Removed the "Add new" button and the "Trash" link from the Content Template edit page, to avoid inconsistencies.
+	
+	- Improved the compatibility with Layouts related to archives pagination.
+
+-------------------------------------------------------------------------------------------------------------------
 Views 1.8 aka R2-D2
 	- Added third-party theme frameworks integration.
 	

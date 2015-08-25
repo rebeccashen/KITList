@@ -125,8 +125,8 @@ public static function wpcf_access_post_save($post_id)
         }
     }
     $model = TAccess_Loader::get('MODEL/Access');
-    if (!empty($_POST['types_access'])) {
-        $model->updateAccessMeta($post_id, $_POST['types_access']);
+    if ( isset($_POST['types_access']) && !empty($_POST['types_access'])) {
+        $model->updateAccessMeta($post_id, sanitize_text_field($_POST['types_access']));
     } else {
         $model->deleteAccessMeta($post_id);
     }

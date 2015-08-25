@@ -3,7 +3,7 @@
 /**
  * produce debug information
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/debug/debug-information.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/debug/debug-information.php $
  * $LastChangedDate: 2014-08-13 01:38:06 +0000 (Wed, 13 Aug 2014) $
  * $LastChangedRevision: 25892 $
  * $LastChangedBy: bruce $

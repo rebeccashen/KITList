@@ -3,8 +3,8 @@
   * produce debug information
   *
   * $HeadURL: https://www.onthegosystems.com/misc_svn/common/trunk/debug/functions_debug_information.php $
-  * $LastChangedDate: 2014-08-12 15:40:07 +0000 (Tue, 12 Aug 2014) $
-  * $LastChangedRevision: 25886 $
+  * $LastChangedDate: 2015-03-12 13:46:29 +0000 (Thu, 12 Mar 2015) $
+  * $LastChangedRevision: 32265 $
   * $LastChangedBy: marcin $
   *
   */
@@ -23,7 +23,7 @@ class ICL_Debug_Information
 		if (empty($info)) {
 			$info = array('core', 'plugins', 'theme', 'extra-debug');
 		}
-	
+
 		$output = array();
 		foreach ($info as $type) {
 			switch ($type) {
@@ -42,12 +42,17 @@ class ICL_Debug_Information
 			}
 		}
 		return $output;
-	}
-	
+    }
+
+    /**
+     *
+     * @global object $wpdb
+     *
+     */
 	function get_core_info() {
-		
+
 		global $wpdb;
-		
+
 		$core = array(
 			'Wordpress' => array(
 				'Multisite' => is_multisite() ? 'Yes' : 'No',
@@ -77,12 +82,12 @@ class ICL_Debug_Information
 	}
 
 	function get_plugins_info() {
-		
+
 		if ( ! function_exists( 'get_plugins' ) ) {
 			$admin_includes_path = str_replace( site_url('/', 'admin'), ABSPATH, admin_url('includes/', 'admin') );
 			require_once $admin_includes_path . 'plugin.php';
 		}
-		
+
 		$plugins = get_plugins();
 		$active_plugins = get_option('active_plugins');
 		$active_plugins_info = array();
@@ -92,7 +97,7 @@ class ICL_Debug_Information
 				$active_plugins_info[$plugin] = $plugins[$plugin];
 			}
 		}
-		
+
 		$mu_plugins = get_mu_plugins();
 
 		$dropins = get_dropins();
@@ -102,12 +107,12 @@ class ICL_Debug_Information
 			'mu_plugins' => $mu_plugins,
 			'dropins' => $dropins,
 		);
-		
+
 		return $output;
 	}
-	
+
 	function get_theme_info() {
-		
+
 		if ( get_bloginfo( 'version' ) < '3.4' ) {
 			$current_theme = get_theme_data( get_stylesheet_directory() . '/style.css' );
 			$theme = $current_theme;
@@ -127,28 +132,33 @@ class ICL_Debug_Information
 				'DomainPath' => $current_theme->DomainPath,
 			);
 		}
-		
+
 		return $theme;
 	}
 
 
-	function do_json_encode($data) {
-		$json_options = 0;
-		if (defined('JSON_HEX_TAG')) {
-			$json_options += JSON_HEX_TAG;
-		}
-		if (defined('JSON_HEX_APOS')) {
-			$json_options += JSON_HEX_APOS;
-		}
-		if (defined('JSON_HEX_QUOT')) {
-			$json_options += JSON_HEX_QUOT;
-		}
-		if (defined('JSON_HEX_AMP')) {
-			$json_options += JSON_HEX_AMP;
-		}
-		if (defined('JSON_UNESCAPED_UNICODE')) {
-			$json_options += JSON_UNESCAPED_UNICODE;
-		}
-		return json_encode($data, $json_options);
-	}
+    function do_json_encode($data)
+    {
+        if (version_compare(phpversion(), '5.3.0', '<')) {
+            return json_encode($data);
+        }
+        $json_options = 0;
+        if (defined('JSON_HEX_TAG')) {
+            $json_options += JSON_HEX_TAG;
+        }
+        if (defined('JSON_HEX_APOS')) {
+            $json_options += JSON_HEX_APOS;
+        }
+        if (defined('JSON_HEX_QUOT')) {
+            $json_options += JSON_HEX_QUOT;
+        }
+        if (defined('JSON_HEX_AMP')) {
+            $json_options += JSON_HEX_AMP;
+        }
+        if (defined('JSON_UNESCAPED_UNICODE')) {
+            $json_options += JSON_UNESCAPED_UNICODE;
+        }
+        return json_encode($data, $json_options);
+    }
+
 }

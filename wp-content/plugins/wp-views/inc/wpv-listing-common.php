@@ -507,7 +507,7 @@ function wpv_prepare_view_listing_query( $view_query_mode, $listed_post_status,
 function wpv_admin_view_listing_message_undo( $undo_link, $message_name, $affected_ids ) {
 	if( ( 'trashed' == $message_name ) && !empty( $affected_ids ) ) {
 		$undo_link = sprintf( '<a href="%s"	class="js-wpv-untrash" data-ids="%s" data-nonce="%s">%s</a>',
-				add_query_arg( array( 'page' => 'views', 'untrashed' => count( $affected_ids ) ), admin_url( 'admin.php' ) ),
+				esc_url( add_query_arg( array( 'page' => 'views', 'untrashed' => count( $affected_ids ) ), admin_url( 'admin.php' ) ) ),
 				urlencode( implode( ',', $affected_ids ) ),
 				wp_create_nonce( 'wpv_view_listing_actions_nonce' ),
 				__( 'Undo', 'wpv-views' ) );

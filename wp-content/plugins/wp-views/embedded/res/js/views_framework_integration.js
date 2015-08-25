@@ -57,33 +57,27 @@ WPViews.FrameworkIntegration = function( $ ) {
 				.prop( 'disabled', true );
 			var data = {
 				action: 'wpv_update_framework_integration_keys',
-				csaction: 'add',
-				cstarget: new_slug.val(),
+				update_action: 'add',
+				update_tag: new_slug.val(),
 				wpv_framework_integration_nonce: $( '#wpv_framework_integration_nonce' ).val()
 			};
 			$.ajax({
 				async:false,
 				type:"POST",
+				dataType: "json",
 				url:ajaxurl,
 				data:data,
 				success:function( response ) {
-					if ( ( typeof( response ) !== 'undefined' ) ) {
-						if ( response == 'ok' ) {
-							$( '.js-wpv-add-item-settings-list', parent_container )
-								.append( '<li class="js-' + new_slug.val() + '-item"><span class="">' + new_slug.val() + '</span> <i class="icon-remove-sign js-wpv-framework-slug-delete" data-target="' + new_slug.val() + '"></i></li>' );
-							new_slug.val( '' );
-						} else {
-							$( '.js-wpv-cs-ajaxfail', parent_form ).show();
-							console.log( "Error: WordPress AJAX returned ", response );
-						}
+					if ( response.success ) {
+						$( '.js-wpv-add-item-settings-list', parent_container )
+							.append( '<li class="js-' + new_slug.val() + '-item"><span class="">' + new_slug.val() + '</span> <i class="icon-remove-sign js-wpv-framework-slug-delete" data-target="' + new_slug.val() + '"></i></li>' );
+						new_slug.val( '' );
 					} else {
 						$( '.js-wpv-cs-ajaxfail', parent_form ).show();
-						console.log( "Error: AJAX returned ", response );
 					}
 				},
 				error: function ( ajaxContext ) {
 					$( '.js-wpv-cs-ajaxfail', parent_form ).show();
-					console.log( "Error: ", ajaxContext.responseText );
 				},
 				complete: function() {
 					spinnerContainer.remove();
@@ -102,35 +96,29 @@ WPViews.FrameworkIntegration = function( $ ) {
 		spinnerContainer = $( '<div class="spinner ajax-loader">' ).insertAfter( self.button_declare_add ).show();
 		var data = {
 			action: 'wpv_update_framework_integration_keys',
-			csaction: 'delete',
-			cstarget: thiz,
+			update_action: 'delete',
+			update_tag: thiz,
 			wpv_framework_integration_nonce: $( '#wpv_framework_integration_nonce' ).val()
 		};
 		$.ajax({
 			async:false,
 			type:"POST",
+			dataType: "json",
 			url:ajaxurl,
 			data:data,
 			success:function( response ) {
-				if ( ( typeof( response ) !== 'undefined' ) ) {
-					if ( response == 'ok' ) {
-						$( 'li.js-' + thiz + '-item', parent_container )
-							.addClass( 'remove' )
-							.fadeOut( 'fast', function() { 
-								$( this ).remove(); 
-							});
-					} else {
-						$( '.js-wpv-cs-ajaxfail', parent_container ).show();
-						console.log( "Error: WordPress AJAX returned ", response );
-					}
+				if ( response.success ) {
+					$( 'li.js-' + thiz + '-item', parent_container )
+						.addClass( 'remove' )
+						.fadeOut( 'fast', function() { 
+							$( this ).remove(); 
+						});
 				} else {
 					$( '.js-wpv-cs-ajaxfail', parent_container ).show();
-					console.log( "Error: AJAX returned ", response );
 				}
 			},
 			error: function ( ajaxContext ) {
 				$( '.js-wpv-cs-ajaxfail', parent_container ).show();
-				console.log( "Error: ", ajaxContext.responseText );
 			},
 			complete: function() {
 				spinnerContainer.remove();

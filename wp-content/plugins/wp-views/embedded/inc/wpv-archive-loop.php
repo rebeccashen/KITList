@@ -567,7 +567,7 @@ class WP_Views_archive_loops {
 						'day-page' => __('Day archives', 'wpv-views'));
 					?>
 
-					<h3><?php _e('Native WordPress Archive Loops', 'wpv-views'); ?></h3>
+					<h3><?php _e('Standard Archives', 'wpv-views'); ?></h3>
 					<ul>
 						<?php foreach($loops as $loop => $loop_name): ?>
 							<?php
@@ -603,7 +603,7 @@ class WP_Views_archive_loops {
 					?>
 
 					<?php if ( !empty( $pt_loops ) ) : ?>
-					<h3><?php _e( 'Post Type Archive Loops', 'wpv-views' ); ?></h3>
+					<h3><?php _e( 'Custom Post Archives', 'wpv-views' ); ?></h3>
 					<ul>
 						<?php foreach ( $pt_loops as $loop => $loop_name ): ?>
 							<?php
@@ -645,7 +645,7 @@ class WP_Views_archive_loops {
 					?>
 
 					<?php if ( !empty( $taxonomies ) ): ?>
-					<h3><?php _e('Taxonomy Archive Loops', 'wpv-views'); ?></h3>
+					<h3><?php _e('Taxonomy Archives', 'wpv-views'); ?></h3>
 					<ul>
 						<?php foreach ( $taxonomies as $category_slug => $category ): ?>
 							<?php

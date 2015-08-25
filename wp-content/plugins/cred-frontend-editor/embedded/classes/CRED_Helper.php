@@ -19,7 +19,7 @@ function getCurrentScreenPerPage() {
 final class CRED_Helper {
 
     private static $cred_wpml_option = '_cred_cred_wpml_active';
-    private static $caps = array();
+    public static $caps = array();
     public static $screens = array();
     public static $currentPage = null;
 
@@ -45,7 +45,7 @@ final class CRED_Helper {
             add_action('admin_head-post-new.php', array(__CLASS__, 'jsForCredCustomPost'));
         }
 
-        if (isset($_GET['page']) && ( $_GET['page'] == 'view-archives-editor' || 
+        if (isset($_GET['page']) && ( $_GET['page'] == 'view-archives-editor' ||
                 $_GET['page'] == 'views-editor' )) {
             add_action('admin_head', array(__CLASS__, 'jsForCredCustomPost'));
         }
@@ -96,7 +96,7 @@ final class CRED_Helper {
 //    public static function HelpMenuPage() {
 //        CRED_Loader::load('VIEW/help');
 //    }
-    
+
     public static function addScreenOptions() {
         $screen = get_current_screen();
         if (!is_array(CRED_Helper::$screens) || !in_array($screen->id, CRED_Helper::$screens))
@@ -124,8 +124,7 @@ final class CRED_Helper {
         }
     }
 
-    public static function add_toolset_promotion_screen_id($ids)
-    {
+    public static function add_toolset_promotion_screen_id($ids) {
         $ids[] = 'toplevel_page_CRED_Forms';
         return $ids;
     }
@@ -773,7 +772,6 @@ final class CRED_Helper {
                     $caps[] = $cred_cap;
                 }
             }
-            // these caps do not require a specific form
             $cred_cap = 'delete_own_posts_with_cred';
             $caps[] = $cred_cap;
             $cred_cap = 'delete_other_posts_with_cred';
@@ -1138,7 +1136,7 @@ final class CRED_Helper {
         }
 
         $link = get_permalink($post_id);
-        $link = add_query_arg(array('cred-edit-form' => $form), $link);
+        $link = esc_url(add_query_arg(array('cred-edit-form' => $form), $link));
         // provide WPML localization for hardcoded texts
         $text = str_replace(array('%TITLE%', '%ID%'), array(get_the_title($post_id), $post_id), cred_translate('Edit Link Text', $text, 'CRED Shortcodes'));
 
@@ -1180,7 +1178,7 @@ final class CRED_Helper {
             $parent_id = self::getLocalisedID($parent_id, $parent_type);
             if ($parent_type === false)
                 return __('Unknown Parent Type', 'wp-cred');
-            $link = add_query_arg(array('parent_' . $parent_type . '_id' => $parent_id), $link);
+            $link = esc_url(add_query_arg(array('parent_' . $parent_type . '_id' => $parent_id), $link));
         }
 
         $_atts = array();
@@ -1524,6 +1522,8 @@ final class CRED_Helper {
      * */
     public static function credFormShortcode($atts) {
         global $post;
+        if (is_null($post))
+            return null;
         /**
          * clone post object to revert after form
          */
@@ -1777,7 +1777,7 @@ final class CRED_Helper {
             AND     (
         ';
         $i = 1;
-        foreach ($roles as $role) {            
+        foreach ($roles as $role) {
             $sql .= ' um.meta_value LIKE    \'%"' . cred_wrap_esc_like($role) . '"%\' ';
             if ($i < count($roles))
                 $sql .= ' OR ';

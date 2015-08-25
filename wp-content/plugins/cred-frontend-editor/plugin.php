@@ -3,7 +3,7 @@
   Plugin Name: CRED Frontend Editor
   Plugin URI: http://wp-types.com/home/cred/
   Description: Create Edit Delete Wordpress content (ie. posts, pages, custom posts) from the front end using fully customizable forms
-  Version: 1.3.6
+  Version: 1.3.6.1
   Author: OnTheGoSystems
   Author URI: http://www.onthegosystems.com/
   License: GPLv2
@@ -32,7 +32,7 @@ if (defined('CRED_FE_VERSION'))
 // TODO use WP Cache object to cache queries(in base model) and templates(in loader DONE)
 /* removed */
 // current version
-define('CRED_FE_VERSION', '1.3.6');
+define('CRED_FE_VERSION', '1.3.6.1');
 // configuration constants
 define('CRED_NAME', 'CRED');
 define('CRED_CAPABILITY', 'manage_options');

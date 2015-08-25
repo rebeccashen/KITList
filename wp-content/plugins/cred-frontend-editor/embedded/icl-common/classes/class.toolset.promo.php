@@ -2,7 +2,7 @@
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/classes/class.toolset.promo.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/classes/class.toolset.promo.php $
  * $LastChangedDate: 2015-03-17 12:32:26 +0000 (Tue, 17 Mar 2015) $
  * $LastChangedRevision: 32417 $
  * $LastChangedBy: riccardo $

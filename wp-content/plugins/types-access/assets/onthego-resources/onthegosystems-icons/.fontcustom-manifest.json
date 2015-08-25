@@ -1,13 +1,13 @@
 {
   "checksum": {
-    "previous": "8d9a6c3bf95bd4630d40a722f192ec47a6dc6367d95e40bb3ee60174fffdfe63",
-    "current": "8d9a6c3bf95bd4630d40a722f192ec47a6dc6367d95e40bb3ee60174fffdfe63"
+    "previous": "ea0d501b723f7b75d3147cf08210b5cf2c0c279dff82e74a178b3badd9bf0318",
+    "current": "ea0d501b723f7b75d3147cf08210b5cf2c0c279dff82e74a178b3badd9bf0318"
   },
   "fonts": [
-    "fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.ttf",
-    "fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.svg",
-    "fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.woff",
-    "fonts/onthegosystems-icons_8d9a6c3bf95bd4630d40a722f192ec47.eot"
+    "fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.ttf",
+    "fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.svg",
+    "fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.woff",
+    "fonts/onthegosystems-icons_ea0d501b723f7b75d3147cf08210b5cf.eot"
   ],
   "glyphs": {
     "access": {
@@ -50,6 +50,14 @@
       "codepoint": 61721,
       "source": "vectors/module-logo.svg"
     },
+    "packager": {
+      "codepoint": 61728,
+      "source": "vectors/packager.svg"
+    },
+    "packager-logo": {
+      "codepoint": 61729,
+      "source": "vectors/packager-logo.svg"
+    },
     "toolset-logo": {
       "codepoint": 61722,
       "source": "vectors/toolset-logo.svg"
@@ -69,13 +77,17 @@
     "views-logo": {
       "codepoint": 61726,
       "source": "vectors/views-logo.svg"
+    },
+    "wpml-logo": {
+      "codepoint": 61727,
+      "source": "vectors/wpml-logo.svg"
     }
   },
   "options": {
     "autowidth": false,
     "config": "fontcustom.yml",
     "css_selector": ".icon-{{glyph}}",
-    "debug": true,
+    "debug": false,
     "file_hash": false,
     "font_name": "onthegosystems-icons",
     "force": false,

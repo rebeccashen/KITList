@@ -101,7 +101,10 @@ function wpv_filter_post_author( $query, $view_settings ) {
 					$author_shortcode = $view_settings['author_shortcode'];
 					$author_shortcode_type = $view_settings['author_shortcode_type'];
 					$view_attrs = $WP_Views->get_view_shortcodes_attributes();
-					if ( isset( $view_attrs[$author_shortcode] ) ) {
+					if ( 
+						isset( $view_attrs[$author_shortcode] ) 
+						&& '' != $view_attrs[$author_shortcode]
+					) {
 						$author_candidates = explode( ',', $view_attrs[$author_shortcode] );
 						switch ( $author_shortcode_type ) {
 							case 'id':

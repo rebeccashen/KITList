@@ -1879,7 +1879,7 @@ function wpv_views_editor_hidden_messages_boxes_pointers( $view_settings, $view_
 		
 		?>
 			<div class="js-wpv-inserted-layout-loop-pointer<?php echo $dismissed_classname; ?>">
-				<h3><?php _e( 'Content Template used as a View loop', 'wpv-views' ); ?></h3>
+				<h3><?php _e( 'Fields updated in the Loop Output', 'wpv-views' ); ?></h3>
 				<p>
 					<?php
 						_e( 'The Loop Wizard just updated the editor with the fields that you added.', 'wpv-views' );

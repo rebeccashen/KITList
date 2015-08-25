@@ -10,7 +10,7 @@ $fields_access = new Post_Fields_Access;
  * @author Gen gen.i@icanlocalize.com
  * @since Types 1.3
  *
- * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.2/embedded/usermeta-init.php $
+ * $HeadURL: http://plugins.svn.wordpress.org/types/tags/1.6.6.5/embedded/usermeta-init.php $
  * $LastChangedDate: 2015-04-01 14:15:17 +0000 (Wed, 01 Apr 2015) $
  * $LastChangedRevision: 1125405 $
  * $LastChangedBy: iworks $

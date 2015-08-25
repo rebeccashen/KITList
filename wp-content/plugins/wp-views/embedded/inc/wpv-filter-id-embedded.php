@@ -71,7 +71,10 @@ function wpv_filter_post_id( $query, $view_settings ) {
 				) {
 					$id_shortcode = $view_settings['post_ids_shortcode'];	
 					$view_attrs = $WP_Views->get_view_shortcodes_attributes();
-					if ( isset( $view_attrs[$id_shortcode] ) ) {
+					if ( 
+						isset( $view_attrs[$id_shortcode] ) 
+						&& '' != $view_attrs[$id_shortcode]
+					) {
 						$ids_to_load = explode( ',', $view_attrs[$id_shortcode] );
 						if ( count( $ids_to_load ) > 0 ) {
 							foreach ( $ids_to_load as $id_candidate ) {

@@ -633,5 +633,5 @@ function wpv_maybe_add_query_arg( $args, $url ) {
             unset( $args[ $key ] );
         }
     }
-    return add_query_arg( $args, $url );
+    return esc_url( add_query_arg( $args, $url ) );
 }

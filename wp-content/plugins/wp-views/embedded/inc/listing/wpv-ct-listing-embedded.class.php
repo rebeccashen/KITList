@@ -86,9 +86,9 @@ class WPV_CT_List_Table_Embedded extends WPV_List_Table_Embedded {
 
         $title = sprintf(
             '<span class="row-title"><a href="%s">%s</a></span>',
-            add_query_arg(
+            esc_url( add_query_arg(
                 array( 'page' => 'view-templates-embedded', 'view_id' => $item->id ),
-                admin_url( 'admin.php' ) ),
+                admin_url( 'admin.php' ) ) ),
             $item->title );
 
         return $title . $description;
@@ -121,9 +121,9 @@ class WPV_CT_List_Table_Embedded extends WPV_List_Table_Embedded {
                     '<span>%s</span>',
                     sprintf( __( 'This Content Template is used as the loop block for the %s <a href="%s" target="_blank">%s</a>', 'wpv-views' ),
                         $owner_view->query_mode_display_name,
-                        add_query_arg(
+                        esc_url( add_query_arg(
                             array( 'page' => 'views-embedded', 'view_id' => $owner_view->id ),
-                            admin_url( 'admin.php' ) ),
+                            admin_url( 'admin.php' ) ) ),
                         $owner_view->title ) );
             } else {
                 return sprintf(

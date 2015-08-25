@@ -2,10 +2,10 @@
 /**
  * Returns HTML formatted output for elements and handles form submission.
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5/classes/forms.php $
- * $LastChangedDate: 2015-03-12 13:46:29 +0000 (Thu, 12 Mar 2015) $
- * $LastChangedRevision: 32265 $
- * $LastChangedBy: marcin $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/common/tags/1.5.1/classes/forms.php $
+ * $LastChangedDate: 2015-04-17 12:53:47 +0000 (Fri, 17 Apr 2015) $
+ * $LastChangedRevision: 32963 $
+ * $LastChangedBy: gen $
  *
  * @version 1.0
  */
@@ -368,10 +368,15 @@ if (!class_exists('Enlimbo_Forms_Wpcf')) {
             if ( isset( $element['#labelclass'] ) ) {
 				$labelclass = $element['#labelclass'] . ' ';
             }
+            $labelstyle = '';
+            if ( isset( $element['#labelstyle'] ) ) {
+				$labelstyle = ' style="' . $element['#labelstyle'] . '" ';
+            }
             $element['_render']['label'] = isset($element['#title']) ? '<label class="'
 					. $labelclass
                     . $this->css_class . '-label ' . $this->css_class . '-'
-                    . $element['#type'] . '-label" for="' . $element['#id'] . '">'
+                    . $element['#type'] . '-label" for="' . $element['#id'] . '"'.
+                    $labelstyle . '>'
                     . stripslashes($element['#title'])
                     . '</label>' . "\r\n" : '';
             $element['_render']['title'] = $this->_setElementTitle($element);

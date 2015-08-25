@@ -2,7 +2,7 @@
 /**
  * Mail Handler Class
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/classes/common/Mail_Handler.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/classes/common/Mail_Handler.php $
  * $LastChangedDate: 2015-03-26 13:45:38 +0000 (Thu, 26 Mar 2015) $
  * $LastChangedRevision: 32662 $
  * $LastChangedBy: francesco $

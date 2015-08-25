@@ -54,8 +54,36 @@ $(document).ready(function() {
 		var columns = $(this).find('th').length;
 		$(this).addClass('columns-'+ columns);
 	});
+    
+    if ( $('#wpcf_access_admin_form input').length > $('#js-max-input-vars').val() ){
+        $.colorbox({			
+            html: '<div class="wpv-dialog js-wpcf-add-access-error-page">'
+            +'<div class="wpv-dialog-header">'+$('#js-max-input-vars').data('header')+'</div>'
+			+'<div class="wpv-dialog-content">'+$('#js-max-input-vars').data('message').replace('<!NUM!>', $('#wpcf_access_admin_form input').length)
+            +'<p><br><input type="checkbox" value="1" id="js-hide-max-fields-message" /> <label for="js-hide-max-fields-message">'+$('#js-max-input-vars').data('hide_error') + '</label></p>'
+            +'</div>'
+			+'<div class="wpv-dialog-footer"><button class="button js-dialog-close js-hide-fields-message-dialog">'+$('#js-max-input-vars').data('btn')+'</button></div></div>'
+		});
+    }
+   
+    $(document).on('click', '.js-hide-fields-message-dialog', function(e) {
+		e.preventDefault();
 
-
+		if ( $('#js-hide-max-fields-message').prop('checked') ){
+            var data = {
+                action : 'wpcf_hide_max_fields_message',
+                wpnonce : $('#wpcf-access-edit').attr('value')
+            };
+            $.ajax({
+            url: ajaxurl,
+            type: 'post',
+            data: data,
+            cache: false,
+            success: function(data) {}
+          });
+        }
+	});
+    
 	$(document).on('click', '.js-wpcf-access-delete-role', function(e) {
 		e.preventDefault();
 
@@ -89,6 +117,11 @@ $(document).ready(function() {
                 //'display' : 'inline'
             });
         });
+        var textbox = $(document.createElement('textarea')).attr({
+            "class" : 'js-wpcf-access-conditional-message',                  
+            rows : 6
+        });
+        $(this).parent().find('input.js-wpcf-access-conditional-message').replaceWith(textbox);
 		$('.js-wpcf-access-list-roles').prop('checked',false);
 		$('.js-wpcf-access-shortcode-operator').eq(0).prop('checked',true);
 		$('.js-wpcf-access-add-shortcode').prop('disabled', true).addClass('button-secondary').removeClass('button-primary');
@@ -133,10 +166,10 @@ $(document).ready(function() {
 		shortcode += $('.js-wpcf-access-list-roles:checked').map(function(){
 			return $(this).val();
 		}).get().join(",");
-		shortcode += '" operator="'+ $('input[name="wpcf-access-shortcode-operator"]:checked').val() +'"]'+ $('.js-wpcf-access-conditional-message').val() +'[/toolset_access]';
-		window.wpcfActiveEditor = 'content';
-    	icl_editor.insert(shortcode);
-    	jQuery('.editor_addon_dropdown').css({'visibility': 'hidden'});
+		shortcode += '" operator="'+ $('input[name="wpcf-access-shortcode-operator"]:checked').val() +'"]'+ $(this).parent().parent().find('.js-wpcf-access-conditional-message').val() +'[/toolset_access]';
+		window.wpcfActiveEditor = jQuery(this).data('editor');
+        icl_editor.insert(shortcode);
+        jQuery('.editor_addon_dropdown').css({'visibility': 'hidden'});
 		return false;
 	});
 
@@ -318,6 +351,12 @@ $(document).ready(function() {
 				id : $(this).data('id'),
 				wpnonce : $('#wpcf-access-error-pages').attr('value')
 		};
+        
+        //Fix dialog position when Layouts active
+        $.extend($.colorbox.settings, {
+            top: '25%'
+        });
+        
 		$.colorbox({
 			href: ajaxurl,
 			data: data,
@@ -554,6 +593,13 @@ $(document).ready(function() {
 
 		return false;
 	});
+    
+    $(document).on('click', '.js-wpcf-search-posts-clear', function() {
+        $('#wpcf-access-suggest-posts').val('');
+        $('.js-wpcf-suggested-posts ul li').remove();
+
+		return false;
+	});
 
 	// Add posts
 	$(document).on('click', '.js-wpcf-add-post-to-group', function() {
@@ -645,12 +691,14 @@ $(document).ready(function() {
 				if ( $('.js-wpcf-assigned-posts ul').is(':empty') ) {
 					$('.js-no-posts-assigned').show();
 				}
+                $(document).off( "keypress.colorbox" );
 			}
 		});
 		return false;
 	});
-
+    
 	$(document).on('click', '.js-wpcf-modify-group', function() {
+        
 		var data = {
 				action : 'wpcf_access_add_new_group_form',
 				modify : $(this).data('group'),
@@ -665,6 +713,7 @@ $(document).ready(function() {
 				if ( $('.js-wpcf-assigned-posts ul').is(':empty') ) {
 					$('.js-no-posts-assigned').show();
 				}
+                $(document).off( "keypress.colorbox" );
 			}
 		});
 		return false;
@@ -717,19 +766,23 @@ $(document).ready(function() {
 			if ( $('input[name="archive_error_type"]:checked').val() === 'error_php' ) {
 				archivetext =  $(this).data('inf03')+': ' + $('select[name="wpcf-access-archive-php"] option:selected').text();
 				archivevalname = $('select[name="wpcf-access-archive-php"]').val();
+                archivetypename = $('input[name="archive_error_type"]:checked').val();
+               
 			} else if ( $('input[name="archive_error_type"]:checked').val() === 'error_ct' ) {
 				archivetext =  $(this).data('inf04')+': ' + $('select[name="wpcf-access-archive-ct"] option:selected').text();
 				archivevalname = $('select[name="wpcf-access-archive-ct"]').val();
+                archivetypename = $('input[name="archive_error_type"]:checked').val();
 			} else if ( $('input[name="archive_error_type"]:checked').val() === 'default_error' ) {
 				archivetext =  $(this).data('inf05');
 				archivevalname = '';
+                archivetypename = '';
 			} else {
 				archivetext = '';
 				archivetypename = '';
 			}
 		}
 
-		$('input[name="' + $('input[name="typename"]').val() + '"]').parent().find('.js-error-page-name').html(text);
+        $('input[name="' + $('input[name="typename"]').val() + '"]').parent().find('.js-error-page-name').html(text);
 		$('input[name="' + $('input[name="typename"]').val() + '"]').parent().find('a').data('curtype', typename);
 		$('input[name="' + $('input[name="typename"]').val() + '"]').parent().find('a').data('curvalue', valname);
 		$('input[name="' + $('input[name="valuename"]').val() + '"]').val(valname);
@@ -739,6 +792,8 @@ $(document).ready(function() {
 			$('input[name="' + $('input[name="archivetypename"]').val() + '"]').parent().find('.js-archive_error-page-name').html(archivetext);
 			$('input[name="' + $('input[name="archivevaluename"]').val() + '"]').val(archivevalname);
 			$('input[name="' + $('input[name="archivetypename"]').val() + '"]').val(archivetypename);
+            $('input[name="' + $('input[name="typename"]').val() + '"]').parent().find('a').data('archivecurtype', archivetypename);
+            $('input[name="' + $('input[name="typename"]').val() + '"]').parent().find('a').data('archivecurvalue', archivevalname);
 		}
 
 		$.colorbox.close();
@@ -1042,6 +1097,7 @@ $(document).ready(function() {
             type: 'post',
             dataType: 'json',
             data: 'action=wpcf_access_add_role&role='+$('#wpcf-access-new-role .input').val(),
+            wpnonce : $('#wpcf-access-edit').attr('value'),
             cache: false,
             beforeSend: function() {},
             success: function(data) {

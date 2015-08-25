@@ -30,7 +30,7 @@ if (!interface_exists('CRED_Friendable')) {
 // TODO use WP Cache object to cache queries(in base model) and templates(in loader DONE)
 /* removed */
 // current version
-define('CRED_FE_VERSION', '1.3.5');
+define('CRED_FE_VERSION', '1.3.6.1');
 // configuration constants
 define('CRED_NAME', 'CRED');
 define('CRED_CAPABILITY', 'manage_options');

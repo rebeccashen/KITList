@@ -7,7 +7,7 @@ Cred settings model
 
 /**
  *
- * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6/embedded/models/Settings.php $
+ * $HeadURL: https://www.onthegosystems.com/misc_svn/crud/tags/1.3.6.1/embedded/models/Settings.php $
  * $LastChangedDate: 2014-08-18 14:03:21 +0000 (Mon, 18 Aug 2014) $
  * $LastChangedRevision: 26052 $
  * $LastChangedBy: riccardo $

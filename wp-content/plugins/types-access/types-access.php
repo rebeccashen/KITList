@@ -5,11 +5,11 @@ Plugin URI: http://wp-types.com/home/types-access/
 Description: User access control and roles management
 Author: OnTheGoSystems
 Author URI: http://www.onthegosystems.com/
-Version: 1.2.3
+Version: 1.2.5
 */
 
 // current version
-define('TACCESS_VERSION','1.2.3');
+define('TACCESS_VERSION','1.2.4');
 if ( function_exists('realpath') )
     define('TACCESS_PLUGIN_PATH', realpath(dirname(__FILE__)));
 else
@@ -35,8 +35,8 @@ define('WPCF_ACCESS_INC_', TACCESS_INCLUDES_PATH);
 // for WPML
 define('TACCESS_WPML_STRING_CONTEXT','Types_Access');
 
-require_once TACCESS_ASSETS_PATH . '/onthego-resources/onthegosystems-branding-loader.php';
-ont_set_on_the_go_systems_uri_and_start( TACCESS_ASSETS_URL . '/onthego-resources/' );
+require TACCESS_ASSETS_PATH . '/onthego-resources/loader.php';
+onthego_initialize(TACCESS_ASSETS_PATH . '/onthego-resources', TACCESS_ASSETS_URL . '/onthego-resources/');
 
 // our global object
 global $wpcf_access;
